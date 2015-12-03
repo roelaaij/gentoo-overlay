@@ -1,0 +1,14 @@
+--- old/src/gtk/glx_3Demu.cpp	2013-11-28 01:36:53.712615822 +0100
++++ new/src/gtk/glx_3Demu.cpp	2014-02-09 01:16:20.119914459 +0100
+@@ -41,11 +41,7 @@
+         glXDestroyContext(dpy, ctx);
+ 
+         XCloseDisplay(dpy);
+-
+-        return true;
+     }
+-
+-    return false;
+ }
+ 
+ int init_glx_3Demu(void) 

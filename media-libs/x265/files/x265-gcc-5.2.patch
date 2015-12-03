@@ -1,0 +1,11 @@
+--- old/source/common/param.cpp	2015-10-08 12:01:36.000000000 +0200
++++ new/source/common/param.cpp	2015-10-13 16:48:37.639802660 +0200
+@@ -52,7 +52,7 @@
+  */
+ 
+ #undef strtok_r
+-static char* strtok_r(char* str, const char* delim, char** nextp)
++char* strtok_r(char* str, const char* delim, char** nextp)
+ {
+     if (!str)
+         str = *nextp;

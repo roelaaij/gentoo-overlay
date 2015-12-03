@@ -1,0 +1,150 @@
+# HG changeset patch
+# User Edd Barrett <vext01@gmail.com>
+# Date 1398429857 -3600
+# Branch libressl
+# Node ID 1ad61d86fafc18be93fbf4ecbc84ad0293d9d679
+# Parent  c65c5258c686c9ae9f7bab1f573a8f0034b85abe
+Fix translation for LibreSSL and fix SSL tests on OpenBSD.
+
+diff --git a/lib-python/2.7/socket.py b/lib-python/2.7/socket.py
+--- a/lib-python/2.7/socket.py
++++ b/lib-python/2.7/socket.py
+@@ -65,7 +65,6 @@
+     from _ssl import SSLError as sslerror
+     from _ssl import \
+          RAND_add, \
+-         RAND_egd, \
+          RAND_status, \
+          SSL_ERROR_ZERO_RETURN, \
+          SSL_ERROR_WANT_READ, \
+@@ -77,6 +76,9 @@
+          SSL_ERROR_EOF, \
+          SSL_ERROR_INVALID_ERROR_CODE
+ 
++    if hasattr(_ssl, "RAND_egd"):
++        from _ssl import RAND_egd
++
+ import os, sys, warnings
+ 
+ try:
+diff --git a/lib-python/2.7/ssl.py b/lib-python/2.7/ssl.py
+--- a/lib-python/2.7/ssl.py
++++ b/lib-python/2.7/ssl.py
+@@ -62,7 +62,11 @@
+ from _ssl import OPENSSL_VERSION_NUMBER, OPENSSL_VERSION_INFO, OPENSSL_VERSION
+ from _ssl import SSLError
+ from _ssl import CERT_NONE, CERT_OPTIONAL, CERT_REQUIRED
+-from _ssl import RAND_status, RAND_egd, RAND_add
++from _ssl import RAND_status, RAND_add
++
++if hasattr(_ssl, "RAND_egd"):
++    from _ssl import RAND_egd
++
+ from _ssl import \
+      SSL_ERROR_ZERO_RETURN, \
+      SSL_ERROR_WANT_READ, \
+diff --git a/pypy/module/_ssl/__init__.py b/pypy/module/_ssl/__init__.py
+--- a/pypy/module/_ssl/__init__.py
++++ b/pypy/module/_ssl/__init__.py
+@@ -16,7 +16,8 @@
+     @classmethod
+     def buildloaders(cls):
+         # init the SSL module
+-        from pypy.module._ssl.interp_ssl import constants, HAVE_OPENSSL_RAND
++        from pypy.module._ssl.interp_ssl import constants, \
++                HAVE_OPENSSL_RAND, HAVE_OPENSSL_RAND_EGD
+ 
+         for constant, value in constants.iteritems():
+             Module.interpleveldefs[constant] = "space.wrap(%r)" % (value,)
+@@ -24,7 +25,8 @@
+         if HAVE_OPENSSL_RAND:
+             Module.interpleveldefs['RAND_add'] = "interp_ssl.RAND_add"
+             Module.interpleveldefs['RAND_status'] = "interp_ssl.RAND_status"
+-            Module.interpleveldefs['RAND_egd'] = "interp_ssl.RAND_egd"
++            if HAVE_OPENSSL_RAND_EGD:
++                Module.interpleveldefs['RAND_egd'] = "interp_ssl.RAND_egd"
+ 
+         super(Module, cls).buildloaders()
+ 
+diff --git a/pypy/module/_ssl/interp_ssl.py b/pypy/module/_ssl/interp_ssl.py
+--- a/rpython/rlib/ropenssl.py
++++ b/rpython/rlib/ropenssl.py
+@@ -19,7 +19,7 @@
+         # so that openssl/ssl.h can repair this nonsense.
+         'wincrypt.h']
+ else:
+-    libraries = ['z', 'ssl', 'crypto']
++    libraries = ['z', 'crypto', 'ssl']
+     includes = []
+ 
+ includes += [
+@@ -150,6 +150,8 @@
+          ('name', rffi.CCHARP),
+          ])
+ 
++    HAVE_OPENSSL_RAND_EGD = rffi_platform.Has('RAND_egd')
++
+ 
+ for k, v in rffi_platform.configure(CConfig).items():
+     globals()[k] = v
+@@ -200,7 +202,9 @@
+ if HAVE_OPENSSL_RAND:
+     ssl_external('RAND_add', [rffi.CCHARP, rffi.INT, rffi.DOUBLE], lltype.Void)
+     ssl_external('RAND_status', [], rffi.INT)
+-    ssl_external('RAND_egd', [rffi.CCHARP], rffi.INT)
++    if HAVE_OPENSSL_RAND_EGD:
++        ssl_external('RAND_egd', [rffi.CCHARP], rffi.INT)
++
+ ssl_external('SSL_CTX_new', [SSL_METHOD], SSL_CTX)
+ ssl_external('SSL_get_SSL_CTX', [SSL], SSL_CTX)
+ ssl_external('TLSv1_method', [], SSL_METHOD)
+diff --git a/rpython/rtyper/lltypesystem/ll2ctypes.py b/rpython/rtyper/lltypesystem/ll2ctypes.py
+--- a/rpython/rtyper/lltypesystem/ll2ctypes.py
++++ b/rpython/rtyper/lltypesystem/ll2ctypes.py
+@@ -14,6 +14,9 @@
+ else:
+     load_library_kwargs = {}
+ 
++if sys.platform.startswith("openbsd"):
++    load_library_kwargs["mode"] = ctypes.RTLD_GLOBAL
++
+ import os, platform as host_platform
+ from rpython.rtyper.lltypesystem import lltype, llmemory
+ from rpython.rtyper.extfunc import ExtRegistryEntry
+--- old/pypy/module/_ssl/interp_ssl.py	2014-09-20 23:16:07.000000000 +0200
++++ new/pypy/module/_ssl/interp_ssl.py	2014-11-05 01:05:10.069916678 +0100
+@@ -94,20 +94,21 @@
+         res = libssl_RAND_status()
+         return space.wrap(res)
+ 
+-    @unwrap_spec(path=str)
+-    def RAND_egd(space, path):
+-        """RAND_egd(path) -> bytes
++    if HAVE_OPENSSL_RAND_EGD:
++        @unwrap_spec(path=str)
++        def RAND_egd(space, path):
++            """RAND_egd(path) -> bytes
+ 
+-        Queries the entropy gather daemon (EGD) on socket path.  Returns number
+-        of bytes read.  Raises socket.sslerror if connection to EGD fails or
+-        if it does provide enough data to seed PRNG."""
+-        with rffi.scoped_str2charp(path) as socket_path:
+-            bytes = libssl_RAND_egd(socket_path)
+-        if bytes == -1:
+-            raise ssl_error(space,
+-                            "EGD connection failed or EGD did not return "
+-                            "enough data to seed the PRNG")
+-        return space.wrap(bytes)
++            Queries the entropy gather daemon (EGD) on socket path.  Returns number
++            of bytes read.  Raises socket.sslerror if connection to EGD fails or
++            if it does provide enough data to seed PRNG."""
++            with rffi.scoped_str2charp(path) as socket_path:
++                bytes = libssl_RAND_egd(socket_path)
++            if bytes == -1:
++                raise ssl_error(space,
++                                "EGD connection failed or EGD did not return "
++                                "enough data to seed the PRNG")
++            return space.wrap(bytes)
+ 
+ 
+ class SSLObject(W_Root):

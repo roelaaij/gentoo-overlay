@@ -1,0 +1,12 @@
+diff -Naur old/src/musicbrainz/MusicDNSAudioDecoder.cpp new/src/musicbrainz/MusicDNSAudioDecoder.cpp
+--- old/src/musicbrainz/MusicDNSAudioDecoder.cpp	2013-08-14 22:22:52.000000000 +0200
++++ new/src/musicbrainz/MusicDNSAudioDecoder.cpp	2014-05-14 20:27:17.118173824 +0200
+@@ -23,7 +23,7 @@
+ #include "core/meta/Meta.h"
+ 
+ extern "C" {
+-    typedef quint64 UINT64_C;
++    #define __STDC_CONSTANT_MACROS
+     #include <libavcodec/avcodec.h>
+     #include <libavformat/avformat.h>
+     #include <libavutil/mathematics.h>

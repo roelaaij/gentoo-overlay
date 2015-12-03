@@ -1,0 +1,11 @@
+--- old/include/ptlib/critsec.h	2014-02-17 03:14:30.000000000 +0100
++++ new/include/ptlib/critsec.h	2015-05-03 15:07:50.725693263 +0200
+@@ -40,7 +40,7 @@
+ #if P_HAS_ATOMIC_INT
+ 
+ #if defined(__GNUC__)
+-#  if __GNUC__ >= 4 && __GNUC_MINOR__ >= 2
++#  if (__GNUC__ >= 4 && __GNUC_MINOR__ >= 2) || __GNUC__ >= 5
+ #     include <ext/atomicity.h>
+ #  else
+ #     include <bits/atomicity.h>

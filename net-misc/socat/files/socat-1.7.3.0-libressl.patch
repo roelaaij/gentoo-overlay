@@ -1,0 +1,83 @@
+--- old/sslcls.h	2015-01-24 11:15:22.000000000 +0100
++++ new/sslcls.h	2015-12-03 16:49:33.704536843 +0100
+@@ -47,15 +47,16 @@
+ int sycSSL_shutdown(SSL *ssl);
+ void sycSSL_CTX_free(SSL_CTX *ctx);
+ void sycSSL_free(SSL *ssl);
++#if !defined(LIBRESSL_VERSION_NUMBER)
+ int sycRAND_egd(const char *path);
+-
++#endif
+ DH *sycPEM_read_bio_DHparams(BIO *bp, DH **x, pem_password_cb *cb, void *u);
+ 
+ BIO *sycBIO_new_file(const char *filename, const char *mode);
+ 
+ int sycFIPS_mode_set(int onoff);
+ 
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+ const COMP_METHOD *sycSSL_get_current_compression(SSL *ssl);
+ const COMP_METHOD *sycSSL_get_current_expansion(SSL *ssl);
+ const char *sycSSL_COMP_get_name(const COMP_METHOD *comp);
+@@ -98,7 +99,9 @@
+ #define sycSSL_shutdown(s) SSL_shutdown(s)
+ #define sycSSL_CTX_free(c) SSL_CTX_free(c)
+ #define sycSSL_free(s) SSL_free(s)
++#if !defined(LIBRESSL_VERSION_NUMBER)
+ #define sycRAND_egd(p) RAND_egd(p)
++#endif
+ 
+ #define sycPEM_read_bio_DHparams(b,x,p,u) PEM_read_bio_DHparams(b,x,p,u)
+ 
+--- old/sslcls.c	2015-01-24 11:15:22.000000000 +0100
++++ new/sslcls.c	2015-12-03 16:49:46.644536748 +0100
+@@ -331,6 +331,7 @@
+    return;
+ }
+ 
++#if !defined(LIBRESSL_VERSION_NUMBER)
+ int sycRAND_egd(const char *path) {
+    int result;
+    Debug1("RAND_egd(\"%s\")", path);
+@@ -338,6 +339,7 @@
+    Debug1("RAND_egd() -> %d", result);
+    return result;
+ }
++#endif
+ 
+ DH *sycPEM_read_bio_DHparams(BIO *bp, DH **x, pem_password_cb *cb, void *u) {
+    DH *result;
+@@ -375,7 +377,7 @@
+ }
+ #endif /* WITH_FIPS */
+ 
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+ const COMP_METHOD *sycSSL_get_current_compression(SSL *ssl) {
+    const COMP_METHOD *result;
+    Debug1("SSL_get_current_compression(%p)", ssl);
+--- old/xio-openssl.c	2015-01-24 15:33:42.000000000 +0100
++++ new/xio-openssl.c	2015-12-03 16:49:12.964536996 +0100
+@@ -147,7 +147,7 @@
+ static void openssl_conn_loginfo(SSL *ssl) {
+    Notice1("SSL connection using %s", SSL_get_cipher(ssl));
+ 
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+    {
+       const COMP_METHOD *comp, *expansion;
+ 
+@@ -877,10 +877,12 @@
+       }
+    }
+ 
++#if !defined(LIBRESSL_VERSION_NUMBER)
+    if (opt_egd) {
+       sycRAND_egd(opt_egd);
+    }
+-
++#endif
++   
+    if (opt_pseudo) {
+       long int randdata;
+       /* initialize libc random from actual microseconds */

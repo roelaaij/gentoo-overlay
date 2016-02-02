@@ -23,7 +23,7 @@ HOMEPAGE="https://www.dolphin-emu.org/"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="alsa ao bluetooth doc ffmpeg +lzo openal opengl openmp portaudio pulseaudio wxwidgets qt"
+IUSE="alsa ao bluetooth doc egl ffmpeg +lzo openal opengl openmp portaudio pulseaudio wxwidgets qt"
 
 RDEPEND=">=media-libs/glew-1.10
 	>=media-libs/libsfml-2.1
@@ -48,6 +48,7 @@ DEPEND="${RDEPEND}
 	media-gfx/nvidia-cg-toolkit
 	media-libs/freetype
 	media-libs/libsoundtouch
+	net-libs/enet
 	>=sys-devel/gcc-4.6.0
 	wxwidgets? ( x11-libs/wxGTK:${WX_GTK_VER} )
 	qt? ( dev-qt/qtwidgets:5 )
@@ -97,17 +98,15 @@ src_prepare() {
 	# - xxhash: Not on the tree.
 	mv Externals/SOIL . || die
 	mv Externals/Bochs_disasm . || die
-	mv Externals/GL . || die
 	mv Externals/gtest . || die
 	mv Externals/xxhash . || die
-	mv Externals/enet . || die
+	# mv Externals/enet . || die
 	rm -r Externals/* || die "Failed to delete Externals dir."
 	mv Bochs_disasm Externals || die
 	mv SOIL Externals || die
-	mv GL Externals || die
 	mv gtest Externals || die
 	mv xxhash Externals || die
-	mv enet Externals || die
+	# mv enet Externals || die
 
 	epatch_user
 }
@@ -120,8 +119,10 @@ src_configure() {
 		"-Dprefix=${GAMES_PREFIX}"
 		"-Ddatadir=${GAMES_DATADIR}/${PN}"
 		"-Dplugindir=$(games_get_libdir)/${PN}"
+		"-DUSE_SHARED_ENET=ON"
 		$( cmake-utils_use_disable wxwidgets WX )
-		$( cmake-utils_use_enable qt QT )
+		$( cmake-utils_use_enable egl EGL )
+		$( cmake-utils_use_enable qt QT2 )
 		$( cmake-utils_use ffmpeg ENCODE_FRAMEDUMPS )
 		$( cmake-utils_use openmp OPENMP )
 	)
@@ -144,7 +145,7 @@ src_install() {
 
 	doicon Installer/dolphin-emu.xpm
 	if use qt; then
-		dogamesbin ${BUILD_DIR}/Binaries/dolphin-emu-qt
+		dogamesbin ${BUILD_DIR}/Binaries/dolphin-emu-qt2
 		make_desktop_entry "dolphin-emu-qt" "Dolphin(Qt)" "Dolphin(Qt)" "Game;"
 	fi
 	if use wxwidgets; then

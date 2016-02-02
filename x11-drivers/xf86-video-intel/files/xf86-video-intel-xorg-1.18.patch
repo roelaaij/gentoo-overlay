@@ -1,0 +1,11 @@
+--- old/src/uxa/intel_driver.c	2014-12-09 21:43:22.000000000 +0100
++++ new/src/uxa/intel_driver.c	2016-01-24 10:26:26.773167060 +0100
+@@ -642,7 +642,7 @@
+ 		return;
+ 
+ 	PixmapRegionInit(&pixregion, dirty->slave_dst->master_pixmap);
+-	PixmapSyncDirtyHelper(dirty, &pixregion);
++	PixmapSyncDirtyHelper(dirty);
+ 	RegionUninit(&pixregion);
+ 
+         intel_flush(intel);

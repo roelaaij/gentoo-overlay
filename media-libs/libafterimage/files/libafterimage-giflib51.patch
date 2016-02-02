@@ -1,0 +1,253 @@
+--- old/ungif.h	2016-01-17 22:16:33.189734399 +0100
++++ new/ungif.h	2016-01-17 22:24:57.859730676 +0100
+@@ -7,18 +7,30 @@
+ extern "C" {
+ #endif
+ 
+-#if (GIFLIB_MAJOR>4) || ((GIFLIB_MAJOR==4) && (GIFLIB_MINOR>=2)) 
++#if (GIFLIB_MAJOR==5) && (GIFLIB_MINOR>=1)
++static inline void PrintGifError(int error) {
++    fprintf(stderr, "%s\n", GifErrorString(error));
++}
++#elif (GIFLIB_MAJOR>4) || ((GIFLIB_MAJOR==4) && (GIFLIB_MINOR>=2)) 
+ static inline void PrintGifError(void) {
+     fprintf(stderr, "%s\n", GifErrorString());
+ }
+ #endif
+ 
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++#ifdef __GNUC__
++#define ASIM_PrintGifError(error) do{ fprintf( stderr, "%s():%d:<%s> ",__FUNCTION__, __LINE__, path?path:"null" ); PrintGifError(error); }while(0)
++#else
++#define ASIM_PrintGifError(error) do{ PrintGifError(error); }while(0)
++#endif
++#else
+ #ifdef __GNUC__
+ #define ASIM_PrintGifError() do{ fprintf( stderr, "%s():%d:<%s> ",__FUNCTION__, __LINE__, path?path:"null" ); PrintGifError(); }while(0)
+ #else
+ #define ASIM_PrintGifError() do{ PrintGifError(); }while(0)
+ #endif
+ 
++#endif
+ #define GIF_GCE_DELAY_BYTE_LOW	1
+ #define GIF_GCE_DELAY_BYTE_HIGH	2
+ #define GIF_GCE_TRANSPARENCY_BYTE	3
+--- old/ungif.c	2011-01-15 06:52:22.000000000 +0100
++++ new/ungif.c	2016-01-17 22:25:50.189730290 +0100
+@@ -122,7 +122,12 @@
+ GifFileType*
+ open_gif_read( FILE *in_stream )
+ {
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++	int gif_error = 0;
++	return DGifOpen(in_stream, fread_gif, &gif_error);
++#else
+ 	return DGifOpen(in_stream, fread_gif);
++#endif
+ }
+ 
+ int
+@@ -169,6 +174,9 @@
+     SavedImage temp_save;
+ 	int curr_image = 0, ret_count = *ret_images ;
+ 	int status = GIF_OK;
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++	int ext_code = 0;
++#endif
+ 
+ 	memset( &temp_save, 0x00, sizeof( temp_save ) );
+ 	do
+@@ -197,6 +205,15 @@
+ 				break;
+ 
+ 	    	case EXTENSION_RECORD_TYPE:
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++				status = DGifGetExtension(gif,&ext_code,&ExtData);
++				while (ExtData != NULL && status == GIF_OK )
++				{
++            		/* Create an extension block with our data */
++            		if ((status = AddExtensionBlock(&temp_save, ExtData[0], (char*)&(ExtData[1]))) == GIF_OK)
++				    	status = DGifGetExtensionNext(gif, &ExtData);
++				}
++#else
+ 				status = DGifGetExtension(gif,&temp_save.Function,&ExtData);
+ 				while (ExtData != NULL && status == GIF_OK )
+ 				{
+@@ -205,6 +222,7 @@
+ 				    	status = DGifGetExtensionNext(gif, &ExtData);
+             		temp_save.Function = 0;
+ 				}
++#endif
+ 				break;
+ 
+ 	    	case TERMINATE_RECORD_TYPE:
+--- old/import.c	2016-01-17 22:16:23.459734471 +0100
++++ new/import.c	2016-01-17 22:26:27.689730013 +0100
+@@ -2289,14 +2289,20 @@
+ 			}
+ 			free_gif_saved_images( sp, count );
+ 		}else if( status != GIF_OK ) 
+-			ASIM_PrintGifError();
++			ASIM_PrintGifError(status);
+ 		else if( params->subimage == -1 )
+ 			show_error( "Image file \"%s\" does not have any valid image information.", path );
+ 		else
+ 			show_error( "Image file \"%s\" does not have subimage %d.", path, params->subimage );
+ 
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++		int gif_error = 0;
++		DGifCloseFile(gif, &gif_error);
++		fclose( fp );
++#else
+ 		DGifCloseFile(gif);
+ 		fclose( fp );
++#endif
+ 	}
+ 	SHOW_TIME("image loading",started);
+ 	return im ;
+--- old/export.c	2016-01-17 22:16:23.459734471 +0100
++++ new/export.c	2016-01-17 22:26:50.399729846 +0100
+@@ -1086,10 +1086,14 @@
+ 
+ 	while( cmap_size < 256 && cmap_size < (int)cmap.count+(gce_bytes[0]&0x01) )
+ 		cmap_size = cmap_size<<1 ;
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++	if( (gif_cmap = GifMakeMapObject(cmap_size, NULL )) == NULL )
++#else
+ 	if( (gif_cmap = MakeMapObject(cmap_size, NULL )) == NULL )
++#endif
+ 	{
+ 		free( mapped_im );
+-		ASIM_PrintGifError();
++		ASIM_PrintGifError(GIF_ERROR);
+ 		return False;
+ 	}
+ 	memcpy( &(gif_cmap->Colors[0]), &(cmap.entries[0]), MIN(cmap.count,(unsigned int)cmap_size)*3 );
+@@ -1104,10 +1108,15 @@
+ 		gif = open_gif_read(infile);
+ 		if( gif == NULL || get_gif_saved_images(gif, -1, &images, &count) == GIF_ERROR)
+ 		{
+-			ASIM_PrintGifError();
++			ASIM_PrintGifError(GIF_ERROR);
+ 			if( gif )
+ 			{
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++				int gif_errnum = 0;
++				DGifCloseFile (gif, &gif_errnum);
++#else
+ 				DGifCloseFile(gif);
++#endif
+ 				gif = NULL ;
+ 			}
+ 			if (infile)
+@@ -1123,15 +1132,26 @@
+ 			gif_src = *gif ;
+ 			gif->SColorMap = NULL ;
+ 			gif->Image.ColorMap = NULL ;
+-			DGifCloseFile(gif);
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++				int gif_errnum = 0;
++				DGifCloseFile (gif, &gif_errnum);
++#else
++				DGifCloseFile(gif);
++#endif
+ 			gif = NULL;
+ 			fclose (infile);
+ 			infile = NULL;
+ 			outfile = open_writeable_image_file( path );
+ 
+ 			if (outfile)
++			{
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++				int gif_errnum = 0;
++				gif = EGifOpenFileHandle(fileno(outfile), &gif_errnum);
++#else
+ 				gif = EGifOpenFileHandle(fileno(outfile));
+-				
++#endif
++			}
+ 			if (gif)
+ 			{
+ 				int status;
+@@ -1141,7 +1161,11 @@
+ 									   gif_src.SColorMap )) == GIF_OK )
+ 					status = write_gif_saved_images( gif, images, count );
+ 				if( status != GIF_OK )
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++					ASIM_PrintGifError(status);
++#else
+ 					ASIM_PrintGifError();
++#endif
+ 			}
+ 			if (gif_src.SColorMap)
+ 			{  /* we only want to save private colormap if it is any different from
+@@ -1160,7 +1184,11 @@
+ 				}
+ 				
+ 				if( EGifPutImageDesc(gif, 0, 0, im->width, im->height, FALSE, (dont_save_cmap)?NULL:gif_cmap ) == GIF_ERROR )
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++					ASIM_PrintGifError(gif->Error);
++#else
+ 					ASIM_PrintGifError();
++#endif
+ 			}
+ 		}
+ 		free_gif_saved_images( images, count );
+@@ -1172,19 +1200,35 @@
+ 			outfile = open_writeable_image_file(path);
+ 			
+ 		if (outfile)
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++		{
++			int gif_error = 0;
++			if ((gif = EGifOpenFileHandle(fileno(outfile), &gif_error)) == NULL)
++				ASIM_PrintGifError(gif_error);
++		}
++#else
+ 			if ((gif = EGifOpenFileHandle(fileno(outfile))) == NULL)
+ 				ASIM_PrintGifError();
++#endif
+ 	}
+ 
+ 	if( new_image && gif )
+ 	{
+ 		if( EGifPutScreenDesc(gif, im->width, im->height, cmap_size, 0, gif_cmap ) == GIF_ERROR )
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++			ASIM_PrintGifError(gif->Error);
++#else
+ 			ASIM_PrintGifError();
++#endif
+ 	
+ 		EGifPutExtension(gif, 0xf9, GIF_GCE_BYTES, &(gce_bytes[0]));
+ 	
+ 		if( EGifPutImageDesc(gif, 0, 0, im->width, im->height, FALSE, NULL ) == GIF_ERROR )
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++			ASIM_PrintGifError(gif->Error);
++#else
+ 			ASIM_PrintGifError();
++#endif
+ 	}
+ 
+ 	if( gif_cmap )
+@@ -1204,11 +1248,21 @@
+ 	  	    while( --x >= 0 )
+ 	  			row_pointer[x] = src[x] ;
+ 			if( EGifPutLine(gif, row_pointer, im->width)  == GIF_ERROR)
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++				ASIM_PrintGifError(gif->Error);
++#else
+ 				ASIM_PrintGifError();
++#endif
+ 		}
+ 		free( row_pointer );
++#if GIFLIB_MAJOR >= 5 && GIFLIB_MINOR >= 1
++		int gif_error;
++		if (EGifCloseFile(gif, &gif_error) == GIF_ERROR)
++			ASIM_PrintGifError(gif_error);
++#else
+ 		if (EGifCloseFile(gif) == GIF_ERROR)
+ 			ASIM_PrintGifError();
++#endif
+ 		gif = NULL;
+ 	}
+ 	free( mapped_im );

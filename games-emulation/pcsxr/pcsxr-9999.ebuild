@@ -4,10 +4,9 @@
 
 EAPI=5
 
-ESVN_REPO_URI="https://pcsxr.svn.codeplex.com/svn/pcsxr"
-ESVN_PROJECT="pcsxr"
+EGIT_REPO_URI="https://github.com/mirror/pcsxr.git"
 
-inherit autotools eutils games subversion
+inherit autotools eutils games git-r3
 
 DESCRIPTION="PCSX-Reloaded: a fork of PCSX, the discontinued Playstation emulator"
 HOMEPAGE="http://pcsxr.codeplex.com"
@@ -48,9 +47,9 @@ REQUIRED_USE="?? ( alsa openal oss pulseaudio sdl )"
 # it's only the .po file check that fails :)
 RESTRICT=test
 
-S=${WORKDIR}/${PN}
-
 src_prepare() {
+	mkdir ${S}/include || die
+
 	local PATCHES=(
 		"${FILESDIR}"/${PN}-disable-sdl2.patch
 		"${FILESDIR}"/${PN}-install-paths.patch

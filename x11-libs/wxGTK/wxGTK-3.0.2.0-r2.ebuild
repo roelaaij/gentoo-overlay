@@ -103,8 +103,8 @@ multilib_src_configure() {
 			--enable-graphics_ctx
 			--with-gtkprint
 			--enable-gui
-			--with-libpng=sys
 			--with-gtk=3
+			--with-libpng=sys
 			--with-libxpm=sys
 			--with-libjpeg=sys
 			--without-gnomevfs

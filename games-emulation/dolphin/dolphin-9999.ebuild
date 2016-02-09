@@ -23,16 +23,20 @@ HOMEPAGE="https://www.dolphin-emu.org/"
 
 LICENSE="GPL-2"
 SLOT="0"
+<<<<<<< HEAD
 IUSE="alsa ao bluetooth doc ffmpeg +lzo openal opengl portaudio pulseaudio wxwidgets qt"
+=======
+IUSE="alsa ao bluetooth doc egl ffmpeg +lzo openal opengl openmp portaudio pulseaudio wxwidgets qt"
+>>>>>>> 16a497ba071c502d3becd3d3d76e029a334df0fd
 
 RDEPEND=">=media-libs/glew-1.10
 	>=media-libs/libsfml-2.1
 	>=net-libs/miniupnpc-1.8
-	sys-libs/readline
+	sys-libs/readline:=
 	x11-libs/libXext
 	x11-libs/libXrandr
 	media-libs/libsdl2[haptic,joystick]
-	net-libs/polarssl[havege]
+	>=net-libs/mbedtls-2.0.1[havege]
 	alsa? ( media-libs/alsa-lib )
 	ao? ( media-libs/libao )
 	bluetooth? ( net-wireless/bluez )
@@ -48,6 +52,7 @@ DEPEND="${RDEPEND}
 	media-gfx/nvidia-cg-toolkit
 	media-libs/freetype
 	media-libs/libsoundtouch
+	net-libs/enet
 	>=sys-devel/gcc-4.6.0
 	wxwidgets? ( x11-libs/wxGTK:${WX_GTK_VER} )
 	qt? ( dev-qt/qtwidgets:5 )
@@ -71,43 +76,41 @@ src_prepare() {
 
 	# Remove automatic dependencies to prevent building without flags enabled.
 	if use !alsa; then
-		sed -i -e '/^include(FindALSA/d' CMakeLists.txt || die
+		sed -i -e '/include(FindALSA/d' CMakeLists.txt || die
 	fi
 	if use !ao; then
-		sed -i -e '/^check_lib(AO/d' CMakeLists.txt || die
+		sed -i -e '/check_lib(AO/d' CMakeLists.txt || die
 	fi
 	if use !bluetooth; then
-		sed -i -e '/^check_lib(BLUEZ/d' CMakeLists.txt || die
+		sed -i -e '/check_lib(BLUEZ/d' CMakeLists.txt || die
 	fi
 	if use !openal; then
-		sed -i -e '/^include(FindOpenAL/d' CMakeLists.txt || die
+		sed -i -e '/include(FindOpenAL/d' CMakeLists.txt || die
 	fi
 	if use !portaudio; then
 		sed -i -e '/CMAKE_REQUIRED_LIBRARIES portaudio/d' CMakeLists.txt || die
 	fi
 	if use !pulseaudio; then
-		sed -i -e '/^check_lib(PULSEAUDIO/d' CMakeLists.txt || die
+		sed -i -e '/check_lib(PULSEAUDIO/d' CMakeLists.txt || die
 	fi
 
 	# Remove ALL the bundled libraries, aside from:
 	# - SOIL: The sources are not public.
 	# - Bochs-disasm: Don't know what it is.
 	# - GL: A custom gl.h file is used.
-	# - polarssl: Not fully supported yet.
-	# - gtest: No idea. Removal causes build failure.
+	# - gtest: Their build set up solely relies on the build in gtest.
+	# - xxhash: Not on the tree.
 	mv Externals/SOIL . || die
 	mv Externals/Bochs_disasm . || die
-	mv Externals/polarssl . || die
-	mv Externals/GL . || die
 	mv Externals/gtest . || die
 	mv Externals/xxhash . || die
+	# mv Externals/enet . || die
 	rm -r Externals/* || die "Failed to delete Externals dir."
 	mv Bochs_disasm Externals || die
 	mv SOIL Externals || die
-	mv polarssl Externals || die
-	mv GL Externals || die
 	mv gtest Externals || die
 	mv xxhash Externals || die
+	# mv enet Externals || die
 
 	epatch_user
 }
@@ -120,9 +123,12 @@ src_configure() {
 		"-Dprefix=${GAMES_PREFIX}"
 		"-Ddatadir=${GAMES_DATADIR}/${PN}"
 		"-Dplugindir=$(games_get_libdir)/${PN}"
+		"-DUSE_SHARED_ENET=ON"
 		$( cmake-utils_use_disable wxwidgets WX )
-		$( cmake-utils_use_enable qt QT )
+		$( cmake-utils_use_enable egl EGL )
+		$( cmake-utils_use_enable qt QT2 )
 		$( cmake-utils_use ffmpeg ENCODE_FRAMEDUMPS )
+		$( cmake-utils_use openmp OPENMP )
 	)
 
 	cmake-utils_src_configure
@@ -143,7 +149,7 @@ src_install() {
 
 	doicon Installer/dolphin-emu.xpm
 	if use qt; then
-		dogamesbin ${BUILD_DIR}/Binaries/dolphin-emu-qt
+		dogamesbin ${BUILD_DIR}/Binaries/dolphin-emu-qt2
 		make_desktop_entry "dolphin-emu-qt" "Dolphin(Qt)" "Dolphin(Qt)" "Game;"
 	fi
 	if use wxwidgets; then

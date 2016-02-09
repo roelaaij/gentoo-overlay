@@ -1,0 +1,20 @@
+--- old/cmake/FindPhononInternal.cmake	2014-12-04 10:30:26.000000000 +0100
++++ new/cmake/FindPhononInternal.cmake	2015-07-12 19:38:34.509810156 +0200
+@@ -178,7 +178,7 @@
+ endif (PHONON_BUILD_PHONON4QT5)
+ set(BIN_INSTALL_DIR             "bin"     ) #         CACHE PATH "The install dir for executables (default ${EXEC_INSTALL_PREFIX}/bin)")
+ set(LIB_INSTALL_DIR             "${CMAKE_INSTALL_LIBDIR}" ) #  CACHE PATH "The subdirectory relative to the install prefix where libraries will be installed"
+-set(PLUGIN_INSTALL_DIR          "${LIB_INSTALL_DIR}/kde4"                   CACHE PATH "The subdirectory relative to the install prefix where plugins will be installed (default is ${LIB_INSTALL_DIR}/kde4)")
++set(PLUGIN_INSTALL_DIR          "${LIB_INSTALL_DIR}/qt4"                   CACHE PATH "The subdirectory relative to the install prefix where plugins will be installed (default is ${LIB_INSTALL_DIR}/qt4)")
+ if (PHONON_BUILD_PHONON4QT5)
+     set(PLUGIN_INSTALL_DIR          "${LIB_INSTALL_DIR}/qt5"                   CACHE PATH "The subdirectory relative to the install prefix where plugins will be installed (default is ${LIB_INSTALL_DIR}/qt5)" FORCE)
+ endif(PHONON_BUILD_PHONON4QT5)
+@@ -359,7 +359,7 @@
+    check_cxx_compiler_flag(-fPIE HAVE_FPIE_SUPPORT)
+    if(KDE4_ENABLE_FPIE)
+        if(HAVE_FPIE_SUPPORT)
+-        set (KDE4_CXX_FPIE_FLAGS "-fPIE")
++        set (KDE4_CXX_FPIE_FLAGS "-fPIE -fPIC -DPIC")
+         set (KDE4_PIE_LDFLAGS "-pie")
+        else(HAVE_FPIE_SUPPORT)
+         message(STATUS "Your compiler doesn't support the PIE flag")

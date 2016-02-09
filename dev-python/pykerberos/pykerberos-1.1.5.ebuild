@@ -22,6 +22,6 @@ RDEPEND="${DEPEND}"
 
 src_prepare() {
 	if has_version app-crypt/heimdal; then
-		epatch "${FILESDIR}"/pykerberos-heimdal.patch
+		epatch "${FILESDIR}"/${P}-heimdal.patch
 	fi
 }

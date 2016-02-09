@@ -38,7 +38,8 @@ src_unpack() {
 
 src_prepare() {
 
-	EPATCH_EXCLUDE="020_all_fbsd.patch" EPATCH_SUFFIX="patch" \
+	EPATCH_EXCLUDE="012_all_kbuild.patch 020_all_fbsd.patch" \
+	EPATCH_SUFFIX="patch" \
 	epatch "${WORKDIR}"/gentoo/patches
 	epatch_user
 

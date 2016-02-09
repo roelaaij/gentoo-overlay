@@ -1,0 +1,11 @@
+--- old/src/Makefile.am	2015-07-01 10:24:20.000000000 +0200
++++ new/src/Makefile.am	2015-07-09 13:01:49.379956528 +0200
+@@ -195,7 +195,7 @@
+ # Wayland protocol
+ protocol_source_h = wayland-drm-client-protocol.h
+ i965_output_wayland.c: $(protocol_source_h)
+-@wayland_scanner_rules@
++	@wayland_scanner_rules@
+ 
+ DIST_SUBDIRS	+= wayland
+ 

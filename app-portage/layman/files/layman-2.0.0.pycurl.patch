@@ -1,0 +1,227 @@
+--- old/layman/db.py	2014-05-25 10:05:29.659981248 +0200
++++ new/layman/db.py	2014-05-25 10:02:48.719982435 +0200
+@@ -28,7 +28,8 @@
+ 
+ import os, os.path
+ import sys
+-import urllib2
++import pycurl
++import cStringIO
+ import hashlib
+ 
+ from   layman.utils             import path, delete_empty_directory, encoder
+@@ -39,6 +40,83 @@
+ 
+ #from   layman.debug             import OUT
+ 
++class RequestError(BaseException):
++    def __init__(self, code, message, body):
++        self.code = code
++        self.body = body
++
++    def __str__(self):
++        return str(self.body)
++        
++from BaseHTTPServer import BaseHTTPRequestHandler
++class HTTPRequest(BaseHTTPRequestHandler):
++    def __init__(self, buf):
++        buf.seek(0)
++        self.rfile = buf
++        self.raw_requestline = self.rfile.readline()
++        self.error_code = self.error_message = None
++        self.parse_request()
++
++    def send_error(self, code, message):
++        self.error_code = code
++        self.error_message = message
++
++    def parse_request(self):
++        """Parse a request (internal).
++
++        The request should be stored in self.raw_requestline; the results
++        are in self.command, self.path, self.request_version and
++        self.headers.
++
++        Return True for success, False for failure; on failure, an
++        error is sent back.
++
++        """
++        self.command = None  # set in case of error on the first line
++        self.request_version = version = self.default_request_version
++        requestline = self.raw_requestline
++        requestline = requestline.rstrip('\r\n')
++        self.requestline = requestline
++        words = requestline.split(' ', 2)
++        if len(words) == 3:
++            version, code, msg = words
++            if version[:5] != 'HTTP/':
++                self.send_error(400, "Bad request version (%r)" % version)
++                return False
++            try:
++                base_version_number = version.split('/', 1)[1]
++                version_number = base_version_number.split(".")
++                # RFC 2145 section 3.1 says there can be only one "." and
++                #   - major and minor numbers MUST be treated as
++                #      separate integers;
++                #   - HTTP/2.4 is a lower version than HTTP/2.13, which in
++                #      turn is lower than HTTP/12.3;
++                #   - Leading zeros MUST be ignored by recipients.
++                if len(version_number) != 2:
++                    raise ValueError
++                version_number = int(version_number[0]), int(version_number[1])
++            except (ValueError, IndexError):
++                self.send_error(400, "Bad request version (%r)" % version)
++                return False
++            if version_number >= (2, 0):
++                self.send_error(505,
++                          "Invalid HTTP Version (%s)" % base_version_number)
++                return False
++            if int(code) != 200:
++                raise RequestError(int(code), msg, requestline)
++        elif not words:
++            return False
++        else:
++            self.send_error(400, "Bad request syntax (%r)" % requestline)
++            return False
++        self.request_version = version
++
++        # Examine the headers and look for a Connection directive
++        from email.parser import Parser
++        parser = Parser()
++        self.headers = parser.parse(self.rfile, 0)
++        return True
++
+ #===============================================================================
+ #
+ # Class DB
+@@ -261,11 +339,6 @@
+         elif os.getenv('http_proxy'):
+             self.proxies['http'] = os.getenv('http_proxy')
+ 
+-        if self.proxies:
+-            proxy_handler = urllib2.ProxyHandler(self.proxies)
+-            opener = urllib2.build_opener(proxy_handler)
+-            urllib2.install_opener(opener)
+-
+         self.urls  = [i.strip() for i in config['overlays'].split('\n') if len(i)]
+ 
+         paths = [self.filepath(i) + '.xml' for i in self.urls]
+@@ -319,7 +392,19 @@
+         has_updates = False
+         # succeeded reset when a failure is detected
+         succeeded = True
++
++        content = cStringIO.StringIO()
++        c = pycurl.Curl()
++        c.setopt(c.FOLLOWLOCATION, 1)
++        c.setopt(c.WRITEFUNCTION, content.write)
++        if self.proxies and 'http' in self.proxies:
++            c.setopt(c.PROXY, self.proxies['http'])
++        def __close():
++            content.close()
++            c.close()
++
+         for url in self.urls:
++            c.setopt(c.URL, url)
+ 
+             filepath = self.filepath(url)
+             mpath = filepath + '.xml'
+@@ -327,29 +412,33 @@
+ 
+             # check when the cache was last updated
+             # and don't re-fetch it unless it has changed
+-            request = urllib2.Request(url)
+-            opener = urllib2.build_opener()
+-            opener.addheaders = [('User-Agent', 'Layman-' + VERSION)]
+-
++            c.setopt(c.HEADER, 1)
++            c.setopt(c.NOBODY, 1)
++            add_headers = ['User-Agent: Layman-' + VERSION]
++            
+             if os.path.exists(tpath):
+                 with fileopen(tpath,'r') as previous:
+                     timestamp = previous.read()
+-                request.add_header('If-Modified-Since', timestamp)
++                add_headers.append('If-Modified-Since: %s' % timestamp)
+ 
++            # Set headers
++            c.setopt(c.HTTPHEADER, add_headers)
++            
+             if not self.check_path([mpath]):
+                 continue
+ 
+             try:
+-                connection = opener.open(request)
++                c.perform()
++                request = HTTPRequest(content)
+                 # py2, py3 compatibility, since only py2 returns keys as lower()
+-                headers = dict((x.lower(), x) for x in connection.headers.keys())
+-                if 'last-modified' in headers:
+-                    timestamp = connection.headers[headers['last-modified']]
+-                elif 'date' in headers:
+-                    timestamp = connection.headers[headers['date']]
++                heads = dict((x.lower(), y) for x, y in request.headers.items())
++                if 'last-modified' in heads:
++                    timestamp = heads['last-modified']
++                elif 'date' in heads:
++                    timestamp = heads['date']
+                 else:
+                     timestamp = None
+-            except urllib2.HTTPError, e:
++            except RequestError, e:
+                 if e.code == 304:
+                     self.output.info('Remote list already up to date: %s'
+                         % url, 4)
+@@ -360,12 +449,6 @@
+                         % (url, str(e)))
+                     succeeded = False
+                 continue
+-            except IOError, error:
+-                self.output.error('RemoteDB.cache(); Failed to update the '
+-                    'overlay list from: %s\nIOError was:%s\n'
+-                    % (url, str(error)))
+-                succeeded = False
+-                continue
+             else:
+                 if url.startswith('file://'):
+                     quieter = 1
+@@ -375,13 +458,17 @@
+                 if timestamp is not None:
+                     self.output.info('Last-modified: %s' % timestamp, 4 + quieter)
+                 # Fetch the remote list
+-                olist = connection.read()
+ 
++                c.setopt(c.HTTPGET, 1)
++                c.setopt(c.HEADER, 0)
++                c.perform()
++                olist = content.getvalue().split('\r\n\r\n', 1)[1]
+                 # Create our storage directory if it is missing
+                 if not os.path.exists(os.path.dirname(mpath)):
+                     try:
+                         os.makedirs(os.path.dirname(mpath))
+                     except OSError, error:
++                        __close()
+                         raise OSError('Failed to create layman storage direct'
+                                       + 'ory ' + os.path.dirname(mpath) + '\n'
+                                       + 'Error was:' + str(error))
+@@ -391,6 +478,7 @@
+                 try:
+                     self.read(olist, origin=url)
+                 except Exception, error:
++                    __close()
+                     raise IOError('Failed to parse the overlays list fetched fr'
+                                   'om ' + url + '\nThis means that the download'
+                                   'ed file is somehow corrupt or there was a pr'
+@@ -414,10 +502,12 @@
+                     has_updates = True
+ 
+                 except Exception, error:
++                    __close()
+                     raise IOError('Failed to temporarily cache overlays list in'
+                                   ' ' + mpath + '\nError was:\n' + str(error))
+         self.output.debug("RemoteDB.cache() returning:  has_updates, succeeded"
+             " %s, %s" % (str(has_updates), str(succeeded)), 4)
++        __close()
+         return has_updates, succeeded
+ 
+ 

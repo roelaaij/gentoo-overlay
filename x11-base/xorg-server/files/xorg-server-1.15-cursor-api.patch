@@ -1,0 +1,309 @@
+From 4c3932620c29c91dfbbc8eb09c84efcaa7ec873e Mon Sep 17 00:00:00 2001
+From: Keith Packard <keithp@keithp.com>
+Date: Fri, 25 Apr 2014 15:22:15 +0000
+Subject: hw/xfree86: Restore API compatibility for cursor loading functions
+
+Create load_cursor_image_check, load_cursor_argb_check,
+LoadCursorImageCheck and LoadCursorARGBCheck that can return failure
+and use them in preference to the old unchecked variants.
+
+Signed-off-by: Keith Packard <keithp@keithp.com>
+Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+Reviewed-by: Michael Thayer <michael.thayer@oracle.com>
+---
+diff --git a/hw/xfree86/modes/xf86Crtc.h b/hw/xfree86/modes/xf86Crtc.h
+index 5407deb..eebe6f4 100644
+--- a/hw/xfree86/modes/xf86Crtc.h
++++ b/hw/xfree86/modes/xf86Crtc.h
+@@ -186,14 +186,18 @@ typedef struct _xf86CrtcFuncs {
+     /**
+      * Load monochrome image
+      */
+-    Bool
++    void
+      (*load_cursor_image) (xf86CrtcPtr crtc, CARD8 *image);
++    Bool
++     (*load_cursor_image_check) (xf86CrtcPtr crtc, CARD8 *image);
+ 
+     /**
+      * Load ARGB image
+      */
+-    Bool
++    void
+      (*load_cursor_argb) (xf86CrtcPtr crtc, CARD32 *image);
++    Bool
++     (*load_cursor_argb_check) (xf86CrtcPtr crtc, CARD32 *image);
+ 
+     /**
+      * Clean up driver-specific bits of the crtc
+diff --git a/hw/xfree86/modes/xf86Cursors.c b/hw/xfree86/modes/xf86Cursors.c
+index 10ef6f6..379a27a 100644
+--- a/hw/xfree86/modes/xf86Cursors.c
++++ b/hw/xfree86/modes/xf86Cursors.c
+@@ -209,6 +209,40 @@ set_bit(CARD8 *image, xf86CursorInfoPtr cursor_info, int x, int y, Bool mask)
+ }
+ 
+ /*
++ * Wrappers to deal with API compatibility with drivers that don't expose
++ * load_cursor_*_check
++ */
++static inline Bool
++xf86_driver_has_load_cursor_image(xf86CrtcPtr crtc)
++{
++    return crtc->funcs->load_cursor_image_check || crtc->funcs->load_cursor_image;
++}
++
++static inline Bool
++xf86_driver_has_load_cursor_argb(xf86CrtcPtr crtc)
++{
++    return crtc->funcs->load_cursor_argb_check || crtc->funcs->load_cursor_argb;
++}
++
++static inline Bool
++xf86_driver_load_cursor_image(xf86CrtcPtr crtc, CARD8 *cursor_image)
++{
++    if (crtc->funcs->load_cursor_image_check)
++        return crtc->funcs->load_cursor_image_check(crtc, cursor_image);
++    crtc->funcs->load_cursor_image(crtc, cursor_image);
++    return TRUE;
++}
++
++static inline Bool
++xf86_driver_load_cursor_argb(xf86CrtcPtr crtc, CARD32 *cursor_argb)
++{
++    if (crtc->funcs->load_cursor_argb_check)
++        return crtc->funcs->load_cursor_argb_check(crtc, cursor_argb);
++    crtc->funcs->load_cursor_argb(crtc, cursor_argb);
++    return TRUE;
++}
++
++/*
+  * Load a two color cursor into a driver that supports only ARGB cursors
+  */
+ static Bool
+@@ -244,7 +278,7 @@ xf86_crtc_convert_cursor_to_argb(xf86CrtcPtr crtc, unsigned char *src)
+                 bits = 0;
+             cursor_image[y * cursor_info->MaxWidth + x] = bits;
+         }
+-    return crtc->funcs->load_cursor_argb(crtc, cursor_image);
++    return xf86_driver_load_cursor_argb(crtc, cursor_image);
+ }
+ 
+ /*
+@@ -269,7 +303,7 @@ xf86_set_cursor_colors(ScrnInfoPtr scrn, int bg, int fg)
+         xf86CrtcPtr crtc = xf86_config->crtc[c];
+ 
+         if (crtc->enabled && !crtc->cursor_argb) {
+-            if (crtc->funcs->load_cursor_image)
++            if (xf86_driver_has_load_cursor_image(crtc))
+                 crtc->funcs->set_cursor_colors(crtc, bg, fg);
+             else if (bits)
+                 xf86_crtc_convert_cursor_to_argb(crtc, bits);
+@@ -450,7 +484,7 @@ xf86_crtc_load_cursor_image(xf86CrtcPtr crtc, CARD8 *src)
+                     set_bit(cursor_image, cursor_info, x, y, TRUE);
+             }
+     }
+-    return crtc->funcs->load_cursor_image(crtc, cursor_image);
++    return xf86_driver_load_cursor_image(crtc, cursor_image);
+ }
+ 
+ /*
+@@ -466,10 +500,10 @@ xf86_load_cursor_image(ScrnInfoPtr scrn, unsigned char *src)
+         xf86CrtcPtr crtc = xf86_config->crtc[c];
+ 
+         if (crtc->enabled) {
+-            if (crtc->funcs->load_cursor_image) {
++            if (xf86_driver_has_load_cursor_image(crtc)) {
+                 if (!xf86_crtc_load_cursor_image(crtc, src))
+                     return FALSE;
+-            } else if (crtc->funcs->load_cursor_argb) {
++            } else if (xf86_driver_has_load_cursor_argb(crtc)) {
+                 if (!xf86_crtc_convert_cursor_to_argb(crtc, src))
+                     return FALSE;
+             } else
+@@ -549,7 +583,7 @@ xf86_crtc_load_cursor_argb(xf86CrtcPtr crtc, CursorPtr cursor)
+             cursor_image[y * image_width + x] = bits;
+         }
+ 
+-    return crtc->funcs->load_cursor_argb(crtc, cursor_image);
++    return xf86_driver_load_cursor_argb(crtc, cursor_image);
+ }
+ 
+ static Bool
+@@ -594,14 +628,14 @@ xf86_cursors_init(ScreenPtr screen, int max_width, int max_height, int flags)
+ 
+     cursor_info->SetCursorColors = xf86_set_cursor_colors;
+     cursor_info->SetCursorPosition = xf86_set_cursor_position;
+-    cursor_info->LoadCursorImage = xf86_load_cursor_image;
++    cursor_info->LoadCursorImageCheck = xf86_load_cursor_image;
+     cursor_info->HideCursor = xf86_hide_cursors;
+     cursor_info->ShowCursor = xf86_show_cursors;
+     cursor_info->UseHWCursor = xf86_use_hw_cursor;
+ #ifdef ARGB_CURSOR
+     if (flags & HARDWARE_CURSOR_ARGB) {
+         cursor_info->UseHWCursorARGB = xf86_use_hw_cursor_argb;
+-        cursor_info->LoadCursorARGB = xf86_load_cursor_argb;
++        cursor_info->LoadCursorARGBCheck = xf86_load_cursor_argb;
+     }
+ #endif
+ 
+@@ -658,11 +692,11 @@ xf86_reload_cursors(ScreenPtr screen)
+             dixLookupScreenPrivate(&cursor->devPrivates, CursorScreenKey,
+                                    screen);
+ #ifdef ARGB_CURSOR
+-        if (cursor->bits->argb && cursor_info->LoadCursorARGB)
+-            (*cursor_info->LoadCursorARGB) (scrn, cursor);
++        if (cursor->bits->argb && xf86DriverHasLoadCursorARGB(cursor_info))
++            xf86DriverLoadCursorARGB(cursor_info, cursor);
+         else if (src)
+ #endif
+-            (*cursor_info->LoadCursorImage) (scrn, src);
++            xf86DriverLoadCursorImage(cursor_info, src);
+ 
+         x += scrn->frameX0 + cursor_screen_priv->HotX;
+         y += scrn->frameY0 + cursor_screen_priv->HotY;
+diff --git a/hw/xfree86/ramdac/IBM.c b/hw/xfree86/ramdac/IBM.c
+index 872d3d4..45876cf 100644
+--- a/hw/xfree86/ramdac/IBM.c
++++ b/hw/xfree86/ramdac/IBM.c
+@@ -622,7 +622,7 @@ IBMramdac526HWCursorInit(xf86CursorInfoPtr infoPtr)
+         HARDWARE_CURSOR_SOURCE_MASK_INTERLEAVE_1;
+     infoPtr->SetCursorColors = IBMramdac526SetCursorColors;
+     infoPtr->SetCursorPosition = IBMramdac526SetCursorPosition;
+-    infoPtr->LoadCursorImage = IBMramdac526LoadCursorImage;
++    infoPtr->LoadCursorImageCheck = IBMramdac526LoadCursorImage;
+     infoPtr->HideCursor = IBMramdac526HideCursor;
+     infoPtr->ShowCursor = IBMramdac526ShowCursor;
+     infoPtr->UseHWCursor = IBMramdac526UseHWCursor;
+@@ -638,7 +638,7 @@ IBMramdac640HWCursorInit(xf86CursorInfoPtr infoPtr)
+         HARDWARE_CURSOR_SOURCE_MASK_INTERLEAVE_1;
+     infoPtr->SetCursorColors = IBMramdac640SetCursorColors;
+     infoPtr->SetCursorPosition = IBMramdac640SetCursorPosition;
+-    infoPtr->LoadCursorImage = IBMramdac640LoadCursorImage;
++    infoPtr->LoadCursorImageCheck = IBMramdac640LoadCursorImage;
+     infoPtr->HideCursor = IBMramdac640HideCursor;
+     infoPtr->ShowCursor = IBMramdac640ShowCursor;
+     infoPtr->UseHWCursor = IBMramdac640UseHWCursor;
+diff --git a/hw/xfree86/ramdac/TI.c b/hw/xfree86/ramdac/TI.c
+index 7d4e0d7..2492bb5 100644
+--- a/hw/xfree86/ramdac/TI.c
++++ b/hw/xfree86/ramdac/TI.c
+@@ -676,7 +676,7 @@ TIramdacHWCursorInit(xf86CursorInfoPtr infoPtr)
+         HARDWARE_CURSOR_SOURCE_MASK_NOT_INTERLEAVED;
+     infoPtr->SetCursorColors = TIramdacSetCursorColors;
+     infoPtr->SetCursorPosition = TIramdacSetCursorPosition;
+-    infoPtr->LoadCursorImage = TIramdacLoadCursorImage;
++    infoPtr->LoadCursorImageCheck = TIramdacLoadCursorImage;
+     infoPtr->HideCursor = TIramdacHideCursor;
+     infoPtr->ShowCursor = TIramdacShowCursor;
+     infoPtr->UseHWCursor = TIramdacUseHWCursor;
+diff --git a/hw/xfree86/ramdac/xf86Cursor.h b/hw/xfree86/ramdac/xf86Cursor.h
+index 1ecbdcd..a389a99 100644
+--- a/hw/xfree86/ramdac/xf86Cursor.h
++++ b/hw/xfree86/ramdac/xf86Cursor.h
+@@ -12,7 +12,8 @@ typedef struct _xf86CursorInfoRec {
+     int MaxHeight;
+     void (*SetCursorColors) (ScrnInfoPtr pScrn, int bg, int fg);
+     void (*SetCursorPosition) (ScrnInfoPtr pScrn, int x, int y);
+-    Bool (*LoadCursorImage) (ScrnInfoPtr pScrn, unsigned char *bits);
++    void (*LoadCursorImage) (ScrnInfoPtr pScrn, unsigned char *bits);
++    Bool (*LoadCursorImageCheck) (ScrnInfoPtr pScrn, unsigned char *bits);
+     void (*HideCursor) (ScrnInfoPtr pScrn);
+     void (*ShowCursor) (ScrnInfoPtr pScrn);
+     unsigned char *(*RealizeCursor) (struct _xf86CursorInfoRec *, CursorPtr);
+@@ -20,11 +21,42 @@ typedef struct _xf86CursorInfoRec {
+ 
+ #ifdef ARGB_CURSOR
+     Bool (*UseHWCursorARGB) (ScreenPtr, CursorPtr);
+-    Bool (*LoadCursorARGB) (ScrnInfoPtr, CursorPtr);
++    void (*LoadCursorARGB) (ScrnInfoPtr, CursorPtr);
++    Bool (*LoadCursorARGBCheck) (ScrnInfoPtr, CursorPtr);
+ #endif
+ 
+ } xf86CursorInfoRec, *xf86CursorInfoPtr;
+ 
++static inline Bool
++xf86DriverHasLoadCursorImage(xf86CursorInfoPtr infoPtr)
++{
++    return infoPtr->LoadCursorImageCheck || infoPtr->LoadCursorImage;
++}
++
++static inline Bool
++xf86DriverLoadCursorImage(xf86CursorInfoPtr infoPtr, unsigned char *bits)
++{
++    if(infoPtr->LoadCursorImageCheck)
++        return infoPtr->LoadCursorImageCheck(infoPtr->pScrn, bits);
++    infoPtr->LoadCursorImage(infoPtr->pScrn, bits);
++    return TRUE;
++}
++
++static inline Bool
++xf86DriverHasLoadCursorARGB(xf86CursorInfoPtr infoPtr)
++{
++    return infoPtr->LoadCursorARGBCheck || infoPtr->LoadCursorARGB;
++}
++
++static inline Bool
++xf86DriverLoadCursorARGB(xf86CursorInfoPtr infoPtr, CursorPtr pCursor)
++{
++    if(infoPtr->LoadCursorARGBCheck)
++        return infoPtr->LoadCursorARGBCheck(infoPtr->pScrn, pCursor);
++    infoPtr->LoadCursorARGB(infoPtr->pScrn, pCursor);
++    return TRUE;
++}
++
+ extern _X_EXPORT Bool xf86InitCursor(ScreenPtr pScreen,
+                                      xf86CursorInfoPtr infoPtr);
+ extern _X_EXPORT xf86CursorInfoPtr xf86CreateCursorInfoRec(void);
+diff --git a/hw/xfree86/ramdac/xf86HWCurs.c b/hw/xfree86/ramdac/xf86HWCurs.c
+index 0b5caa2..953c86a 100644
+--- a/hw/xfree86/ramdac/xf86HWCurs.c
++++ b/hw/xfree86/ramdac/xf86HWCurs.c
+@@ -87,7 +87,7 @@ xf86InitHardwareCursor(ScreenPtr pScreen, xf86CursorInfoPtr infoPtr)
+ 
+     /* These are required for now */
+     if (!infoPtr->SetCursorPosition ||
+-        !infoPtr->LoadCursorImage ||
++        !xf86DriverHasLoadCursorImage(infoPtr) ||
+         !infoPtr->HideCursor ||
+         !infoPtr->ShowCursor || !infoPtr->SetCursorColors)
+         return FALSE;
+@@ -140,7 +140,7 @@ xf86SetCursor(ScreenPtr pScreen, CursorPtr pCurs, int x, int y)
+     y -= infoPtr->pScrn->frameY0 + ScreenPriv->HotY;
+ 
+ #ifdef ARGB_CURSOR
+-    if (!pCurs->bits->argb || !infoPtr->LoadCursorARGB)
++    if (!pCurs->bits->argb || !xf86DriverHasLoadCursorARGB(infoPtr))
+ #endif
+         if (!bits) {
+             bits = (*infoPtr->RealizeCursor) (infoPtr, pCurs);
+@@ -152,13 +152,13 @@ xf86SetCursor(ScreenPtr pScreen, CursorPtr pCurs, int x, int y)
+         (*infoPtr->HideCursor) (infoPtr->pScrn);
+ 
+ #ifdef ARGB_CURSOR
+-    if (pCurs->bits->argb && infoPtr->LoadCursorARGB) {
+-        if (!(*infoPtr->LoadCursorARGB) (infoPtr->pScrn, pCurs))
++    if (pCurs->bits->argb && xf86DriverHasLoadCursorARGB(infoPtr)) {
++        if (!xf86DriverLoadCursorARGB (infoPtr, pCurs))
+             return FALSE;
+     } else
+ #endif
+     if (bits)
+-        if (!(*infoPtr->LoadCursorImage) (infoPtr->pScrn, bits))
++        if (!xf86DriverLoadCursorImage (infoPtr, bits))
+             return FALSE;
+ 
+     xf86RecolorCursor(pScreen, pCurs, 1);
+@@ -185,8 +185,8 @@ xf86SetTransparentCursor(ScreenPtr pScreen)
+         (*infoPtr->HideCursor) (infoPtr->pScrn);
+ 
+     if (ScreenPriv->transparentData)
+-        (*infoPtr->LoadCursorImage) (infoPtr->pScrn,
+-                                     ScreenPriv->transparentData);
++        xf86DriverLoadCursorImage (infoPtr,
++                                   ScreenPriv->transparentData);
+ 
+     (*infoPtr->ShowCursor) (infoPtr->pScrn);
+ }
+--
+cgit v0.9.0.2-2-gbebe

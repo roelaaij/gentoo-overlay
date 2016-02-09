@@ -23,11 +23,7 @@ HOMEPAGE="https://www.dolphin-emu.org/"
 
 LICENSE="GPL-2"
 SLOT="0"
-<<<<<<< HEAD
-IUSE="alsa ao bluetooth doc ffmpeg +lzo openal opengl portaudio pulseaudio wxwidgets qt"
-=======
 IUSE="alsa ao bluetooth doc egl ffmpeg +lzo openal opengl openmp portaudio pulseaudio wxwidgets qt"
->>>>>>> 16a497ba071c502d3becd3d3d76e029a334df0fd
 
 RDEPEND=">=media-libs/glew-1.10
 	>=media-libs/libsfml-2.1

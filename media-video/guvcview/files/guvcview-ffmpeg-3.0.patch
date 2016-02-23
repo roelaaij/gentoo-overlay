@@ -1,0 +1,33 @@
+--- old/gview_v4l2core/uvc_h264.c	2014-10-05 12:41:44.000000000 +0200
++++ new/gview_v4l2core/uvc_h264.c	2016-02-19 09:54:44.719981941 +0100
+@@ -1072,7 +1072,7 @@
+ 	}
+ 	
+ 	h264_ctx->context->flags2 |= CODEC_FLAG2_FAST;
+-	h264_ctx->context->pix_fmt = PIX_FMT_YUV420P;
++	h264_ctx->context->pix_fmt = AV_PIX_FMT_YUV420P;
+ 	h264_ctx->context->width = width;
+ 	h264_ctx->context->height = height;
+ 	//h264_ctx->context->dsp_mask = (FF_MM_MMX | FF_MM_MMXEXT | FF_MM_SSE);
+--- old/gview_v4l2core/jpeg_decoder.c	2014-10-05 12:41:44.000000000 +0200
++++ new/gview_v4l2core/jpeg_decoder.c	2016-02-19 09:55:04.709981794 +0100
+@@ -1439,7 +1439,7 @@
+ 		exit(-1);
+ 	}
+ 
+-	codec_data->context->pix_fmt = PIX_FMT_YUV422P;
++	codec_data->context->pix_fmt = AV_PIX_FMT_YUV422P;
+ 	codec_data->context->width = width;
+ 	codec_data->context->height = height;
+ 	//jpeg_ctx->context->dsp_mask = (FF_MM_MMX | FF_MM_MMXEXT | FF_MM_SSE);
+--- old/gview_encoder/encoder.c	2014-10-05 12:41:44.000000000 +0200
++++ new/gview_encoder/encoder.c	2016-02-19 09:55:48.939981467 +0100
+@@ -1434,7 +1434,7 @@
+ 		/*convert default yuyv to y420p (libav input format)*/		
+ 		switch(video_codec_data->codec_context->pix_fmt)
+ 		{
+-			case PIX_FMT_YUVJ420P:
++			case AV_PIX_FMT_YUVJ420P:
+ 				yuv422to420p(encoder_ctx, input_frame);
+ 				break;
+ 			default:

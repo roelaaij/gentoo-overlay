@@ -3,7 +3,7 @@
 # $Header: $
 
 EAPI=5
-PLOCALES="ar ar_SY bg ca cs da de el_GR en_GB en_US es et eu fi fr gl he_IL hr
+PLOCALES="ar ar_SY bg cs da de el_GR en_GB en_US es et eu fi fr gl he_IL hr
 hu id it ja ka ko ku lt mk ms_MY nl nn_NO pl pt pt_BR ro_RO ru_RU sk sl_SI sq_AL
 sr sv th tr uk_UA vi_VN zh_CN zh_TW"
 PLOCALE_BACKUP="en_US"
@@ -35,8 +35,12 @@ DEPEND="
 		dev-qt/qtxml:5
 		autoshutdown? ( dev-qt/qtdbus:5 )
 		mpris? ( dev-qt/qtdbus:5 )
-		streaming? ( dev-qt/qtnetwork:5[ssl]
-			dev-qt/qtscript:5 ) )"
+		streaming? (
+			dev-qt/qtnetwork:5[ssl]
+			dev-qt/qtscript:5
+				   )
+		)
+"
 RDEPEND="${DEPEND}
 	|| ( media-video/mplayer[bidi?,libass,png,X]
 		( >=media-video/mpv-0.6.2[libass,X]
@@ -139,7 +143,7 @@ src_compile() {
 
 src_install() {
 	# remove unneeded copies of GPL
-	rm Copying* docs/{cs,en,hu,it,ja,pt,ru,zh_CN}/gpl.html || die
+	rm Copying* docs/{cs,en,hu,it,ja,ru,zh_CN}/gpl.html || die
 	rm -r docs/{de,es,fr,nl,ro} || die
 
 	emake DESTDIR="${D}" install

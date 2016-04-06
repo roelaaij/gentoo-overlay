@@ -143,8 +143,8 @@ src_install() {
 		dodoc -r docs/ActionReplay docs/DSP docs/WiiMote
 	fi
 
-	doicon Installer/dolphin-emu.svg
-	doicon Installer/dolphin-emu.png
+	doicon Data/dolphin-emu.svg
+	doicon Data/dolphin-emu.png
 	if use qt; then
 		dogamesbin ${BUILD_DIR}/Binaries/dolphin-emu-qt2
 		make_desktop_entry "dolphin-emu-qt" "Dolphin(Qt)" "Dolphin(Qt)" "Game;"

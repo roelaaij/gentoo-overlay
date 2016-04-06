@@ -1,13 +1,16 @@
---- a/src/core.cpp
-+++ b/src/core.cpp
-@@ -1811,10 +1811,6 @@
+--- old/src/core.cpp	2016-03-15 12:18:33.225606273 +0100
++++ new/src/core.cpp	2016-03-15 12:18:17.215606391 +0100
+@@ -1832,13 +1832,6 @@
  
  		proc->setOption("ass-font-scale", QString::number(mset.sub_scale_ass));
  
--		if (!pref->mplayer_is_mplayer2) {
+-		#ifdef MPLAYER2_SUPPORT
+-		if (!pref->mplayer_is_mplayer2)
+-		#endif
+-		{
 -			proc->setOption("flip-hebrew",false); // It seems to be necessary to display arabic subtitles correctly when using -ass
 -		}
 -
  		if (pref->enable_ass_styles) {
- 			if (!pref->force_ass_styles) {
- 				// Load the styles.ass file
+ 			QString ass_force_style;
+ 			if (!pref->user_forced_ass_style.isEmpty()) {

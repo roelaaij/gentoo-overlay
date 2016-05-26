@@ -3,9 +3,9 @@
 # $Header: $
 
 EAPI=5
-PLOCALES="ar ar_SY bg cs da de el_GR en_GB en_US es et eu fi fr gl he_IL hr
+PLOCALES="am ar ar_SY bg ca cs da de el_GR en_GB en_US es et eu fa fi fr gl he_IL hr
 hu id it ja ka ko ku lt mk ms_MY nl nn_NO pl pt pt_BR ro_RO ru_RU sk sl_SI sq_AL
-sr sv th tr uk_UA vi_VN zh_CN zh_TW"
+sr sv th tr uk_UA uz vi_VN zh_CN zh_TW"
 PLOCALE_BACKUP="en_US"
 inherit eutils l10n qmake-utils subversion
 

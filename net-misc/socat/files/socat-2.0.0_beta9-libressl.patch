@@ -1,0 +1,273 @@
+--- old/sslcls.h	2015-04-06 11:52:38.000000000 +0200
++++ new/sslcls.h	2016-06-06 10:41:01.148075937 +0200
+@@ -8,12 +8,18 @@
+ #if WITH_SYCLS
+ #if WITH_OPENSSL
+ 
++#include <openssl/comp.h>
++
+ void sycSSL_load_error_strings(void);
+ int sycSSL_library_init(void);
+ const SSL_METHOD *sycSSLv2_client_method(void);
+ const SSL_METHOD *sycSSLv2_server_method(void);
++
++#if !defined(LIBRESSL_VERSION_NUMBER) || LIBRESSL_VERSION_NUMBER < 0x2030000fL
+ const SSL_METHOD *sycSSLv3_client_method(void);
+ const SSL_METHOD *sycSSLv3_server_method(void);
++#endif
++
+ const SSL_METHOD *sycSSLv23_client_method(void);
+ const SSL_METHOD *sycSSLv23_server_method(void);
+ const SSL_METHOD *sycTLSv1_client_method(void);
+@@ -49,7 +55,6 @@
+ int sycSSL_shutdown(SSL *ssl);
+ void sycSSL_CTX_free(SSL_CTX *ctx);
+ void sycSSL_free(SSL *ssl);
+-int sycRAND_egd(const char *path);
+ 
+ DH *sycPEM_read_bio_DHparams(BIO *bp, DH **x, pem_password_cb *cb, void *u);
+ 
+@@ -57,7 +62,7 @@
+ 
+ int sycFIPS_mode_set(int onoff);
+ 
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+ const COMP_METHOD *sycSSL_get_current_compression(SSL *ssl);
+ const COMP_METHOD *sycSSL_get_current_expansion(SSL *ssl);
+ const char *sycSSL_COMP_get_name(const COMP_METHOD *comp);
+@@ -102,7 +107,6 @@
+ #define sycSSL_shutdown(s) SSL_shutdown(s)
+ #define sycSSL_CTX_free(c) SSL_CTX_free(c)
+ #define sycSSL_free(s) SSL_free(s)
+-#define sycRAND_egd(p) RAND_egd(p)
+ 
+ #define sycPEM_read_bio_DHparams(b,x,p,u) PEM_read_bio_DHparams(b,x,p,u)
+ 
+@@ -119,4 +123,3 @@
+ #endif /* !WITH_SYCLS */
+ 
+ #endif /* !defined(__sslcls_h_included) */
+-
+--- old/xioopts.c	2015-04-06 11:52:38.000000000 +0200
++++ new/xioopts.c	2016-06-06 10:36:43.758077836 +0200
+@@ -303,7 +303,7 @@
+ #if WITH_EXT2 && defined(EXT2_COMPR_FL)
+ 	IF_ANY    ("compr",	&opt_ext2_compr)
+ #endif
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+ 	IF_OPENSSL("compress",  &opt_openssl_compress)
+ #endif
+ #ifdef TCP_CONN_ABORT_THRESHOLD  /* HP_UX */
+@@ -419,7 +419,6 @@
+ #ifdef ECHOPRT
+ 	IF_TERMIOS("echoprt",	&opt_echoprt)
+ #endif
+-	IF_OPENSSL("egd",	&opt_openssl_egd)
+ 	IF_ANY    ("end-close",	&opt_end_close)
+ 	IF_TERMIOS("eof",	&opt_veof)
+ 	IF_TERMIOS("eol",	&opt_veol)
+@@ -1062,11 +1061,10 @@
+ 	IF_OPENSSL("openssl-certificate",	&opt_openssl_certificate)
+ 	IF_OPENSSL("openssl-cipherlist",	&opt_openssl_cipherlist)
+ 	IF_OPENSSL("openssl-commonname",	&opt_openssl_commonname)
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+ 	IF_OPENSSL("openssl-compress",  &opt_openssl_compress)
+ #endif
+ 	IF_OPENSSL("openssl-dhparam",	&opt_openssl_dhparam)
+-	IF_OPENSSL("openssl-egd",	&opt_openssl_egd)
+ #if WITH_FIPS
+ 	IF_OPENSSL("openssl-fips",	&opt_openssl_fips)
+ #endif
+@@ -4282,4 +4280,3 @@
+    }
+    return 0;
+ }
+-
+--- old/xio-openssl.c	2016-01-29 11:31:22.000000000 +0100
++++ new/xio-openssl.c	2016-06-06 10:34:10.748078965 +0200
+@@ -6,9 +6,11 @@
+ 
+ #include "xiosysincludes.h"
+ #if WITH_OPENSSL	/* make this address configure dependend */
++#include <openssl/comp.h>
+ #include <openssl/conf.h>
+ #include <openssl/x509v3.h>
+ 
++
+ #include "xioopen.h"
+ 
+ #include "xio-fd.h"
+@@ -181,9 +183,8 @@
+ const struct optdesc opt_openssl_dhparam     = { "openssl-dhparam",     "dh",    OPT_OPENSSL_DHPARAM,     GROUP_OPENSSL, PH_SPEC, TYPE_FILENAME, OFUNC_SPEC };
+ const struct optdesc opt_openssl_cafile      = { "openssl-cafile",     "cafile", OPT_OPENSSL_CAFILE,      GROUP_OPENSSL, PH_SPEC, TYPE_FILENAME, OFUNC_SPEC };
+ const struct optdesc opt_openssl_capath      = { "openssl-capath",     "capath", OPT_OPENSSL_CAPATH,      GROUP_OPENSSL, PH_SPEC, TYPE_FILENAME, OFUNC_SPEC };
+-const struct optdesc opt_openssl_egd         = { "openssl-egd",        "egd",    OPT_OPENSSL_EGD,         GROUP_OPENSSL, PH_SPEC, TYPE_FILENAME, OFUNC_SPEC };
+ const struct optdesc opt_openssl_pseudo      = { "openssl-pseudo",     "pseudo", OPT_OPENSSL_PSEUDO,      GROUP_OPENSSL, PH_SPEC, TYPE_BOOL,     OFUNC_SPEC };
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+ const struct optdesc opt_openssl_compress    = { "openssl-compress",   "compress", OPT_OPENSSL_COMPRESS,  GROUP_OPENSSL, PH_SPEC, TYPE_STRING,   OFUNC_SPEC };
+ #endif
+ #if WITH_FIPS
+@@ -220,7 +221,7 @@
+ static void openssl_conn_loginfo(SSL *ssl) {
+    Notice1("SSL connection using %s", SSL_get_cipher(ssl));
+ 
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+    {
+       const COMP_METHOD *comp, *expansion;
+ 
+@@ -857,7 +858,6 @@
+    char *opt_dhparam = NULL;	/* file name of DH params */
+    char *opt_cafile = NULL;	/* certificate authority file */
+    char *opt_capath = NULL;	/* certificate authority directory */
+-   char *opt_egd = NULL;	/* entropy gathering daemon socket path */
+ #if OPENSSL_VERSION_NUMBER >= 0x00908000L
+    char *opt_compress = NULL;  /* compression method */
+ #endif
+@@ -875,9 +875,8 @@
+    retropt_string(opts, OPT_OPENSSL_CAPATH, &opt_capath);
+    retropt_string(opts, OPT_OPENSSL_KEY, &opt_key);
+    retropt_string(opts, OPT_OPENSSL_DHPARAM, &opt_dhparam);
+-   retropt_string(opts, OPT_OPENSSL_EGD, &opt_egd);
+    retropt_bool(opts,OPT_OPENSSL_PSEUDO, &opt_pseudo);
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+    retropt_string(opts, OPT_OPENSSL_COMPRESS, &opt_compress);
+ #endif
+ #if WITH_FIPS
+@@ -1010,10 +1009,6 @@
+       }
+    }
+ 
+-   if (opt_egd) {
+-      sycRAND_egd(opt_egd);
+-   }
+-
+    if (opt_pseudo) {
+       long int randdata;
+       /* initialize libc random from actual microseconds */
+@@ -1238,7 +1233,7 @@
+       if (e == ((ERR_LIB_RAND<<24)|
+ 		(RAND_F_SSLEAY_RAND_BYTES<<12)|
+ 		(RAND_R_PRNG_NOT_SEEDED)) /*0x24064064*/) {
+-	 Error("too few entropy; use options \"egd\" or \"pseudo\"");
++	 Error("too few entropy; use options \"pseudo\"");
+ 	 stat = STAT_NORETRY;
+       } else {
+ 	 Msg2(level, "%s(): %s", funcname, ERR_error_string(e, buf));
+--- old/doc/xio.help	2015-04-03 17:57:00.000000000 +0200
++++ new/doc/xio.help	2016-06-06 10:34:10.748078965 +0200
+@@ -4566,19 +4566,6 @@
+ documentation) 
+ 
+ 
+-Option: openssl-egd=file
+-Aliases: egd
+-
+-Type: FILENAME
+-Option group: OPENSSL
+-Phase: SPEC
+-Platforms: (depends on openssl installation)
+-
+-On some systems, openssl requires an explicit source of random data. Specify
+-the socket name where an entropy gathering daemon like egd provides random
+-data, e.g. /dev/egd-pool.
+-
+-
+ Option: openssl-pseudo
+ Aliases: pseudo
+ 
+--- old/sslcls.c	2015-04-06 11:52:38.000000000 +0200
++++ new/sslcls.c	2016-06-06 10:40:29.218076173 +0200
+@@ -10,6 +10,8 @@
+ 
+ #if WITH_SYCLS && WITH_OPENSSL
+ 
++#include <openssl/comp.h>
++
+ #include "sysincludes.h"
+ 
+ #include "mytypes.h"
+@@ -55,6 +57,7 @@
+ }
+ #endif
+ 
++#if !defined(LIBRESSL_VERSION_NUMBER) || LIBRESSL_VERSION_NUMBER < 0x2030000fL
+ const SSL_METHOD *sycSSLv3_client_method(void) {
+    const SSL_METHOD *result;
+    Debug("SSLv3_client_method()");
+@@ -70,6 +73,7 @@
+    Debug1("SSLv3_server_method() -> %p", result);
+    return result;
+ }
++#endif
+ 
+ const SSL_METHOD *sycSSLv23_client_method(void) {
+    const SSL_METHOD *result;
+@@ -347,14 +351,6 @@
+    return;
+ }
+ 
+-int sycRAND_egd(const char *path) {
+-   int result;
+-   Debug1("RAND_egd(\"%s\")", path);
+-   result = RAND_egd(path);
+-   Debug1("RAND_egd() -> %d", result);
+-   return result;
+-}
+-
+ DH *sycPEM_read_bio_DHparams(BIO *bp, DH **x, pem_password_cb *cb, void *u) {
+    DH *result;
+    Debug4("PEM_read_bio_DHparams(%p, %p, %p, %p)",
+@@ -391,7 +387,7 @@
+ }
+ #endif /* WITH_FIPS */
+ 
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+ const COMP_METHOD *sycSSL_get_current_compression(SSL *ssl) {
+    const COMP_METHOD *result;
+    Debug1("SSL_get_current_compression(%p)", ssl);
+--- old/xioopts.h	2015-04-06 11:52:38.000000000 +0200
++++ new/xioopts.h	2016-06-06 10:34:10.748078965 +0200
+@@ -478,11 +478,10 @@
+    OPT_OPENSSL_CERTIFICATE,
+    OPT_OPENSSL_CIPHERLIST,
+    OPT_OPENSSL_COMMONNAME,
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+    OPT_OPENSSL_COMPRESS,
+ #endif
+    OPT_OPENSSL_DHPARAM,
+-   OPT_OPENSSL_EGD,
+    OPT_OPENSSL_FIPS,
+    OPT_OPENSSL_KEY,
+    OPT_OPENSSL_METHOD,
+--- old/configure	2015-04-06 18:20:05.000000000 +0200
++++ new/configure	2016-06-06 10:29:01.638081245 +0200
+@@ -3841,7 +3841,7 @@
+ 
+ done
+ 
+-for ac_header in pwd.h grp.h stdint.h sys/types.h poll.h sys/poll.h sys/socket.h sys/uio.h sys/stat.h netdb.h sys/un.h
++for ac_header in pwd.h grp.h stddef.h stdint.h sys/types.h poll.h sys/poll.h sys/socket.h sys/uio.h sys/stat.h netdb.h sys/un.h
+ do :
+   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+--- old/xio-openssl.h	2015-04-06 11:52:38.000000000 +0200
++++ new/xio-openssl.h	2016-06-06 10:34:10.748078965 +0200
+@@ -21,9 +21,8 @@
+ extern const struct optdesc opt_openssl_dhparam;
+ extern const struct optdesc opt_openssl_cafile;
+ extern const struct optdesc opt_openssl_capath;
+-extern const struct optdesc opt_openssl_egd;
+ extern const struct optdesc opt_openssl_pseudo;
+-#if OPENSSL_VERSION_NUMBER >= 0x00908000L
++#if OPENSSL_VERSION_NUMBER >= 0x00908000L && !defined(OPENSSL_NO_COMP)
+ extern const struct optdesc opt_openssl_compress;
+ #endif
+ #if WITH_FIPS

@@ -1,0 +1,30 @@
+--- old/src/tlsdate-helper.c	2015-05-28 20:49:40.000000000 +0200
++++ new/src/tlsdate-helper.c	2016-06-06 14:19:41.797979139 +0200
+@@ -1133,10 +1133,12 @@
+   {
+     verb ("V: using SSLv23_client_method()");
+     ctx = SSL_CTX_new(SSLv23_client_method());
++#if !defined(LIBRESSL_VERSION_NUMBER) || LIBRESSL_VERSION_NUMBER < 0x2030000fL
+   } else if (0 == strcmp("sslv3", protocol))
+   {
+     verb ("V: using SSLv3_client_method()");
+     ctx = SSL_CTX_new(SSLv3_client_method());
++#endif
+   } else if (0 == strcmp("tlsv1", protocol))
+   {
+     verb ("V: using TLSv1_client_method()");
+--- old/src/tlsdate-helper-plan9.c	2015-05-28 20:49:40.000000000 +0200
++++ new/src/tlsdate-helper-plan9.c	2016-06-06 14:20:08.817978939 +0200
+@@ -978,10 +978,12 @@
+   {
+     verb ("V: using SSLv23_client_method()\n");
+     ctx = SSL_CTX_new(SSLv23_client_method());
++#if !defined(LIBRESSL_VERSION_NUMBER) || LIBRESSL_VERSION_NUMBER < 0x2030000fL
+   } else if (0 == strcmp("sslv3", protocol))
+   {
+     verb ("V: using SSLv3_client_method()\n");
+     ctx = SSL_CTX_new(SSLv3_client_method());
++#endif
+   } else if (0 == strcmp("tlsv1", protocol))
+   {
+     verb ("V: using TLSv1_client_method()\n");

@@ -5,7 +5,7 @@
 EAPI=5
 
 PYTHON_COMPAT=( python{2_6,2_7} )
-WX_GTK_VER="3.0"
+WX_GTK_VER="3.0-gtk3"
 
 inherit alternatives distutils-r1 eutils fdo-mime flag-o-matic wxwidgets
 
@@ -18,7 +18,7 @@ SRC_URI="
 	examples? ( mirror://sourceforge/wxpython/wxPython-demo-${PV}.tar.bz2 )"
 
 LICENSE="wxWinLL-3"
-SLOT="3.0"
+SLOT="3.0-gtk3"
 KEYWORDS="~alpha ~amd64 ~arm ~hppa ~ia64 ~ppc ~ppc64 ~sh ~sparc ~x86 ~x86-fbsd"
 IUSE="cairo examples libnotify opengl"
 

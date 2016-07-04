@@ -9,7 +9,7 @@ inherit qt5-build
 DESCRIPTION="Network abstraction library for the Qt5 framework"
 
 if [[ ${QT5_BUILD_TYPE} == release ]]; then
-	KEYWORDS="~amd64 ~arm ~arm64 ~hppa ~ppc64 ~x86"
+	KEYWORDS="~amd64 ~arm ~arm64 ~hppa ~ppc ~ppc64 ~x86"
 fi
 
 IUSE="bindist connman libproxy networkmanager +ssl"
@@ -28,7 +28,7 @@ RDEPEND="${DEPEND}
 "
 
 PATCHES=(
-	"${FILESDIR}/${PN}-5.6-libressl.patch"
+	"${FILESDIR}/${PN}-5.7-libressl.patch"
 )
 
 QT5_TARGET_SUBDIRS=(
@@ -52,7 +52,7 @@ src_configure() {
 	local myconf=(
 		$(use connman || use networkmanager && echo -dbus-linked)
 		$(qt_use libproxy)
-		$(use ssl && echo -openssl-linked)
+		$(usex ssl -openssl-linked '')
 	)
 	qt5-build_src_configure
 }

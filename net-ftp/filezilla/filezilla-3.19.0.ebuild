@@ -1,10 +1,10 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2016 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-ftp/filezilla/filezilla-3.10.1.1.ebuild,v 1.1 2015/02/03 00:08:59 voyageur Exp $
+# $Id$
 
 EAPI=5
 
-WX_GTK_VER="3.0"
+WX_GTK_VER="3.1-gtk3"
 
 inherit autotools eutils flag-o-matic multilib wxwidgets
 
@@ -17,16 +17,18 @@ SRC_URI="mirror://sourceforge/${PN}/${MY_P}_src.tar.bz2"
 
 LICENSE="GPL-2"
 SLOT="0"
-KEYWORDS="~amd64 ~arm ~ia64 ~ppc ~sparc ~x86 ~amd64-linux ~ia64-linux ~x86-linux ~x86-macos"
-IUSE="aqua dbus nls test"
+KEYWORDS="~amd64 ~arm ~x86"
+IUSE="dbus nls test"
 
-RDEPEND=">=app-admin/eselect-wxwidgets-0.7-r1
+# pugixml 1.7 minimal dependency is for c++11 proper configuration
+RDEPEND=">=app-eselect/eselect-wxwidgets-0.7-r1
+	>=dev-libs/nettle-3.1:=
 	>=dev-db/sqlite-3.7
-	>=dev-libs/tinyxml-2.6.1-r1[stl]
+	>=dev-libs/libfilezilla-0.5.3
+	>=dev-libs/pugixml-1.7
 	net-dns/libidn
 	>=net-libs/gnutls-3.1.12
-	aqua? ( >=x11-libs/wxGTK-3.0.2.0-r1:3.0[aqua] )
-	!aqua? ( >=x11-libs/wxGTK-3.0.2.0-r1:3.0[X] x11-misc/xdg-utils )
+	>=x11-libs/wxGTK-3.0.2.0-r1:3.0[X] x11-misc/xdg-utils
 	dbus? ( sys-apps/dbus )"
 DEPEND="${RDEPEND}
 	virtual/pkgconfig
@@ -36,16 +38,25 @@ DEPEND="${RDEPEND}
 
 S="${WORKDIR}"/${PN}-${MY_PV}
 
+pkg_pretend() {
+	if [[ ${MERGE_TYPE} != binary ]]; then
+		if ! test-flag-CXX -std=c++14; then
+			eerror "${P} requires C++14-capable C++ compiler. Your current compiler"
+			eerror "does not seem to support -std=c++14 option. Please upgrade your compiler"
+			eerror "to gcc-4.9 or an equivalent version supporting C++14."
+			die "Currently active compiler does not support -std=c++14"
+		fi
+	fi
+}
+
 src_prepare() {
-	epatch "${FILESDIR}"/${PN}-3.7.4-debug.patch
-	epatch "${FILESDIR}"/wxWidgets-gtk3.patch
-	append-cppflags -DTIXML_USE_STL
+	epatch "${FILESDIR}"/${PN}-3.10.2-debug.patch
 	eautoreconf
 }
 
 src_configure() {
 	econf $(use_with dbus) $(use_enable nls locales) \
-		--with-tinyxml=system \
+		--with-pugixml=system \
 		--disable-autoupdatecheck
 }
 
@@ -55,15 +66,4 @@ src_install() {
 	doicon src/interface/resources/48x48/${PN}.png
 
 	dodoc AUTHORS ChangeLog NEWS
-
-	if use aqua ; then
-		cat > "${T}/${PN}" <<-EOF
-			#!${EPREFIX}/bin/bash
-			open "${EPREFIX}"/Applications/FileZilla.app
-		EOF
-		rm "${ED}/usr/bin/${PN}" || die
-		dobin "${T}/${PN}"
-		insinto /Applications
-		doins -r "${S}"/FileZilla.app
-	fi
 }

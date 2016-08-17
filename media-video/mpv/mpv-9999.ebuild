@@ -7,9 +7,9 @@ EAPI=6
 PYTHON_COMPAT=( python{2_7,3_3,3_4,3_5} )
 PYTHON_REQ_USE='threads(+)'
 
-WAF_PV=1.8.12
+WAF_PV=1.9.2
 
-inherit fdo-mime gnome2-utils pax-utils python-any-r1 toolchain-funcs waf-utils
+inherit fdo-mime gnome2-utils pax-utils python-any-r1 toolchain-funcs versionator waf-utils
 
 DESCRIPTION="Media player based on MPlayer and mplayer2"
 HOMEPAGE="https://mpv.io/"
@@ -23,10 +23,10 @@ else
 	inherit git-r3
 fi
 SRC_URI+=" https://waf.io/waf-${WAF_PV}"
-DOCS+=( DOCS/contribute.md README.md )
+DOCS+=( README.md )
 
 # See Copyright in sources and Gentoo bug 506946. Waf is BSD, libmpv is ISC.
-LICENSE="GPL-3+ BSD ISC"
+LICENSE="GPL-2+ BSD ISC"
 SLOT="0"
 IUSE="aqua +alsa archive bluray cdda +cli coreaudio doc drm dvb dvd +egl +enca
 	encode gbm +iconv jack jpeg lcms +libass libav libcaca libguess libmpv lua
@@ -84,7 +84,7 @@ COMMON_DEPEND="
 	)
 	libcaca? ( >=media-libs/libcaca-0.99_beta18 )
 	lua? (
-		!luajit? ( || ( =dev-lang/lua-5.1*:= =dev-lang/lua-5.2*:= ) )
+		!luajit? ( <dev-lang/lua-5.3:= )
 		luajit? ( dev-lang/luajit:2 )
 	)
 	openal? ( >=media-libs/openal-1.13 )
@@ -126,6 +126,8 @@ RDEPEND="${COMMON_DEPEND}
 	selinux? ( sec-policy/selinux-mplayer )
 "
 
+PATCHES=( "${FILESDIR}/${PN}-0.18.1-make-ffmpeg-version-check-non-fatal.patch" )
+
 pkg_pretend() {
 	if [[ ${MERGE_TYPE} != "binary" ]] && ! tc-has-tls && use vaapi && use egl; then
 		die "Your compiler lacks C++11 TLS support. Use GCC>=4.8.0 or Clang>=3.3."
@@ -142,6 +144,7 @@ src_configure() {
 	local mywafargs=(
 		--confdir="${EPREFIX}/etc/${PN}"
 		--docdir="${EPREFIX}/usr/share/doc/${PF}"
+		--htmldir="${EPREFIX}/usr/share/doc/${PF}/html"
 
 		$(usex cli '' '--disable-cplayer')
 		$(use_enable libmpv libmpv-shared)
@@ -151,8 +154,8 @@ src_configure() {
 		--disable-static-build
 		--disable-optimize		# Don't add '-O2' to CFLAGS.
 		--disable-debug-build	# Don't add '-g' to CFLAGS.
+		--enable-html-build
 
-		$(use_enable doc html-build)
 		$(use_enable doc pdf-build)
 		$(use_enable vf-dlopen vf-dlopen-filters)
 		$(use_enable zsh-completion zsh-comp)
@@ -268,6 +271,26 @@ pkg_preinst() {
 pkg_postinst() {
 	fdo-mime_desktop_database_update
 	gnome2_icon_cache_update
+
+	local softvol_0_18_1=0
+	for rv in ${REPLACING_VERSIONS}; do
+		version_compare ${rv} 0.18.1-r1
+		[[ $? -eq 1 ]] && softvol_0_18_1=1
+	done
+
+	if [[ ${softvol_0_18_1} -eq 1 ]]; then
+		echo
+		elog "Starting from version 0.18.1 the software volume control is"
+		elog "enabled by default, see:"
+		elog "https://github.com/mpv-player/mpv/blob/v0.18.1/DOCS/interface-changes.rst"
+		elog "https://github.com/mpv-player/mpv/issues/3322"
+		elog
+		elog "This means that volume controls don't change the system volume,"
+		elog "e.g. per-application volume with PulseAudio."
+		elog "If you want to restore the old behaviour, please refer to"
+		elog "https://bugs.gentoo.org/show_bug.cgi?id=588492#c7"
+		echo
+	fi
 
 	# bash-completion < 2.3-r1 already installs (mostly broken) mpv completion.
 	if use cli && ! has_version '<app-shells/bash-completion-2.3-r1' && \

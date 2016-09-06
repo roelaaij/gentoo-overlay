@@ -16,6 +16,11 @@ uk vi zh-CN zh-TW )
 
 # Convert the ebuild version to the upstream mozilla version, used by mozlinguas
 MOZ_PV="${PV/_beta/b}"
+# ESR releases have slightly version numbers
+if [[ ${MOZ_ESR} == 1 ]]; then
+	MOZ_PV="${MOZ_PV}esr"
+fi
+MOZ_P="${PN}-${MOZ_PV}"
 
 # Enigmail version
 EMVER="1.9.1"
@@ -26,22 +31,8 @@ PATCHFF="firefox-45.0-patches-04"
 
 MOZ_HTTP_URI="https://archive.mozilla.org/pub/${PN}/releases"
 
-if [[ ${MOZ_PV} == *_p[0-9]* ]]; then
-	MOZ_PV="${MOZ_PV%_p[0-9]*}"
-	FF_PV=${MOZ_PV/.[0-9]./.${PV##*_p}.}esr
-	SRC_URI+="
-	${MOZ_HTTP_URI//thunderbird/firefox}/${FF_PV}/source/firefox-${FF_PV}.source.tar.xz"
-fi
-# ESR releases have slightly version numbers
-if [[ ${MOZ_ESR} == 1 ]]; then
-	MOZ_PV="${MOZ_PV}esr"
-fi
-MOZ_P="${PN}-${MOZ_PV}"
-
-
-MOZCONFIG_OPTIONAL_GTK3=1
 MOZCONFIG_OPTIONAL_JIT="enabled"
-inherit flag-o-matic toolchain-funcs mozconfig-v6.45 makeedit autotools pax-utils check-reqs nsplugins mozlinguas-v2
+inherit flag-o-matic toolchain-funcs mozconfig-v6.45 makeedit autotools pax-utils check-reqs nsplugins mozlinguas-v2 fdo-mime gnome2-utils
 
 DESCRIPTION="Thunderbird Mail Client"
 HOMEPAGE="http://www.mozilla.com/en-US/thunderbird/"
@@ -69,8 +60,9 @@ CDEPEND="
 	crypt?  ( || (
 		( >=app-crypt/gnupg-2.0
 			|| (
-				app-crypt/pinentry[gtk]
-				app-crypt/pinentry[qt4]
+				app-crypt/pinentry[gtk(-)]
+				app-crypt/pinentry[qt4(-)]
+				app-crypt/pinentry[qt5(-)]
 			)
 		)
 		=app-crypt/gnupg-1.4*
@@ -128,13 +120,6 @@ src_unpack() {
 
 	# this version of gdata-provider is a .tar.xz , no xpi needed
 	#use lightning && xpi_unpack gdata-provider-${MOZ_LIGHTNING_GDATA_VER}.xpi
-
-	# if this is a gentoo-patch release then put the firefox sourcedir in the
-	# right location within ${S}
-	if [[ -n ${FF_PV} ]]; then
-		rm -f "${S}"/mozilla
-		mv "${WORKDIR}"/firefox-${FF_PV} "${S}"/mozilla
-	fi
 }
 
 src_prepare() {
@@ -144,8 +129,7 @@ src_prepare() {
 
 	# Apply our patchset from firefox to thunderbird as well
 	pushd "${S}"/mozilla &>/dev/null || die
-	eapply "${WORKDIR}/firefox" \
-		"${FILESDIR}"/firefox-45-gcc6.patch
+	eapply "${WORKDIR}/firefox"
 	popd &>/dev/null || die
 
 	# Ensure that are plugins dir is enabled as default
@@ -295,17 +279,30 @@ src_install() {
 	# Install language packs
 	mozlinguas_src_install
 
+	local size sizes icon_path icon
 	if ! use bindist; then
-		newicon "${S}"/other-licenses/branding/thunderbird/content/icon48.png thunderbird-icon.png
+		icon_path="${S}/other-licenses/branding/thunderbird"
+		icon="${PN}-icon"
+
 		domenu "${FILESDIR}"/icon/${PN}.desktop
 	else
-		newicon "${S}"/mail/branding/aurora/content/icon48.png thunderbird-icon-unbranded.png
+		icon_path="${S}/mail/branding/aurora"
+		icon="${PN}-icon-unbranded"
+
 		newmenu "${FILESDIR}"/icon/${PN}-unbranded.desktop \
 			${PN}.desktop
 
 		sed -i -e "s:Mozilla\ Thunderbird:EarlyBird:g" \
 			"${ED}"/usr/share/applications/${PN}.desktop
 	fi
+
+	# Install a 48x48 icon into /usr/share/pixmaps for legacy DEs
+	newicon "${icon_path}"/mailicon48.png "${icon}".png
+	# Install icons for menu entry
+	sizes="16 22 24 32 48 256"
+	for size in ${sizes}; do
+		newicon -s ${size} "${icon_path}/mailicon${size}.png" "${icon}.png"
+	done
 
 	local emid
 	# stage extra locales for lightning and install over existing
@@ -356,7 +353,14 @@ src_install() {
 	fi
 }
 
+pkg_preinst() {
+	gnome2_icon_savelist
+}
+
 pkg_postinst() {
+	fdo-mime_desktop_database_update
+	gnome2_icon_cache_update
+
 	if use crypt; then
 		local peimpl=$(eselect --brief --colour=no pinentry show)
 		case "${peimpl}" in
@@ -378,4 +382,9 @@ pkg_postinst() {
 		elog "fails to show the calendar extension after restarting with above change"
 		elog "please file a bug report."
 	fi
+}
+
+pkg_postrm() {
+	fdo-mime_desktop_database_update
+	gnome2_icon_cache_update
 }

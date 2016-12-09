@@ -12,7 +12,7 @@
 # We need to bring in the kernel sources seperately
 # Because they have to be configured in a way that differs from the copy in
 # /usr/src/. The sys-kernel/linux-headers are too stripped down to use
-# unfortunetly.
+# unfortunately.
 # This will be able to go away once the klibc author updates his code
 # to build again the headers provided by the kernel's 'headers_install' target.
 
@@ -98,10 +98,6 @@ src_unpack() {
 src_prepare() {
 	[[ ${PKV} ]] && EPATCH_OPTS="-d ${KS} -p1" epatch "${DISTDIR}"/patch-${PKV}.${K_TARBALL_SUFFIX}
 
-	# Add compiler-gcc5.h
-	EPATCH_OPTS="-d ${KS} -p1" epatch "${FILESDIR}"/${PN}-gcc5.patch
-	cd "${S}"
-
 	# Symlink /usr/src/linux to ${S}/linux
 	ln -snf "${KS}" linux
 	#ln -snf "/usr" linux
@@ -118,6 +114,10 @@ src_prepare() {
 
 	# Newer kernels have some headers in the uapi dir
 	epatch "${FILESDIR}"/klibc-2.0.3-kernel-uapi.patch
+
+	# Use more recent compiler-gcc.h
+	EPATCH_OPTS="-d ${KS} -p1" epatch "${FILESDIR}"/${PN}-linux-compiler_h.patch
+	cd "${S}"
 
 	# Borrow the debian fixes too
 	for p in $(<"${S}"/debian/patches/series) ; do

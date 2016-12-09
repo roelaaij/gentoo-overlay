@@ -89,7 +89,8 @@ src_prepare() {
 	# Turn off youtube support (which pulls in extra dependencies) if unwanted
 	if ! use streaming ; then
 		sed -e 's:DEFINES += YOUTUBE_SUPPORT:#DEFINES += YOUTUBE_SUPPORT:' \
-		-i "${S}"/src/smplayer.pro || die "sed failed"
+			-i "${S}"/src/smplayer.pro || die "sed failed"
+		epatch "${FILESDIR}"/smplayer-loadpage.patch
 	fi
 
 	l10n_find_plocales_changes "${S}/src/translations" "${PN}_" '.ts'

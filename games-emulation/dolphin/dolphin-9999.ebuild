@@ -40,6 +40,7 @@ RDEPEND=">=media-libs/libsfml-2.1
 	x11-libs/libXrandr
 	virtual/libusb:1
 	virtual/opengl
+	media-libs/mesa[vulkan]
 	alsa? ( media-libs/alsa-lib )
 	ao? ( media-libs/libao )
 	bluetooth? ( net-wireless/bluez )
@@ -69,6 +70,8 @@ RDEPEND=">=media-libs/libsfml-2.1
 				x11-libs/gtk+:3
 				x11-libs/wxGTK:${WX_GTK_VER}[opengl,X]
 	)
+	media-libs/vulkan-loader
+	dev-libs/hidapi
 	"
 DEPEND="${RDEPEND}
 	>=dev-util/cmake-2.8.8

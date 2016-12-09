@@ -1,0 +1,10 @@
+--- old/source/fitz/load-jpx.c	2016-10-31 20:43:46.190861082 +0100
++++ new/source/fitz/load-jpx.c	2016-10-31 20:44:01.760860967 +0100
+@@ -3,7 +3,6 @@
+ /* Without the definition of OPJ_STATIC, compilation fails on windows
+  * due to the use of __stdcall. We believe it is required on some
+  * linux toolchains too. */
+-#define OPJ_STATIC
+ #ifndef _MSC_VER
+ #define OPJ_HAVE_STDINT_H
+ #endif

@@ -70,7 +70,8 @@ DEPEND="${RDEPEND}
 	sys-devel/bison
 "
 
-PATCHES=( "${FILESDIR}/${PN}-5.6.1-nss.patch" )
+PATCHES=( "${FILESDIR}/${PN}-5.6.1-nss.patch"
+		  "${FILESDIR}/${PN}-5.7.0-icu-58.patch" )
 
 src_prepare() {
 	qt_use_disable_mod geolocation positioning \

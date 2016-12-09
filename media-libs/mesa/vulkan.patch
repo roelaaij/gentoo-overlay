@@ -1,0 +1,66 @@
+--- old/mesa-13.0.0_rc3.ebuild	2016-10-20 01:05:01.000000000 +0200
++++ new/mesa-13.0.0_rc3.ebuild	2016-10-21 15:32:33.670987162 +0200
+@@ -45,7 +45,7 @@
+ IUSE="${IUSE_VIDEO_CARDS}
+ 	bindist +classic d3d9 debug +dri3 +egl +gallium +gbm gles1 gles2 +llvm
+ 	+nptl opencl osmesa pax_kernel openmax pic selinux vaapi valgrind
+-	vdpau wayland xvmc xa kernel_FreeBSD"
++	vdpau vulkan wayland xvmc xa kernel_FreeBSD"
+ 
+ REQUIRED_USE="
+ 	d3d9?   ( dri3 gallium )
+@@ -59,9 +59,9 @@
+ 	wayland? ( egl gbm )
+ 	xa?  ( gallium )
+ 	video_cards_freedreno?  ( gallium )
+-	video_cards_intel?  ( classic )
++	video_cards_intel?  ( || ( classic vulkan ) )
+ 	video_cards_i915?   ( || ( classic gallium ) )
+-	video_cards_i965?   ( classic )
++	video_cards_i965?   ( || ( classic vulkan ) )
+ 	video_cards_ilo?    ( gallium )
+ 	video_cards_nouveau? ( || ( classic gallium ) )
+ 	video_cards_radeon? ( || ( classic gallium )
+@@ -264,6 +264,11 @@
+ 		fi
+ 	fi
+ 
++	if use vulkan; then
++		vulkan_enable video_cards_i965 intel
++		vulkan_enable video_cards_intel intel
++	fi
++
+ 	# x86 hardened pax_kernel needs glx-rts, bug 240956
+ 	if [[ ${ABI} == x86 ]]; then
+ 		myconf+=" $(use_enable pax_kernel glx-read-only-text)"
+@@ -302,6 +307,7 @@
+ 		--enable-llvm-shared-libs \
+ 		--with-dri-drivers=${DRI_DRIVERS} \
+ 		--with-gallium-drivers=${GALLIUM_DRIVERS} \
++		--with-vulkan-drivers=${VULKAN_DRIVERS} \
+ 		PYTHON2="${PYTHON}" \
+ 		${myconf}
+ }
+@@ -463,5 +469,22 @@
+ 				done
+ 			fi
+ 			;;
++	   esac
++}
++
++vulkan_enable() {
++	case $# in
++		# for enabling unconditionally
++		1)
++			VULKAN_DRIVERS+=",$1"
++			;;
++		*)
++			if use $1; then
++				shift
++				for i in $@; do
++					VULKAN_DRIVERS+=",${i}"
++				done
++			fi
++			;;
+ 	esac
+ }

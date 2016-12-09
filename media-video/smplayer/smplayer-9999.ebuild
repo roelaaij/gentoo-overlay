@@ -2,10 +2,10 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Header: $
 
-EAPI=5
-PLOCALES="am ar ar_SY bg ca cs da de el_GR en_GB en_US es et eu fa fi fr gl he_IL hr
-hu id it ja ka ko ku lt mk ms_MY nl nn_NO pl pt pt_BR ro_RO ru_RU sk sl_SI sq_AL
-sr sv th tr uk_UA uz vi_VN zh_CN zh_TW"
+EAPI=6
+PLOCALES="am ar ar_SY bg ca cs da de el_GR en en_GB en_US es et eu fa fi fr
+		  gl he_IL hr hu id it ja ka ko ku lt mk ms_MY nl nn_NO pl pt pt_BR
+		  ro_RO ru_RU sk sl_SI sq_AL sr sv th tr uk_UA uz vi_VN zh_CN zh_TW"
 PLOCALE_BACKUP="en_US"
 inherit eutils l10n qmake-utils subversion
 
@@ -94,6 +94,7 @@ src_prepare() {
 	fi
 
 	l10n_find_plocales_changes "${S}/src/translations" "${PN}_" '.ts'
+	eapply_user
 }
 
 src_configure() {

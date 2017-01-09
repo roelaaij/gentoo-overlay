@@ -44,7 +44,7 @@ IUSE="a52 aalib alsa altivec +audioqueue +avcodec
 	fluidsynth +ffmpeg flac fontconfig +gcrypt gme gnutls gstreamer httpd
 	ieee1394 jack jpeg kate kde libass libav libcaca libnotify
 	+libsamplerate libtiger linsys libtar lirc live lua
-	macosx-eyetv macosx-notifications macosx-quartztext macosx-qtkit
+	macosx-notifications macosx-qtkit
 	matroska media-library cpu_flags_x86_mmx modplug mp3 mpeg mtp musepack
 	ncurses neon ogg omxil opencv opengl optimisememory opus
 	png +postproc projectm pulseaudio +qt4 qt5 rdp rtsp run-as-root samba
@@ -176,11 +176,11 @@ RDEPEND="${RDEPEND}
 "
 
 DEPEND="${RDEPEND}
-	kde? ( >=kde-base/kdelibs-4:4 )
+	!qt5? ( kde? ( >=kde-frameworks/kdelibs-4:4 ) )
 	xcb? ( x11-proto/xproto:0 )
 	app-arch/xz-utils:0
 	dev-lang/yasm:*
-	>=sys-devel/gettext-0.19.2:*
+	>=sys-devel/gettext-0.19.6:*
 	virtual/pkgconfig:*
 "
 
@@ -358,11 +358,8 @@ src_configure() {
 		$(use_enable lirc) \
 		$(use_enable live live555) \
 		$(use_enable lua) \
-		$(use_enable macosx-eyetv) \
 		$(use_enable macosx-notifications osx-notifications) \
 		$(use_enable macosx-qtkit) \
-		$(use_enable macosx-quartztext) \
-		$(use_enable matroska mkv) \
 		$(use_enable cpu_flags_x86_mmx mmx) \
 		$(use_enable modplug mod) \
 		$(use_enable mp3 mad) \
@@ -427,7 +424,6 @@ src_configure() {
 		--disable-cprof \
 		--disable-crystalhd \
 		--disable-decklink \
-		--disable-gles1 \
 		--disable-gles2 \
 		--disable-goom \
 		--disable-kai \
@@ -438,7 +434,6 @@ src_configure() {
 		--disable-mmal \
 		--disable-opensles \
 		--disable-oss \
-		--disable-quicktime \
 		--disable-rpi-omxil \
 		--disable-shine \
 		--disable-sndio \

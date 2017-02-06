@@ -41,6 +41,7 @@ RDEPEND=">=media-libs/libsfml-2.1
 	virtual/libusb:1
 	virtual/opengl
 	media-libs/mesa[vulkan]
+	dev-util/glslang
 	alsa? ( media-libs/alsa-lib )
 	ao? ( media-libs/libao )
 	bluetooth? ( net-wireless/bluez )
@@ -76,6 +77,7 @@ RDEPEND=">=media-libs/libsfml-2.1
 DEPEND="${RDEPEND}
 	>=dev-util/cmake-2.8.8
 	>=sys-devel/gcc-4.9.0
+	dev-cpp/gtest
 	app-arch/zip
 	media-libs/freetype
 	sys-devel/gettext
@@ -124,16 +126,13 @@ src_prepare() {
 	# Remove ALL the bundled libraries, aside from:
 	# - SOIL: The sources are not public.
 	# - Bochs-disasm: Don't know what it is.
-	# - gtest: Their build set up solely relies on the build in gtest.
 	# - xxhash: Not on the tree.
 	mv Externals/SOIL . || die
 	mv Externals/Bochs_disasm . || die
-	mv Externals/gtest . || die
 	mv Externals/xxhash . || die
 	rm -r Externals/* || die "Failed to delete Externals dir."
 	mv Bochs_disasm Externals || die
 	mv SOIL Externals || die
-	mv gtest Externals || die
 	mv xxhash Externals || die
 
 	remove_locale() {
@@ -160,6 +159,7 @@ src_configure() {
 	local mycmakeargs=(
 		"-DUSE_SHARED_ENET=ON"
 		"-DUSE_SHARED_GLSLANG=ON"
+		"-DUSE_SHARED_GTEST=ON"
 		$( cmake-utils_use ffmpeg ENCODE_FRAMEDUMPS )
 		$( cmake-utils_use log FASTLOG )
 		$( cmake-utils_use profile OPROFILING )

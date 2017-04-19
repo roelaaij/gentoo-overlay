@@ -1,0 +1,13 @@
+diff --git a/desmume/src/ROMReader.cpp b/desmume/src/ROMReader.cpp
+index 8fd0bb91..7d89f4b2 100644
+--- a/desmume/src/ROMReader.cpp
++++ b/desmume/src/ROMReader.cpp
+@@ -221,7 +221,7 @@ ROMReader_struct ZIPROMReader =
+ 	ZIPROMReaderDeInit,
+ 	ZIPROMReaderSize,
+ 	ZIPROMReaderSeek,
+-	ZIPROMReaderRead
++	ZIPROMReaderRead,
+ 	ZIPROMReaderWrite
+ };
+ 

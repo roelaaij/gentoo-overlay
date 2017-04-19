@@ -5,7 +5,7 @@
 EAPI=5
 EGIT_REPO_URI="https://github.com/TASVideos/desmume"
 
-inherit autotools games git-r3
+inherit eutils autotools games git-r3
 
 DESCRIPTION="Nintendo DS emulator"
 HOMEPAGE="http://desmume.org/"
@@ -30,6 +30,9 @@ DEPEND="${RDEPEND}
 S="${WORKDIR}/${P}/${PN}/src/frontend/posix"
 
 src_prepare() {
+	cd "${WORKDIR}/${P}"
+	epatch "${FILESDIR}/rom-reader.patch"
+	cd "${S}"
 	eautoreconf
 }
 

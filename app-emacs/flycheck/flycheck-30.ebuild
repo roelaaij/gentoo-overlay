@@ -16,9 +16,10 @@ IUSE="cpp asciidoc ada python"
 LICENSE="GPL"
 SLOT="0"
 
-DEPEND="virtual/emacs"
+DEPEND="virtual/emacs
+		app-emacs/dash"
 RDEPEND="${DEPEND}
 		cpp? ( dev-util/cppcheck )
 		asciidoc? ( app-text/asciidoc )
 		ada? ( virtual/gnat )
-		python? ( || ( dev-python/flake8 dev-python/pylint ) )"
+		python? ( || ( >=dev-python/flake8-3.0.4 dev-python/pylint ) )"

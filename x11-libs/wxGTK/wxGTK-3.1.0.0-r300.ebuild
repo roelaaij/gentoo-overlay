@@ -16,7 +16,7 @@ WXRELEASE_NODOT=${WXRELEASE//./}		# 31-gtk3
 
 # we use the wxPython tarballs because they include the full wxGTK sources and
 # docs, and are released more frequently than wxGTK.
-SRC_URI="https://github.com/wxWidgets/wxWidgets/releases/download/v${PV}/wxWidgets-${WXVERSION}.tar.bz2"
+SRC_URI="https://github.com/wxWidgets/wxWidgets/releases/download/v${WXVERSION}/wxWidgets-${WXVERSION}.tar.bz2"
 
 KEYWORDS="~alpha ~amd64 ~arm ~hppa ~ia64 ~mips ~ppc ~ppc64 ~sh ~sparc ~x86 ~x86-fbsd ~x86-freebsd ~x86-interix ~amd64-linux ~x86-linux ~ppc-macos ~x86-macos"
 IUSE="+X aqua doc debug gstreamer libnotify opengl sdl2 tiff webkit"

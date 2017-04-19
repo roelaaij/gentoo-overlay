@@ -1,0 +1,18 @@
+--- a/src/smplayer.pro	2016-09-06 17:46:31.645716140 +0200
++++ b/src/smplayer.pro	2016-09-07 15:19:04.532973805 +0200
+@@ -199,6 +199,7 @@
+ 	prefnetwork.h \
+ 	filepropertiesdialog.h \
+ 	multilineinputdialog.h \
++	youtube/loadpage.h \
+ 	playlist.h \
+ 	playlistdock.h \
+ 	verticaltext.h \
+@@ -296,6 +297,7 @@
+ 	prefnetwork.cpp \
+ 	filepropertiesdialog.cpp \
+ 	multilineinputdialog.cpp \
++	youtube/loadpage.cpp \
+ 	playlist.cpp \
+ 	playlistdock.cpp \
+ 	verticaltext.cpp \

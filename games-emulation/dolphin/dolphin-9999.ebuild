@@ -54,7 +54,6 @@ RDEPEND=">=media-libs/libsfml-2.1
 	llvm? ( sys-devel/llvm )
 	openal? (
 			media-libs/openal
-			media-libs/libsoundtouch
 	)
 	portaudio? ( media-libs/portaudio )
 	profile? ( dev-util/oprofile )
@@ -125,15 +124,20 @@ src_prepare() {
 
 	# Remove ALL the bundled libraries, aside from:
 	# - SOIL: The sources are not public.
+	# - cpp-optparse: not in tree
 	# - Bochs-disasm: Don't know what it is.
 	# - xxhash: Not on the tree.
 	mv Externals/SOIL . || die
 	mv Externals/Bochs_disasm . || die
 	mv Externals/xxhash . || die
+	mv Externals/cpp-optparse . || die
+	mv Externals/soundtouch . || die
 	rm -r Externals/* || die "Failed to delete Externals dir."
 	mv Bochs_disasm Externals || die
 	mv SOIL Externals || die
 	mv xxhash Externals || die
+	mv cpp-optparse Externals || die
+	mv soundtouch Externals || die
 
 	remove_locale() {
 		# Ensure preservation of the backup locale when no valid LINGUA is set

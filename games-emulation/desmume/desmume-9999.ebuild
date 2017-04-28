@@ -30,9 +30,9 @@ DEPEND="${RDEPEND}
 S="${WORKDIR}/${P}/${PN}/src/frontend/posix"
 
 src_prepare() {
-	cd "${WORKDIR}/${P}"
-	epatch "${FILESDIR}/rom-reader.patch"
-	cd "${S}"
+	# cd "${WORKDIR}/${P}"
+	# epatch "${FILESDIR}/rom-reader.patch"
+	# cd "${S}"
 	eautoreconf
 }
 

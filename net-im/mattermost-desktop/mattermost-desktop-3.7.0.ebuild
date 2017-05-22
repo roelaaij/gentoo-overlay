@@ -1,15 +1,14 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: $
 # https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=mattermost-desktop
 
-EAPI=5
+EAPI=6
 
 inherit eutils unpacker
 
 DESCRIPTION="Mattermost chat desktop client for Linux"
 HOMEPAGE="https://github.com/mattermost/desktop"
-SRC_URI="https://github.com/mattermost/desktop/archive/v${PV}.tar.gz -> ${P}.tar.gz"
+SRC_URI="https://github.com/mattermost/desktop/archive/v3.7.0.tar.gz -> ${P}.tar.gz"
 
 LICENSE="MIT"
 SLOT="1"
@@ -25,7 +24,7 @@ RDEPEND="
 	!net-im/mattermost
 "
 
-MY_P="${P/mattermost-/}"
+MY_P="desktop-${PV}"
 S="${WORKDIR}/${MY_P}"
 
 src_compile() {

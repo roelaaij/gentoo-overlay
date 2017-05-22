@@ -1,14 +1,13 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI=5
+EAPI=6
 
 PLOCALES="ar ca cs da_DK de el en es fa fr hr hu it ja ko ms_MY nb nl pl pt_BR pt ro_RO ru sr sv tr zh_CN zh_TW"
 PLOCALE_BACKUP="en"
 WX_GTK_VER="3.1-gtk3"
 
-inherit cmake-utils eutils l10n pax-utils toolchain-funcs versionator wxwidgets
+inherit cmake-utils l10n pax-utils toolchain-funcs versionator wxwidgets
 
 if [[ ${PV} == 9999* ]]
 then
@@ -122,6 +121,8 @@ src_prepare() {
 		sed -i -e '/check_lib(PULSEAUDIO/d' CMakeLists.txt || die
 	fi
 
+	pushd `pwd`
+	cd "$S"
 	# Remove ALL the bundled libraries, aside from:
 	# - SOIL: The sources are not public.
 	# - cpp-optparse: not in tree
@@ -130,14 +131,17 @@ src_prepare() {
 	mv Externals/SOIL . || die
 	mv Externals/Bochs_disasm . || die
 	mv Externals/xxhash . || die
+	mv Externals/gtest . || die
 	mv Externals/cpp-optparse . || die
 	mv Externals/soundtouch . || die
 	rm -r Externals/* || die "Failed to delete Externals dir."
 	mv Bochs_disasm Externals || die
 	mv SOIL Externals || die
+	mv gtest Externals || die
 	mv xxhash Externals || die
 	mv cpp-optparse Externals || die
 	mv soundtouch Externals || die
+	popd
 
 	remove_locale() {
 		# Ensure preservation of the backup locale when no valid LINGUA is set
@@ -151,7 +155,7 @@ src_prepare() {
 	l10n_find_plocales_changes "Languages/po/" "" '.po'
 	l10n_for_each_disabled_locale_do remove_locale
 
-	epatch_user
+	eapply_user
 }
 
 src_configure() {
@@ -161,20 +165,20 @@ src_configure() {
 	fi
 
 	local mycmakeargs=(
-		"-DUSE_SHARED_ENET=ON"
-		"-DUSE_SHARED_GLSLANG=ON"
-		"-DUSE_SHARED_GTEST=ON"
-		$( cmake-utils_use ffmpeg ENCODE_FRAMEDUMPS )
-		$( cmake-utils_use log FASTLOG )
-		$( cmake-utils_use profile OPROFILING )
-		$( cmake-utils_use_disable wxwidgets WX )
-		$( cmake-utils_use_enable evdev EVDEV )
-		$( cmake-utils_use_enable lto LTO )
-		$( cmake-utils_use_enable pch PCH )
-		$( cmake-utils_use_enable qt5 QT2 )
-		$( cmake-utils_use_enable sdl SDL )
-		$( cmake-utils_use_use egl EGL )
-		$( cmake-utils_use_use upnp UPNP )
+		-DUSE_SHARED_ENET=ON
+		-DUSE_SHARED_GLSLANG=ON
+		-DUSE_SHARED_GTEST=ON
+		-DENCODE_FRAMEDUMPS="$(usex ffmpeg ON OFF)"
+		-DFASTLOG="$(usex log ON OFF)"
+		-DOPROFILING="$(usex profile ON OFF)"
+		-DDISABLE_WX="$(usex wxwidgets OFF ON)"
+		-DENABLE_EVDEV="$(usex evdev ON OFF)"
+		-DENABLE_LTO="$(usex lto ON OFF)"
+		-DENABLE_PCH="$(usex pch ON OFF)"
+		-DENABLE_QT2="$(usex qt5 ON OFF)"
+		-DENABLE_SDL="$(usex sdl ON OFF)"
+		-DUSE_EGL="$(usex egl ON OFF)"
+		-DUSE_UPNP="$(usex upnp ON OFF)"
 	)
 
 	cmake-utils_src_configure
@@ -184,6 +188,7 @@ src_compile() {
 
 	cmake-utils_src_compile
 }
+
 src_install() {
 
 	cmake-utils_src_install

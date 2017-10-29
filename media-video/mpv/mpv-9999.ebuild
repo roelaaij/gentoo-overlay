@@ -6,7 +6,7 @@ EAPI=6
 PYTHON_COMPAT=( python{2_7,3_4,3_5} )
 PYTHON_REQ_USE='threads(+)'
 
-WAF_PV=1.8.12
+WAF_PV=1.9.8
 
 inherit gnome2-utils pax-utils python-r1 toolchain-funcs versionator waf-utils xdg-utils
 
@@ -18,7 +18,7 @@ if [[ ${PV} != *9999* ]]; then
 	KEYWORDS="~amd64 ~hppa ~x86 ~amd64-linux"
 	DOCS=( RELEASE_NOTES )
 else
-	EGIT_REPO_URI=( {https,git}://github.com/mpv-player/mpv.git )
+	EGIT_REPO_URI="https://github.com/mpv-player/mpv.git"
 	inherit git-r3
 fi
 SRC_URI+=" https://waf.io/waf-${WAF_PV}"
@@ -28,21 +28,22 @@ DOCS+=( README.md )
 LICENSE="GPL-2+ BSD ISC"
 SLOT="0"
 IUSE="+alsa aqua archive bluray cdda +cli coreaudio cplugins cuda doc drm dvb
-	dvd +egl encode gbm +iconv jack jpeg lcms +libass libav libcaca libmpv +lua
-	luajit openal +opengl oss pulseaudio raspberry-pi rubberband samba sdl
-	selinux test tools +uchardet v4l vaapi vdpau vf-dlopen wayland +X
-	+xv zsh-completion"
+	dvd +egl encode gbm +iconv jack javascript jpeg lcms +libass libav libcaca
+	libmpv +lua luajit openal +opengl oss pulseaudio raspberry-pi rubberband
+	samba sdl selinux test tools +uchardet v4l vaapi vdpau wayland +X +xv zlib
+	zsh-completion"
 IUSE+=" cpu_flags_x86_sse4_1"
 
 REQUIRED_USE="
 	|| ( cli libmpv )
 	aqua? ( opengl )
-	cuda? ( !libav || ( opengl egl ) )
+	cuda? ( !libav opengl )
 	egl? ( || ( gbm X wayland ) )
 	gbm? ( drm egl )
 	lcms? ( || ( opengl egl ) )
 	luajit? ( lua )
 	opengl? ( || ( aqua X !cli? ( libmpv ) ) )
+	raspberry-pi? ( opengl )
 	test? ( || ( opengl egl ) )
 	tools? ( cli )
 	uchardet? ( iconv )
@@ -50,6 +51,7 @@ REQUIRED_USE="
 	vaapi? ( || ( gbm X wayland ) )
 	vdpau? ( X )
 	wayland? ( egl )
+	X? ( egl? ( opengl ) )
 	xv? ( X )
 	zsh-completion? ( cli )
 	${PYTHON_REQUIRED_USE}
@@ -134,27 +136,7 @@ PATCHES=(
 	"${FILESDIR}/${PN}-0.23.0-make-libavdevice-check-accept-libav.patch"
 )
 
-mpv_check_compiler() {
-	if [[ ${MERGE_TYPE} != "binary" ]]; then
-		if tc-is-gcc && ( [[ $(gcc-major-version) -lt 4 ]] || \
-			( [[ $(gcc-major-version) -eq 4 ]] && [[ $(gcc-minor-version) -lt 5 ]] ) ); then
-			die "${PN} requires GCC>=4.5."
-		fi
-		if ( use opengl || use egl ) && ! tc-has-tls; then
-			die "Your compiler lacks C++11 TLS support. Use GCC>=4.8 or Clang>=3.3."
-		fi
-		if use vaapi && use cpu_flags_x86_sse4_1 && ! tc-is-gcc; then
-			die "${PN} requires GCC for SSE4.1 intrinsics."
-		fi
-	fi
-}
-
-pkg_pretend() {
-	mpv_check_compiler
-}
-
 pkg_setup() {
-	mpv_check_compiler
 	[[ ${MERGE_TYPE} != "binary" ]] && python_setup
 }
 
@@ -184,13 +166,13 @@ src_configure() {
 		# See deep down below for build-date.
 		--disable-libmpv-static
 		--disable-static-build
+		# See deep down below for build-date.
 		--disable-optimize		# Don't add '-O2' to CFLAGS.
 		--disable-debug-build	# Don't add '-g' to CFLAGS.
 		--enable-html-build
 
 		$(use_enable doc pdf-build)
 		$(use_enable cplugins)
-		$(use_enable vf-dlopen vf-dlopen-filters)
 		$(use_enable zsh-completion zsh-comp)
 		$(use_enable test)
 
@@ -198,8 +180,10 @@ src_configure() {
 		$(use_enable samba libsmbclient)
 		$(use_enable lua)
 		$(usex luajit '--lua=luajit' '')
+		$(use_enable javascript)
 		$(use_enable libass)
 		$(use_enable libass libass-osd)
+		$(use_enable zlib)
 		$(use_enable encode encoding)
 		$(use_enable bluray libbluray)
 		$(use_enable dvd dvdread)
@@ -238,7 +222,7 @@ src_configure() {
 		$(usex opengl "$(use_enable X gl-x11)" '--disable-gl-x11')
 		$(usex egl "$(use_enable X egl-x11)" '--disable-egl-x11')
 		$(usex egl "$(use_enable gbm egl-drm)" '--disable-egl-drm')
-		$(use_enable wayland gl-wayland)
+		$(usex opengl "$(use_enable wayland gl-wayland)" '--disable-gl-wayland')
 		$(use_enable vdpau)
 		$(usex vdpau "$(use_enable opengl vdpau-gl-x11)" '--disable-vdpau-gl-x11')
 		$(use_enable vaapi)		# See below for vaapi-glx, vaapi-x-egl.
@@ -249,10 +233,9 @@ src_configure() {
 		$(use_enable jpeg)
 		--disable-android
 		$(use_enable raspberry-pi rpi)
-		$(usex opengl "$(use_enable !aqua plain-gl)" '--disable-plain-gl')
-		--disable-ios-gl
 		$(usex libmpv "$(use_enable opengl plain-gl)" '--disable-plain-gl')
 		--disable-mali-fbdev	# Only available in overlays.
+		$(usex opengl '' '--disable-gl')
 
 		# HWaccels:
 		# Automagic Video Toolbox HW acceleration. See Gentoo bug 577332.
@@ -276,10 +259,6 @@ src_configure() {
 			$(use_enable opengl vaapi-glx)
 			$(use_enable egl vaapi-x-egl)
 		)
-	fi
-
-	if ! use egl && ! use opengl && ! use raspberry-pi; then
-		mywafargs+=(--disable-gl)
 	fi
 
 	# Create reproducible non-live builds.
@@ -312,13 +291,17 @@ pkg_preinst() {
 }
 
 pkg_postinst() {
-	local rv softvol_0_18_1=0 osc_0_21_0=0
+	local rv softvol_0_18_1=0 osc_0_21_0=0 txtsubs_0_24_0=0 opengl_0_25_0=0
 
 	for rv in ${REPLACING_VERSIONS}; do
 		version_compare ${rv} 0.18.1
 		[[ $? -eq 1 ]] && softvol_0_18_1=1
 		version_compare ${rv} 0.21.0
 		[[ $? -eq 1 ]] && osc_0_21_0=1
+		version_compare ${rv} 0.24.0
+		[[ $? -eq 1 ]] && txtsubs_0_24_0=1
+		version_compare ${rv} 0.25.0
+		[[ $? -eq 1 ]] && ! use opengl && opengl_0_25_0=1
 	done
 
 	if [[ ${softvol_0_18_1} -eq 1 ]]; then
@@ -339,9 +322,21 @@ pkg_postinst() {
 		elog
 	fi
 
-	# bash-completion < 2.3-r1 already installs (mostly broken) mpv completion.
-	if use cli && ! has_version '<app-shells/bash-completion-2.3-r1' && \
-		! has_version 'app-shells/mpv-bash-completion'; then
+	if [[ ${txtsubs_0_24_0} -eq 1 ]]; then
+		elog "Since version 0.24.0 subtitles with .txt extension aren't autoloaded."
+		elog "If you want to restore the previous behaviour, please refer to"
+		elog
+		elog "https://wiki.gentoo.org/wiki/Mpv#Subtitles_with_.txt_extension_in_0.24.0"
+		elog
+	fi
+
+	if [[ ${opengl_0_25_0} -eq 1 ]]; then
+		elog "Since version 0.25.0 the 'opengl' USE flag is mapped to"
+		elog "the 'opengl' video output and no longer explicitly requires"
+		elog "X11 or Mac OS Aqua. Consider enabling the 'opengl' USE flag."
+	fi
+
+	if use cli && ! has_version 'app-shells/mpv-bash-completion'; then
 		elog "If you want to have command-line completion via bash-completion,"
 		elog "please install app-shells/mpv-bash-completion."
 	fi

@@ -1,0 +1,24 @@
+diff --git a/desmume/src/utils/colorspacehandler/colorspacehandler_AVX2.cpp b/desmume/src/utils/colorspacehandler/colorspacehandler_AVX2.cpp
+index 56f1fe4a..a54b1bdb 100644
+--- a/desmume/src/utils/colorspacehandler/colorspacehandler_AVX2.cpp
++++ b/desmume/src/utils/colorspacehandler/colorspacehandler_AVX2.cpp
+@@ -15,6 +15,7 @@
+ 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++#include <cstring>
+ #include "colorspacehandler_AVX2.h"
+ 
+ #ifndef ENABLE_AVX2
+diff --git a/desmume/src/utils/colorspacehandler/colorspacehandler_SSE2.cpp b/desmume/src/utils/colorspacehandler/colorspacehandler_SSE2.cpp
+index 1c139485..b1bf2ec1 100644
+--- a/desmume/src/utils/colorspacehandler/colorspacehandler_SSE2.cpp
++++ b/desmume/src/utils/colorspacehandler/colorspacehandler_SSE2.cpp
+@@ -15,6 +15,7 @@
+ 	along with the this software.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++#include <cstring>
+ #include "colorspacehandler_SSE2.h"
+ 
+ #ifndef ENABLE_SSE2

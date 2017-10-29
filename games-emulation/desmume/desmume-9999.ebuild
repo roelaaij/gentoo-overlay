@@ -1,11 +1,10 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
-EAPI=5
+EAPI=6
 EGIT_REPO_URI="https://github.com/TASVideos/desmume"
 
-inherit eutils autotools games git-r3
+inherit autotools git-r3
 
 DESCRIPTION="Nintendo DS emulator"
 HOMEPAGE="http://desmume.org/"
@@ -27,21 +26,18 @@ RDEPEND=">=x11-libs/gtk+-2.8.0:2
 DEPEND="${RDEPEND}
 	virtual/pkgconfig"
 
-S="${WORKDIR}/${P}/${PN}/src/frontend/posix"
+PATCHES=(
+	   "${FILESDIR}/${PN}-cspace-includes.patch"
+)
 
 src_prepare() {
-	# cd "${WORKDIR}/${P}"
-	# epatch "${FILESDIR}/rom-reader.patch"
-	# cd "${S}"
+	default
+	S="${WORKDIR}/${P}/${PN}/src/frontend/posix"
+	cd "${S}"
 	eautoreconf
-}
-
-src_configure() {
-	egamesconf --datadir=/usr/share
 }
 
 src_install() {
 	DOCS="../../../AUTHORS ../../../ChangeLog ../../../README ../../../README.LIN" \
 		default
-	prepgamesdirs
 }

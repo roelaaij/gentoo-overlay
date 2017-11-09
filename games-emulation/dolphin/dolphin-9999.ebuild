@@ -53,6 +53,7 @@ RDEPEND=">=media-libs/libsfml-2.1
 	llvm? ( sys-devel/llvm )
 	openal? (
 			media-libs/openal
+			media-libs/libsoundtouch
 	)
 	portaudio? ( media-libs/portaudio )
 	profile? ( dev-util/oprofile )
@@ -75,6 +76,7 @@ RDEPEND=">=media-libs/libsfml-2.1
 DEPEND="${RDEPEND}
 	>=dev-util/cmake-2.8.8
 	>=sys-devel/gcc-4.9.0
+	>=dev-libs/xxhash-0.6.2
 	dev-cpp/gtest
 	app-arch/zip
 	media-libs/freetype
@@ -127,20 +129,20 @@ src_prepare() {
 	# - SOIL: The sources are not public.
 	# - cpp-optparse: not in tree
 	# - Bochs-disasm: Don't know what it is.
-	# - xxhash: Not on the tree.
+	# - cubeb: Not in tree.
 	mv Externals/SOIL . || die
 	mv Externals/Bochs_disasm . || die
-	mv Externals/xxhash . || die
 	mv Externals/gtest . || die
 	mv Externals/cpp-optparse . || die
 	mv Externals/soundtouch . || die
+	mv Externals/cubeb . || die
 	rm -r Externals/* || die "Failed to delete Externals dir."
 	mv Bochs_disasm Externals || die
 	mv SOIL Externals || die
 	mv gtest Externals || die
-	mv xxhash Externals || die
 	mv cpp-optparse Externals || die
 	mv soundtouch Externals || die
+	mv cubeb Externals || die
 	popd
 
 	remove_locale() {
@@ -155,7 +157,7 @@ src_prepare() {
 	l10n_find_plocales_changes "Languages/po/" "" '.po'
 	l10n_for_each_disabled_locale_do remove_locale
 
-	eapply_user
+	cmake-utils_src_prepare
 }
 
 src_configure() {
@@ -166,6 +168,7 @@ src_configure() {
 
 	local mycmakeargs=(
 		-DUSE_SHARED_ENET=ON
+		-DUSE_SHARED_XXHASH=ON
 		-DUSE_SHARED_GLSLANG=ON
 		-DUSE_SHARED_GTEST=ON
 		-DENCODE_FRAMEDUMPS="$(usex ffmpeg ON OFF)"

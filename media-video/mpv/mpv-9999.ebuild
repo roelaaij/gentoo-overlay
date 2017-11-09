@@ -15,36 +15,35 @@ HOMEPAGE="https://mpv.io/"
 
 if [[ ${PV} != *9999* ]]; then
 	SRC_URI="https://github.com/mpv-player/mpv/archive/v${PV}.tar.gz -> ${P}.tar.gz"
-	KEYWORDS="~amd64 ~hppa ~x86 ~amd64-linux"
+	KEYWORDS="~alpha ~amd64 ~arm ~hppa ~ppc ~ppc64 ~x86 ~amd64-linux"
 	DOCS=( RELEASE_NOTES )
 else
 	EGIT_REPO_URI="https://github.com/mpv-player/mpv.git"
 	inherit git-r3
 fi
 SRC_URI+=" https://waf.io/waf-${WAF_PV}"
-DOCS+=( README.md )
+DOCS+=( README.md DOCS/{client-api,interface}-changes.rst )
 
 # See Copyright in sources and Gentoo bug 506946. Waf is BSD, libmpv is ISC.
-LICENSE="GPL-2+ BSD ISC"
+LICENSE="LGPL-2.1+ GPL-2+ BSD ISC samba? ( GPL-3+ )"
 SLOT="0"
 IUSE="+alsa aqua archive bluray cdda +cli coreaudio cplugins cuda doc drm dvb
 	dvd +egl encode gbm +iconv jack javascript jpeg lcms +libass libav libcaca
 	libmpv +lua luajit openal +opengl oss pulseaudio raspberry-pi rubberband
 	samba sdl selinux test tools +uchardet v4l vaapi vdpau wayland +X +xv zlib
 	zsh-completion"
-IUSE+=" cpu_flags_x86_sse4_1"
 
 REQUIRED_USE="
 	|| ( cli libmpv )
 	aqua? ( opengl )
 	cuda? ( !libav opengl )
 	egl? ( || ( gbm X wayland ) )
-	gbm? ( drm egl )
-	lcms? ( || ( opengl egl ) )
+	gbm? ( drm egl opengl )
+	lcms? ( opengl )
 	luajit? ( lua )
-	opengl? ( || ( aqua X !cli? ( libmpv ) ) )
+	opengl? ( || ( aqua egl X raspberry-pi !cli ) )
 	raspberry-pi? ( opengl )
-	test? ( || ( opengl egl ) )
+	test? ( opengl )
 	tools? ( cli )
 	uchardet? ( iconv )
 	v4l? ( || ( alsa oss ) )
@@ -60,7 +59,6 @@ REQUIRED_USE="
 COMMON_DEPEND="
 	!libav? ( >=media-video/ffmpeg-3.2.2:0=[encode?,threads,vaapi?,vdpau?] )
 	libav? ( >=media-video/libav-12:0=[encode?,threads,vaapi?,vdpau?] )
-	sys-libs/zlib
 	alsa? ( >=media-libs/alsa-lib-1.0.18 )
 	archive? ( >=app-arch/libarchive-3.0.0:= )
 	bluray? ( >=media-libs/libbluray-0.3.0:= )
@@ -77,6 +75,7 @@ COMMON_DEPEND="
 		uchardet? ( app-i18n/uchardet )
 	)
 	jack? ( virtual/jack )
+	javascript? ( >=dev-lang/mujs-1.0.0 )
 	jpeg? ( virtual/jpeg:0 )
 	lcms? ( >=media-libs/lcms-2.6:2 )
 	libass? (
@@ -89,31 +88,39 @@ COMMON_DEPEND="
 		luajit? ( dev-lang/luajit:2 )
 	)
 	openal? ( >=media-libs/openal-1.13 )
-	opengl? ( X? ( virtual/opengl ) )
 	pulseaudio? ( media-sound/pulseaudio )
-	raspberry-pi? (
-		>=media-libs/raspberrypi-userland-0_pre20160305-r1
-		virtual/opengl
-	)
+	raspberry-pi? ( >=media-libs/raspberrypi-userland-0_pre20160305-r1 )
 	rubberband? ( >=media-libs/rubberband-1.8.0 )
-	samba? ( net-fs/samba[smbclient(+)] )
-	sdl? ( media-libs/libsdl2[sound,threads,video,X?,wayland?] )
+	samba? ( net-fs/samba )
+	sdl? ( media-libs/libsdl2[sound,threads,video] )
 	v4l? ( media-libs/libv4l )
-	vaapi? ( >=x11-libs/libva-1.4.0[drm?,X?,wayland?] )
-	vdpau? ( >=x11-libs/libvdpau-0.2 )
+	vaapi? (
+		!libav? ( >=media-video/ffmpeg-3.3:0 )
+		libav? ( >=media-video/libav-13:0 )
+		x11-libs/libva[drm?,X?,wayland?]
+	)
+	vdpau? (
+		!libav? ( >=media-video/ffmpeg-3.3:0 )
+		libav? ( >=media-video/libav-13:0 )
+		x11-libs/libvdpau
+	)
 	wayland? (
 		>=dev-libs/wayland-1.6.0
 		>=x11-libs/libxkbcommon-0.3.0
 	)
 	X? (
 		x11-libs/libX11
-		x11-libs/libXext
-		>=x11-libs/libXrandr-1.2.0
-		opengl? ( x11-libs/libXdamage )
-		x11-libs/libXinerama
 		x11-libs/libXScrnSaver
+		x11-libs/libXext
+		x11-libs/libXinerama
+		x11-libs/libXrandr
+		opengl? (
+			x11-libs/libXdamage
+			virtual/opengl
+		)
 		xv? ( x11-libs/libXv )
 	)
+	zlib? ( sys-libs/zlib )
 "
 DEPEND="${COMMON_DEPEND}
 	${PYTHON_DEPS}
@@ -133,7 +140,6 @@ RDEPEND="${COMMON_DEPEND}
 
 PATCHES=(
 	"${FILESDIR}/${PN}-0.19.0-make-ffmpeg-version-check-non-fatal.patch"
-	"${FILESDIR}/${PN}-0.23.0-make-libavdevice-check-accept-libav.patch"
 )
 
 pkg_setup() {
@@ -163,7 +169,6 @@ src_configure() {
 		$(usex cli '' '--disable-cplayer')
 		$(use_enable libmpv libmpv-shared)
 
-		# See deep down below for build-date.
 		--disable-libmpv-static
 		--disable-static-build
 		# See deep down below for build-date.
@@ -176,6 +181,7 @@ src_configure() {
 		$(use_enable zsh-completion zsh-comp)
 		$(use_enable test)
 
+		--disable-android
 		$(use_enable iconv)
 		$(use_enable samba libsmbclient)
 		$(use_enable lua)
@@ -231,7 +237,6 @@ src_configure() {
 		$(usex vaapi "$(use_enable gbm vaapi-drm)" '--disable-vaapi-drm')
 		$(use_enable libcaca caca)
 		$(use_enable jpeg)
-		--disable-android
 		$(use_enable raspberry-pi rpi)
 		$(usex libmpv "$(use_enable opengl plain-gl)" '--disable-plain-gl')
 		--disable-mali-fbdev	# Only available in overlays.
@@ -239,8 +244,6 @@ src_configure() {
 
 		# HWaccels:
 		# Automagic Video Toolbox HW acceleration. See Gentoo bug 577332.
-		$(use_enable vaapi vaapi-hwaccel)
-		$(use_enable vdpau vdpau-hwaccel)
 		$(use_enable cuda cuda-hwaccel)
 
 		# TV features:
@@ -284,10 +287,6 @@ src_install() {
 		newbin TOOLS/idet.sh mpv_idet.sh
 		python_replicate_script "${ED}"usr/bin/umpv
 	fi
-}
-
-pkg_preinst() {
-	gnome2_icon_savelist
 }
 
 pkg_postinst() {

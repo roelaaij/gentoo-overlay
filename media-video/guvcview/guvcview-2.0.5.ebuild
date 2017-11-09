@@ -1,9 +1,8 @@
-# Copyright 1999-2016 Gentoo Foundation
+# Copyright 1999-2017 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI=5
-inherit autotools eutils qmake-utils
+inherit autotools eutils flag-o-matic qmake-utils toolchain-funcs
 
 MY_P=${PN}-src-${PV}
 
@@ -13,7 +12,7 @@ SRC_URI="mirror://sourceforge/${PN}/${MY_P}.tar.gz"
 
 LICENSE="GPL-3"
 SLOT="0"
-KEYWORDS="~amd64 ~x86"
+KEYWORDS="amd64 x86"
 IUSE="gsl libav pulseaudio qt5"
 
 RDEPEND=">=dev-libs/glib-2.10
@@ -41,14 +40,16 @@ DEPEND="${RDEPEND}
 S=${WORKDIR}/${MY_P}
 
 src_prepare() {
-	epatch "${FILESDIR}/guvcview-2.0.3-no-clang.patch"
-	epatch "${FILESDIR}/ffmpeg3.patch"
 	sed -i '/^docdir/,/^$/d' Makefile.am || die
+	epatch "${FILESDIR}/latest-ffmpeg.patch"
 	eautoreconf
 }
 
 src_configure() {
 	export MOC="$(qt5_get_bindir)/moc"
+	use qt5 && append-cxxflags -std=c++11
+	# 599030
+	tc-export CC CXX
 	econf \
 		--disable-debian-menu \
 		$(use_enable gsl) \

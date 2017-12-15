@@ -2,21 +2,23 @@
 # Distributed under the terms of the GNU General Public License v2
 # https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=mattermost-desktop
 
-EAPI=6
+EAPI=5
 
 inherit eutils unpacker
 
 DESCRIPTION="Mattermost chat desktop client for Linux"
 HOMEPAGE="https://github.com/mattermost/desktop"
-SRC_URI="https://github.com/mattermost/desktop/archive/v3.7.0.tar.gz -> ${P}.tar.gz"
+SRC_URI="https://github.com/mattermost/desktop/archive/v${PV}.tar.gz -> ${P}.tar.gz"
 
 LICENSE="MIT"
 SLOT="1"
-KEYWORDS="x86 amd64"
+KEYWORDS=""
 IUSE=""
 
 DEPEND="
 	net-libs/nodejs[npm]
+	media-libs/libicns
+	media-gfx/imagemagick[png]
 "
 RDEPEND="
 	${DEPEND}
@@ -24,14 +26,14 @@ RDEPEND="
 	!net-im/mattermost
 "
 
-MY_P="desktop-${PV}"
+MY_P="${P/mattermost-/}"
 S="${WORKDIR}/${MY_P}"
 
 src_compile() {
 	default
 
-	npm run build --linux --x64 --em.name=${PN} || die "npm run package failed!"
 	npm install || die "npm install failed!"
+	npm run package:linux || die "npm run package:linux failed!"
 }
 
 src_install() {

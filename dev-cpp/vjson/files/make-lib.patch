@@ -1,0 +1,23 @@
+--- a/CMakeLists.txt	2017-10-11 10:56:12.650333013 +0200
++++ b/CMakeLists.txt	2017-10-11 10:56:35.630332843 +0200
+@@ -1,7 +1,13 @@
+-cmake_minimum_required(VERSION 2.8)
+-project(vjson)
+-add_definitions(-Wall -Wextra
+-	-Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align
+-	-Wstrict-overflow=5 -Wwrite-strings -Waggregate-return -Wcast-qual
+-	-Wswitch-enum -Wconversion -Wunreachable-code)	
+-add_executable(vjson_test block_allocator.cpp json.cpp main.cpp)
++cmake_minimum_required(VERSION 2.8)
++project(vjson)
++add_definitions(-Wall -Wextra
++	-Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align
++	-Wstrict-overflow=5 -Wwrite-strings -Waggregate-return -Wcast-qual
++	-Wswitch-enum -Wconversion -Wunreachable-code)
++add_executable(vjson_test block_allocator.cpp json.cpp main.cpp)
++
++add_library(vjson SHARED json.cpp)
++
++install(FILES json.h DESTINATION include)
++install(TARGETS vjson 
++        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})

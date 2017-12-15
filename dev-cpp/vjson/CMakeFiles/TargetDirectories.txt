@@ -1,8 +1,0 @@
-/usr/local/portage/dev-cpp/vjson/CMakeFiles/install/strip.dir
-/usr/local/portage/dev-cpp/vjson/CMakeFiles/install/local.dir
-/usr/local/portage/dev-cpp/vjson/CMakeFiles/vjson.dir
-/usr/local/portage/dev-cpp/vjson/CMakeFiles/vjson_test.dir
-/usr/local/portage/dev-cpp/vjson/CMakeFiles/edit_cache.dir
-/usr/local/portage/dev-cpp/vjson/CMakeFiles/rebuild_cache.dir
-/usr/local/portage/dev-cpp/vjson/CMakeFiles/list_install_components.dir
-/usr/local/portage/dev-cpp/vjson/CMakeFiles/install.dir

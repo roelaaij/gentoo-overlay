@@ -1,0 +1,2401 @@
+From d88c85b63e5a5a69ee21c0a7d2a619372fd191c6 Mon Sep 17 00:00:00 2001
+From: Hayaki Saito <saitoha@me.com>
+Date: Sun, 2 Jul 2017 03:14:56 +0900
+Subject: [PATCH] Initial implementation of SIXEL graphics feature Initial
+ implementation of SIXEL graphics feature Use vte's file stream for image
+ serialization (Thanks for Christian Persch's review) Fix memory leak problem:
+ make VteImage hold raw pixel bytes data, because a cairo surface created by
+ cairo_image_surface_create_for_data() didn't seems to take ownership of pixel
+ bytes. Avoid extra call to first/last_displayed_row()
+ https://bugzilla.gnome.org/show_bug.cgi?id=729204#c11 Rewrite hls_to_rgb()
+ Make VteImage retain on-screen images (that have never been freezed) as
+ device-dependent surfaces instead of image surfaces.
+ https://bugzilla.gnome.org/show_bug.cgi?id=729204#c11 Remove unused file
+ src/sixel_hls.cc because now it's out of build target(with 9100d28). Make
+ VteImage a C++ class instead of using the _init/_fini design.
+ https://bugzilla.gnome.org/show_bug.cgi?id=729204#c11 Add new debug flag
+ VTE_DEBUG_IMAGE Add new APIs for controlling enable/disable sixels, and
+ get/set resource limit. - vte_terminal_{get,set}_sixel_enabled() -
+ vte_terminal_{get,set}_freezed_image_limit() Use a std::map container(the key
+ is image bottom position) for managing images, instead of a GList.
+ https://bugzilla.gnome.org/show_bug.cgi?id=729204#c11 Switch primary DA
+ response accoring to whether sixel-enabled property is enabled Move
+ image-freezing process to vadjustment_value_changed() for more efficient
+ image iteration
+
+---
+ src/Makefile.am       |   4 +
+ src/caps.cc           |   5 +
+ src/caps.h            |   1 +
+ src/debug.c           |   1 +
+ src/debug.h           |   1 +
+ src/ring.cc           | 169 ++++++++++-
+ src/ring.h            |  13 +-
+ src/sixel.cc          | 770 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/sixel.h           |  71 +++++
+ src/vte.cc            | 285 +++++++++++++++++++
+ src/vte/vteterminal.h |  17 ++
+ src/vtedefines.hh     |   1 +
+ src/vtegtk.cc         |  86 ++++++
+ src/vtegtk.hh         |   2 +
+ src/vteimage.cc       | 275 ++++++++++++++++++
+ src/vteimage.h        |  61 ++++
+ src/vteinternal.hh    |  18 +-
+ src/vteseq-n.gperf    |   3 +-
+ src/vteseq.cc         | 220 ++++++++++++++-
+ 19 files changed, 1996 insertions(+), 7 deletions(-)
+ create mode 100644 src/sixel.cc
+ create mode 100644 src/sixel.h
+ create mode 100644 src/vteimage.cc
+ create mode 100644 src/vteimage.h
+
+diff --git a/src/Makefile.am b/src/Makefile.am
+index a1120ccd..28f9f764 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -61,6 +61,8 @@ libvte_@VTE_API_MAJOR_VERSION@_@VTE_API_MINOR_VERSION@_la_SOURCES = \
+ 	reaper.hh \
+ 	ring.cc \
+ 	ring.h \
++	sixel.cc \
++	sixel.h \
+ 	table.cc \
+ 	table.h \
+ 	vte.cc \
+@@ -73,6 +75,8 @@ libvte_@VTE_API_MAJOR_VERSION@_@VTE_API_MINOR_VERSION@_la_SOURCES = \
+ 	vtedraw.hh \
+ 	vtegtk.cc \
+ 	vtegtk.hh \
++	vteimage.cc \
++	vteimage.hh \
+ 	vteinternal.hh \
+ 	vtepcre2.h \
+ 	vtepty-private.h \
+diff --git a/src/caps.cc b/src/caps.cc
+index 1f9cd1ed..2a520f67 100644
+--- a/src/caps.cc
++++ b/src/caps.cc
+@@ -27,6 +27,7 @@
+ #define OSC _VTE_CAP_OSC
+ #define PM  _VTE_CAP_PM
+ #define APC _VTE_CAP_APC
++#define DCS _VTE_CAP_DCS
+ 
+ #define ENQ "\005"
+ #define BEL "\007"
+@@ -151,6 +152,10 @@ const char _vte_xterm_capability_strings[] =
+         ENTRY(CSI "%dP", "delete-characters")
+         ENTRY(CSI "S", "scroll-up")
+         ENTRY(CSI "%dS", "scroll-up")
++        ENTRY(CSI "?S", "graphics-attributes")
++        ENTRY(CSI "?%dS", "graphics-attributes")
++        ENTRY(CSI "?%d;%dS", "graphics-attributes")
++        ENTRY(CSI "?%d;%d;%dS", "graphics-attributes")
+         ENTRY(CSI "T", "scroll-down")
+         ENTRY(CSI "%dT", "scroll-down")
+         ENTRY(CSI "%d;%d;%d;%d;%dT", "initiate-hilite-mouse-tracking")
+diff --git a/src/caps.h b/src/caps.h
+index 6f20d925..1d1ca413 100644
+--- a/src/caps.h
++++ b/src/caps.h
+@@ -32,6 +32,7 @@ G_BEGIN_DECLS
+ #define _VTE_CAP_OSC _VTE_CAP_ESC "]"	/* Operating System Command */
+ #define _VTE_CAP_PM  _VTE_CAP_ESC "^"	/* Privacy Message */
+ #define _VTE_CAP_APC _VTE_CAP_ESC "_"	/* Application Program Command */
++#define _VTE_CAP_DCS _VTE_CAP_ESC "P"	/* Device Control String */
+ #define _VTE_CAP_SS2 _VTE_CAP_ESC "N"	/* Single-shift to G2 */
+ #define _VTE_CAP_SS3 _VTE_CAP_ESC "O"	/* Single-shift to G3 */
+ 
+diff --git a/src/debug.c b/src/debug.c
+index b8dc3956..82fed4e3 100644
+--- a/src/debug.c
++++ b/src/debug.c
+@@ -53,6 +53,7 @@ _vte_debug_init(void)
+     { "style",        VTE_DEBUG_STYLE        },
+     { "resize",       VTE_DEBUG_RESIZE       },
+     { "regex",        VTE_DEBUG_REGEX        }
++    { "image",        VTE_DEBUG_IMAGE        },
+   };
+ 
+   _vte_debug_flags = g_parse_debug_string (g_getenv("VTE_DEBUG"),
+diff --git a/src/debug.h b/src/debug.h
+index c2119427..c6745ad7 100644
+--- a/src/debug.h
++++ b/src/debug.h
+@@ -62,6 +62,7 @@ typedef enum {
+         VTE_DEBUG_STYLE         = 1 << 22,
+ 	VTE_DEBUG_RESIZE        = 1 << 23,
+-        VTE_DEBUG_REGEX         = 1 << 24
++        VTE_DEBUG_REGEX         = 1 << 24,
++        VTE_DEBUG_IMAGE         = 1 << 25
+ } VteDebugFlags;
+ 
+ void _vte_debug_init(void);
+diff --git a/src/ring.cc b/src/ring.cc
+index d23f1913..079df26e 100644
+--- a/src/ring.cc
++++ b/src/ring.cc
+@@ -24,6 +24,7 @@
+ #include "ring.h"
+ 
+ #include <string.h>
++#include <new>
+ 
+ /*
+  * VteRing: A buffer ring
+@@ -67,6 +68,7 @@ _vte_ring_init (VteRing *ring, gulong max_rows, gboolean has_streams)
+ 		ring->attr_stream = _vte_file_stream_new ();
+ 		ring->text_stream = _vte_file_stream_new ();
+ 		ring->row_stream = _vte_file_stream_new ();
++		ring->image_stream = _vte_file_stream_new ();
+ 	} else {
+ 		ring->attr_stream = ring->text_stream = ring->row_stream = NULL;
+ 	}
+@@ -80,6 +82,10 @@ _vte_ring_init (VteRing *ring, gulong max_rows, gboolean has_streams)
+ 
+         ring->visible_rows = 0;
+ 
++        ring->image_map = new (std::nothrow) std::map<gint, vte::image::image_object *>();
++        ring->image_onscreen_resource_counter = 0;
++        ring->image_offscreen_resource_counter = 0;
++
+ 	_vte_ring_validate(ring);
+ }
+ 
+@@ -87,16 +93,24 @@ void
+ _vte_ring_fini (VteRing *ring)
+ {
+ 	gulong i;
++	auto image_map = ring->image_map;
+ 
+ 	for (i = 0; i <= ring->mask; i++)
+ 		_vte_row_data_fini (&ring->array[i]);
+ 
+ 	g_free (ring->array);
+ 
++	/* Clear SIXEL images */
++	for (auto it = image_map->begin (); it != image_map->end (); ++it)
++		delete it->second;
++	image_map->clear();
++	delete ring->image_map;
++
+ 	if (ring->has_streams) {
+ 		g_object_unref (ring->attr_stream);
+ 		g_object_unref (ring->text_stream);
+ 		g_object_unref (ring->row_stream);
++		g_object_unref (ring->image_stream);
+ 	}
+ 
+ 	g_string_free (ring->utf8_buffer, TRUE);
+@@ -321,8 +335,8 @@ _vte_ring_reset_streams (VteRing *ring, gulong position)
+ 
+ 	if (ring->has_streams) {
+ 		_vte_stream_reset (ring->row_stream, position * sizeof (VteRowRecord));
+-                _vte_stream_reset (ring->text_stream, _vte_stream_head (ring->text_stream));
+-                _vte_stream_reset (ring->attr_stream, _vte_stream_head (ring->attr_stream));
++		_vte_stream_reset (ring->text_stream, _vte_stream_head (ring->text_stream));
++		_vte_stream_reset (ring->attr_stream, _vte_stream_head (ring->attr_stream));
+ 	}
+ 
+ 	ring->last_attr_text_start_offset = 0;
+@@ -332,12 +346,21 @@ _vte_ring_reset_streams (VteRing *ring, gulong position)
+ long
+ _vte_ring_reset (VteRing *ring)
+ {
++	auto image_map = ring->image_map;
++
+         _vte_debug_print (VTE_DEBUG_RING, "Reseting the ring at %lu.\n", ring->end);
+ 
+         _vte_ring_reset_streams (ring, ring->end);
+         ring->start = ring->writable = ring->end;
+         ring->cached_row_num = (gulong) -1;
+ 
++	/* Clear SIXEL images */
++	for (auto it = image_map->begin (); it != image_map->end (); ++it)
++		delete it->second;
++	image_map->clear();
++	if (ring->has_streams)
++		_vte_stream_reset (ring->image_stream, _vte_stream_head (ring->image_stream));
++
+         return ring->end;
+ }
+ 
+@@ -1059,6 +1082,148 @@ err:
+ }
+ 
+ 
++/**
++ * _vte_ring_append_image:
++ * @ring: a #VteRing
++ * @surface: a Cairo surface object
++ * @pixelwidth: image width in pixels
++ * @pixelheight: image height in pixels
++ * @left: left position of image in cell unit
++ * @top: left position of image in cell unit
++ * @width: width of image in cell unit
++ * @height: width of image in cell unit
++ *
++ * Append an image into the internal image list.
++ */
++void
++_vte_ring_append_image (VteRing *ring, cairo_surface_t *surface, gint pixelwidth, gint pixelheight, glong left, glong top, glong width, glong height)
++{
++	using namespace vte::image;
++	image_object *image;
++	auto image_map = ring->image_map;
++	gulong char_width, char_height;
++
++	g_assert_true (image_map != NULL);
++
++	image = new (std::nothrow) image_object (surface, pixelwidth, pixelheight, left, top, width, height, ring->image_stream);
++	g_assert_true (image != NULL);
++
++	char_width = pixelwidth / width;
++	char_height = pixelwidth / height;
++
++	/* composition */
++	for (auto it = image_map->lower_bound (top); it != image_map->end (); ++it) {
++		image_object *current = it->second;
++
++		/* Combine two images if one's area includes another's area */
++		if (image->includes (current)) {
++			/*
++			 * Replace current image with new image
++			 *
++			 *  +--------------+
++			 *  |     new      |
++			 *  | ...........  |
++			 *  | : current :  |
++			 *  | :.........:  |
++			 *  +--------------+
++			 */
++			image_map->erase (image->get_bottom ());
++			if (current->is_freezed())
++				ring->image_offscreen_resource_counter -= current->resource_size ();
++			else
++				ring->image_onscreen_resource_counter -= current->resource_size ();
++			delete current;
++		} else if (current->includes (image)) {
++			/*
++			 * Copy new image to current image's sub-area.
++			 *
++			 *  +--------------+
++			 *  | +-----+      |
++			 *  | | new |      |
++			 *  | +-----+      |
++			 *  |    current   |
++			 *  +--------------+
++			 */
++			if (current->is_freezed()) {
++				ring->image_offscreen_resource_counter -= current->resource_size ();
++				current->thaw ();
++			} else {
++				ring->image_onscreen_resource_counter -= current->resource_size ();
++			}
++			current->combine (image, char_width, char_height);
++			ring->image_onscreen_resource_counter += current->resource_size ();
++			delete image;
++			goto end;
++		}
++
++		if ((current->get_bottom () - image->get_bottom ()) * (current->get_top () - image->get_top ()) <= 0) {
++                        /*
++			 * Unite two images if one's [top, bottom] includes another's [top, bottom].
++			 * This operation ensures bottom-position-based order is same to top-position-based order.
++			 *
++			 *              +------+
++			 *  +---------+ |      |
++			 *  | current | | new  |
++			 *  |         | |      |
++			 *  +---------+ |      |
++			 *              +------+
++			 *  or
++			 *
++			 *  +---------+
++			 *  | current | +------+
++			 *  |         | | new  |
++			 *  |         | +------+
++			 *  +---------+
++			 *          |
++			 *          v
++			 *  +------------------+
++			 *  | new (united)     |
++			 *  |                  |
++			 *  +------------------+
++			 */
++			image->unite (image, char_width, char_height);
++			image_map->erase (current->get_bottom ());
++			if (current->is_freezed())
++				ring->image_offscreen_resource_counter -= current->resource_size ();
++			else
++				ring->image_onscreen_resource_counter -= current->resource_size ();
++			delete current;
++			goto end;
++		}
++	}
++
++register_to_map:
++	/*
++	 * Now register new image to the image_map container.
++	 * the key is bottom positon.
++	 *  +----------+
++	 *  |   new    |
++	 *  |          |
++	 *  +----------+ <- bottom position (key)
++	 */
++	image_map->insert (std::make_pair (image->get_bottom (), image));
++	ring->image_onscreen_resource_counter += image->resource_size ();
++end:
++	/* noop */
++	;
++}
++
++void
++_vte_ring_shrink_image_stream (VteRing *ring)
++{
++	using namespace vte::image;
++	image_object *first_image;
++
++	if (ring->image_map->empty())
++		return;
++
++	first_image = ring->image_map->begin()->second;
++
++	if (first_image->is_freezed ())
++		if (first_image->get_stream_position () > _vte_stream_tail (ring->image_stream))
++			_vte_stream_advance_tail (ring->image_stream, first_image->get_stream_position ());
++}
++
+ static gboolean
+ _vte_ring_write_row (VteRing *ring,
+ 		     GOutputStream *stream,
+diff --git a/src/ring.h b/src/ring.h
+index 84fea260..157d7f4e 100644
+--- a/src/ring.h
++++ b/src/ring.h
+@@ -25,9 +25,11 @@
+ 
+ #include <gio/gio.h>
+ #include <vte/vte.h>
++#include <map>
+ 
+ #include "vterowdata.h"
+ #include "vtestream.h"
++#include "vteimage.h"
+ 
+ G_BEGIN_DECLS
+ 
+@@ -57,7 +59,7 @@ struct _VteRing {
+ 	VteRowData *array;
+ 
+ 	/* Storage */
+-	VteStream *attr_stream, *text_stream, *row_stream;
++	VteStream *attr_stream, *text_stream, *row_stream, *image_stream;
+ 	gsize last_attr_text_start_offset;
+ 	VteIntCellAttr last_attr;
+ 	GString *utf8_buffer;
+@@ -67,6 +69,13 @@ struct _VteRing {
+ 
+ 	gboolean has_streams;
+         gulong visible_rows;  /* to keep at least a screenful of lines in memory, bug 646098 comment 12 */
++
++        /* The SIXEL image list, registered with bottom position of image. */
++        std::map<gint, vte::image::image_object *> *image_map;
++
++        /* resource counters for image management */
++        size_t image_onscreen_resource_counter;  /* calculated amount size of in-memory or GPU-allocated images */
++        size_t image_offscreen_resource_counter;  /* calculated amount size of freezed images in VteBoa */
+ };
+ 
+ #define _vte_ring_contains(__ring, __position) \
+@@ -90,6 +99,8 @@ void _vte_ring_remove (VteRing *ring, gulong position);
+ void _vte_ring_drop_scrollback (VteRing *ring, gulong position);
+ void _vte_ring_set_visible_rows (VteRing *ring, gulong rows);
+ void _vte_ring_rewrap (VteRing *ring, glong columns, VteVisualPosition **markers);
++void _vte_ring_append_image (VteRing *ring, cairo_surface_t *surface, gint pixelwidth, gint pixelheight, glong left, glong top, glong width, glong height);
++void _vte_ring_shrink_image_stream (VteRing *ring);
+ gboolean _vte_ring_write_contents (VteRing *ring,
+ 				   GOutputStream *stream,
+ 				   VteWriteFlags flags,
+diff --git a/src/sixel.cc b/src/sixel.cc
+new file mode 100644
+index 00000000..0e06ca66
+--- /dev/null
++++ b/src/sixel.cc
+@@ -0,0 +1,770 @@
++/*
++ * Copyright (C) Hayaki Saito
++ * originally written by kmiya@cluti (https://github.com/saitoha/sixel/blob/master/fromsixel.c)
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <stdlib.h>
++#include <stdio.h>
++#include <ctype.h>   /* isdigit */
++#include <string.h>  /* memcpy */
++#include <glib.h>
++
++#include "sixel.h"
++
++#define SIXEL_RGB(r, g, b) ((r) + ((g) << 8) +  ((b) << 16))
++#define PALVAL(n,a,m) (((n) * (a) + ((m) / 2)) / (m))
++#define SIXEL_XRGB(r,g,b) SIXEL_RGB(PALVAL(r, 255, 100), PALVAL(g, 255, 100), PALVAL(b, 255, 100))
++
++static int const sixel_default_color_table[] = {
++	SIXEL_XRGB(0,  0,  0),   /*  0 Black    */
++	SIXEL_XRGB(20, 20, 80),  /*  1 Blue     */
++	SIXEL_XRGB(80, 13, 13),  /*  2 Red      */
++	SIXEL_XRGB(20, 80, 20),  /*  3 Green    */
++	SIXEL_XRGB(80, 20, 80),  /*  4 Magenta  */
++	SIXEL_XRGB(20, 80, 80),  /*  5 Cyan     */
++	SIXEL_XRGB(80, 80, 20),  /*  6 Yellow   */
++	SIXEL_XRGB(53, 53, 53),  /*  7 Gray 50% */
++	SIXEL_XRGB(26, 26, 26),  /*  8 Gray 25% */
++	SIXEL_XRGB(33, 33, 60),  /*  9 Blue*    */
++	SIXEL_XRGB(60, 26, 26),  /* 10 Red*     */
++	SIXEL_XRGB(33, 60, 33),  /* 11 Green*   */
++	SIXEL_XRGB(60, 33, 60),  /* 12 Magenta* */
++	SIXEL_XRGB(33, 60, 60),  /* 13 Cyan*    */
++	SIXEL_XRGB(60, 60, 33),  /* 14 Yellow*  */
++	SIXEL_XRGB(80, 80, 80),  /* 15 Gray 75% */
++};
++
++/*
++ *  HLS-formatted color handling.
++ *  (0 degree = blue, double-hexcone model)
++ *  http://odl.sysworks.biz/disk$vaxdocdec021/progtool/d3qsaaa1.p64.bkb
++ */
++static int
++hls_to_rgb(int hue, int lum, int sat)
++{
++    double min, max;
++    int r, g, b;
++
++    if (sat == 0) {
++        r = g = b = lum;
++    }
++
++    /* https://wikimedia.org/api/rest_v1/media/math/render/svg/17e876f7e3260ea7fed73f69e19c71eb715dd09d */
++    max = lum + sat * (100 - (lum > 50 ? 1 : -1) * ((lum << 1) - 100)) / 200.0;
++
++    /* https://wikimedia.org/api/rest_v1/media/math/render/svg/f6721b57985ad83db3d5b800dc38c9980eedde1d */
++    min = lum - sat * (100 - (lum > 50 ? 1 : -1) * ((lum << 1) - 100)) / 200.0;
++
++    /* HLS hue color ring is roteted -120 degree from HSL's one. */
++    hue = (hue + 240) % 360;
++
++    /* https://wikimedia.org/api/rest_v1/media/math/render/svg/937e8abdab308a22ff99de24d645ec9e70f1e384 */
++    switch (hue / 60) {
++    case 0:  /* 0 <= hue < 60 */
++        r = max;
++        g = (min + (max - min) * (hue / 60.0));
++        b = min;
++        break;
++    case 1:  /* 60 <= hue < 120 */
++        r = min + (max - min) * ((120 - hue) / 60.0);
++        g = max;
++        b = min;
++        break;
++    case 2:  /* 120 <= hue < 180 */
++        r = min;
++        g = max;
++        b = (min + (max - min) * ((hue - 120) / 60.0));
++        break;
++    case 3:  /* 180 <= hue < 240 */
++        r = min;
++        g = (min + (max - min) * ((240 - hue) / 60.0));
++        b = max;
++        break;
++    case 4:  /* 240 <= hue < 300 */
++        r = (min + (max - min) * ((hue - 240) / 60.0));
++        g = min;
++        b = max;
++        break;
++    case 5:  /* 300 <= hue < 360 */
++    default:
++        r = max;
++        g = min;
++        b = (min + (max - min) * ((360 - hue) / 60.0));
++        break;
++    }
++
++    return SIXEL_XRGB(r, g, b);
++}
++
++static int
++set_default_color(sixel_image_t *image)
++{
++	int i;
++	int n;
++	int r;
++	int g;
++	int b;
++
++	/* palette initialization */
++	for (n = 1; n < 17; n++) {
++		image->palette[n] = sixel_default_color_table[n - 1];
++	}
++
++	/* colors 17-232 are a 6x6x6 color cube */
++	for (r = 0; r < 6; r++) {
++		for (g = 0; g < 6; g++) {
++			for (b = 0; b < 6; b++) {
++				image->palette[n++] = SIXEL_RGB(r * 51, g * 51, b * 51);
++			}
++		}
++	}
++
++	/* colors 233-256 are a grayscale ramp, intentionally leaving out */
++	for (i = 0; i < 24; i++) {
++		image->palette[n++] = SIXEL_RGB(i * 11, i * 11, i * 11);
++	}
++
++	for (; n < DECSIXEL_PALETTE_MAX; n++) {
++		image->palette[n] = SIXEL_RGB(255, 255, 255);
++	}
++
++	return (0);
++}
++
++static int
++sixel_image_init(
++    sixel_image_t    *image,
++    int              width,
++    int              height,
++    int              fgcolor,
++    int              bgcolor,
++    int              use_private_register)
++{
++	int status = (-1);
++	size_t size;
++
++	size = (size_t)(width * height) * sizeof(sixel_color_no_t);
++	image->width = width;
++	image->height = height;
++	image->data = (sixel_color_no_t *)g_malloc(size);
++	image->ncolors = 2;
++	image->use_private_register = use_private_register;
++
++	if (image->data == NULL) {
++		status = (-1);
++		goto end;
++	}
++	memset(image->data, 0, size);
++
++	image->palette[0] = bgcolor;
++
++	if (image->use_private_register)
++		image->palette[1] = fgcolor;
++
++	image->palette_modified = 0;
++
++	status = (0);
++
++end:
++	return status;
++}
++
++
++static int
++image_buffer_resize(
++    sixel_image_t   *image,
++    int              width,
++    int              height)
++{
++	int status = (-1);
++	size_t size;
++	sixel_color_no_t *alt_buffer;
++	int n;
++	int min_height;
++
++	size = (size_t)(width * height) * sizeof(sixel_color_no_t);
++	alt_buffer = (sixel_color_no_t *)g_malloc(size);
++	if (alt_buffer == NULL) {
++		/* free source image */
++		g_free(image->data);
++		image->data = NULL;
++		status = (-1);
++		goto end;
++	}
++
++	min_height = height > image->height ? image->height: height;
++	if (width > image->width) {  /* if width is extended */
++		for (n = 0; n < min_height; ++n) {
++			/* copy from source image */
++			memcpy(alt_buffer + width * n,
++			       image->data + image->width * n,
++			       (size_t)image->width * sizeof(sixel_color_no_t));
++			/* fill extended area with background color */
++			memset(alt_buffer + width * n + image->width,
++			       0,
++			       (size_t)(width - image->width) * sizeof(sixel_color_no_t));
++		}
++	} else {
++		for (n = 0; n < min_height; ++n) {
++			/* copy from source image */
++			memcpy(alt_buffer + width * n,
++			       image->data + image->width * n,
++			       (size_t)width * sizeof(sixel_color_no_t));
++		}
++	}
++
++	if (height > image->height) {  /* if height is extended */
++		/* fill extended area with background color */
++		memset(alt_buffer + width * image->height,
++		       0,
++		       (size_t)(width * (height - image->height)) * sizeof(sixel_color_no_t));
++	}
++
++	/* free source image */
++	g_free(image->data);
++
++	image->data = alt_buffer;
++	image->width = width;
++	image->height = height;
++
++	status = (0);
++
++end:
++	return status;
++}
++
++static void
++sixel_image_deinit(sixel_image_t *image)
++{
++	g_free(image->data);
++	image->data = NULL;
++}
++
++int
++sixel_parser_init(sixel_state_t *st,
++                  int fgcolor, int bgcolor,
++                  int use_private_register)
++{
++	int status = (-1);
++
++	st->state = PS_DCS;
++	st->pos_x = 0;
++	st->pos_y = 0;
++	st->max_x = 0;
++	st->max_y = 0;
++	st->attributed_pan = 2;
++	st->attributed_pad = 1;
++	st->attributed_ph = 0;
++	st->attributed_pv = 0;
++	st->repeat_count = 1;
++	st->color_index = 16;
++	st->nparams = 0;
++	st->param = 0;
++
++	/* buffer initialization */
++	status = sixel_image_init(&st->image, 1, 1, fgcolor, bgcolor, use_private_register);
++
++	return status;
++}
++
++int
++sixel_parser_set_default_color(sixel_state_t *st)
++{
++	return set_default_color(&st->image);
++}
++
++int
++sixel_parser_finalize(sixel_state_t *st, unsigned char *pixels)
++{
++	int status = (-1);
++	int sx;
++	int sy;
++	sixel_image_t *image = &st->image;
++	int x, y;
++	sixel_color_no_t *src;
++	unsigned char *dst;
++	int color;
++
++	if (++st->max_x < st->attributed_ph)
++		st->max_x = st->attributed_ph;
++
++	if (++st->max_y < st->attributed_pv)
++		st->max_y = st->attributed_pv;
++
++	sx = st->max_x;
++	sy = st->max_y;
++
++	if (image->width > sx || image->height > sy) {
++		status = image_buffer_resize(image, sx, sy);
++		if (status < 0)
++			goto end;
++	}
++
++	if (image->use_private_register && image->ncolors > 2 && !image->palette_modified) {
++		status = set_default_color(image);
++		if (status < 0)
++			goto end;
++	}
++
++	src = st->image.data;
++	dst = pixels;
++	for (y = 0; y < st->image.height; ++y) {
++		for (x = 0; x < st->image.width; ++x) {
++			color = st->image.palette[*src++];
++			*dst++ = color >> 16 & 0xff;   /* b */
++			*dst++ = color >> 8 & 0xff;    /* g */
++			*dst++ = color >> 0 & 0xff;    /* r */
++			*dst++ = 0xff;                 /* a */
++		}
++	}
++
++	status = (0);
++
++end:
++	return status;
++}
++
++/* convert sixel data into indexed pixel bytes and palette data */
++int
++sixel_parser_parse(sixel_state_t *st, unsigned char *p, size_t len)
++{
++	int status = (-1);
++	int n;
++	int i;
++	int x;
++	int y;
++	int bits;
++	int sixel_vertical_mask;
++	int sx;
++	int sy;
++	int c;
++	int pos;
++	unsigned char *p0 = p;
++	sixel_image_t *image = &st->image;
++
++	if (! image->data)
++		goto end;
++
++	while (p < p0 + len) {
++		switch (st->state) {
++		case PS_ESC:
++			switch (*p) {
++			case '\\':
++			case 0x9c:
++				p++;
++				break;
++			case 'P':
++				st->param = -1;
++				st->state = PS_DCS;
++				p++;
++				break;
++			default:
++				p++;
++				break;
++			}
++			goto end;
++		case PS_DCS:
++			switch (*p) {
++			case 0x1b:
++				st->state = PS_ESC;
++				p++;
++				break;
++			case '0':
++			case '1':
++			case '2':
++			case '3':
++			case '4':
++			case '5':
++			case '6':
++			case '7':
++			case '8':
++			case '9':
++				if (st->param < 0)
++					st->param = 0;
++				st->param = st->param * 10 + *p - '0';
++				p++;
++				break;
++			case ';':
++				if (st->param < 0) {
++					st->param = 0;
++				}
++				if (st->nparams < DECSIXEL_PARAMS_MAX) {
++					st->params[st->nparams++] = st->param;
++				}
++				st->param = 0;
++				p++;
++				break;
++			case 'q':
++				if (st->param >= 0 && st->nparams < DECSIXEL_PARAMS_MAX) {
++					st->params[st->nparams++] = st->param;
++				}
++				if (st->nparams > 0) {
++					/* Pn1 */
++					switch (st->params[0]) {
++					case 0:
++					case 1:
++						st->attributed_pad = 2;
++						break;
++					case 2:
++						st->attributed_pad = 5;
++						break;
++					case 3:
++					case 4:
++						st->attributed_pad = 4;
++						break;
++					case 5:
++					case 6:
++						st->attributed_pad = 3;
++						break;
++					case 7:
++					case 8:
++						st->attributed_pad = 2;
++						break;
++					case 9:
++						st->attributed_pad = 1;
++						break;
++					default:
++						st->attributed_pad = 2;
++						break;
++					}
++				}
++
++				if (st->nparams > 2) {
++					/* Pn3 */
++					if (st->params[2] == 0)
++						st->params[2] = 10;
++					st->attributed_pan = st->attributed_pan * st->params[2] / 10;
++					st->attributed_pad = st->attributed_pad * st->params[2] / 10;
++					if (st->attributed_pan <= 0)
++						st->attributed_pan = 1;
++					if (st->attributed_pad <= 0)
++						st->attributed_pad = 1;
++				}
++				st->nparams = 0;
++				st->state = PS_DECSIXEL;
++				p++;
++				break;
++			default:
++				p++;
++				break;
++			}
++			break;
++
++		case PS_DECSIXEL:
++			switch (*p) {
++			case '\x1b':
++				st->state = PS_ESC;
++				p++;
++				break;
++			case '"':
++				st->param = 0;
++				st->nparams = 0;
++				st->state = PS_DECGRA;
++				p++;
++				break;
++			case '!':
++				st->param = 0;
++				st->nparams = 0;
++				st->state = PS_DECGRI;
++				p++;
++				break;
++			case '#':
++				st->param = 0;
++				st->nparams = 0;
++				st->state = PS_DECGCI;
++				p++;
++				break;
++			case '$':
++				/* DECGCR Graphics Carriage Return */
++				st->pos_x = 0;
++				p++;
++				break;
++			case '-':
++				/* DECGNL Graphics Next Line */
++				st->pos_x = 0;
++				if (st->pos_y < DECSIXEL_HEIGHT_MAX - 5 - 6)
++					st->pos_y += 6;
++				else
++					st->pos_y = DECSIXEL_HEIGHT_MAX + 1;
++				p++;
++				break;
++			default:
++				if (*p >= '?' && *p <= '~') {  /* sixel characters */
++					if ((image->width < (st->pos_x + st->repeat_count) || image->height < (st->pos_y + 6))
++					        && image->width < DECSIXEL_WIDTH_MAX && image->height < DECSIXEL_HEIGHT_MAX) {
++						sx = image->width * 2;
++						sy = image->height * 2;
++						while (sx < (st->pos_x + st->repeat_count) || sy < (st->pos_y + 6)) {
++							sx *= 2;
++							sy *= 2;
++						}
++
++						if (sx > DECSIXEL_WIDTH_MAX)
++							sx = DECSIXEL_WIDTH_MAX;
++						if (sy > DECSIXEL_HEIGHT_MAX)
++							sy = DECSIXEL_HEIGHT_MAX;
++
++						status = image_buffer_resize(image, sx, sy);
++						if (status < 0)
++							goto end;
++					}
++
++					if (st->color_index > image->ncolors)
++						image->ncolors = st->color_index;
++
++					if (st->pos_x + st->repeat_count > image->width)
++						st->repeat_count = image->width - st->pos_x;
++
++					if (st->repeat_count > 0 && st->pos_y - 5 < image->height) {
++						bits = *p - '?';
++						if (bits != 0) {
++							sixel_vertical_mask = 0x01;
++							if (st->repeat_count <= 1) {
++								for (i = 0; i < 6; i++) {
++									if ((bits & sixel_vertical_mask) != 0) {
++										pos = image->width * (st->pos_y + i) + st->pos_x;
++										image->data[pos] = st->color_index;
++										if (st->max_x < st->pos_x)
++											st->max_x = st->pos_x;
++										if (st->max_y < (st->pos_y + i))
++											st->max_y = st->pos_y + i;
++									}
++									sixel_vertical_mask <<= 1;
++								}
++							} else {
++								/* st->repeat_count > 1 */
++								for (i = 0; i < 6; i++) {
++									if ((bits & sixel_vertical_mask) != 0) {
++										c = sixel_vertical_mask << 1;
++										for (n = 1; (i + n) < 6; n++) {
++											if ((bits & c) == 0)
++												break;
++											c <<= 1;
++										}
++										for (y = st->pos_y + i; y < st->pos_y + i + n; ++y) {
++											for (x = st->pos_x; x < st->pos_x + st->repeat_count; ++x)
++												image->data[image->width * y + x] = st->color_index;
++										}
++										if (st->max_x < (st->pos_x + st->repeat_count - 1))
++											st->max_x = st->pos_x + st->repeat_count - 1;
++										if (st->max_y < (st->pos_y + i + n - 1))
++											st->max_y = st->pos_y + i + n - 1;
++										i += (n - 1);
++										sixel_vertical_mask <<= (n - 1);
++									}
++									sixel_vertical_mask <<= 1;
++								}
++							}
++						}
++					}
++					if (st->repeat_count > 0)
++						st->pos_x += st->repeat_count;
++					st->repeat_count = 1;
++				}
++				p++;
++				break;
++			}
++			break;
++
++		case PS_DECGRA:
++			/* DECGRA Set Raster Attributes " Pan; Pad; Ph; Pv */
++			switch (*p) {
++			case '\x1b':
++				st->state = PS_ESC;
++				p++;
++				break;
++			case '0':
++			case '1':
++			case '2':
++			case '3':
++			case '4':
++			case '5':
++			case '6':
++			case '7':
++			case '8':
++			case '9':
++				st->param = st->param * 10 + *p - '0';
++				if (st->param > DECSIXEL_PARAMVALUE_MAX)
++					st->param = DECSIXEL_PARAMVALUE_MAX;
++				p++;
++				break;
++			case ';':
++				if (st->nparams < DECSIXEL_PARAMS_MAX)
++					st->params[st->nparams++] = st->param;
++				st->param = 0;
++				p++;
++				break;
++			default:
++				if (st->nparams < DECSIXEL_PARAMS_MAX)
++					st->params[st->nparams++] = st->param;
++				if (st->nparams > 0)
++					st->attributed_pad = st->params[0];
++				if (st->nparams > 1)
++					st->attributed_pan = st->params[1];
++				if (st->nparams > 2 && st->params[2] > 0)
++					st->attributed_ph = st->params[2];
++				if (st->nparams > 3 && st->params[3] > 0)
++					st->attributed_pv = st->params[3];
++
++				if (st->attributed_pan <= 0)
++					st->attributed_pan = 1;
++				if (st->attributed_pad <= 0)
++					st->attributed_pad = 1;
++
++				if (image->width < st->attributed_ph ||
++				        image->height < st->attributed_pv) {
++					sx = st->attributed_ph;
++					if (image->width > st->attributed_ph)
++						sx = image->width;
++
++					sy = st->attributed_pv;
++					if (image->height > st->attributed_pv)
++						sy = image->height;
++
++					if (sx > DECSIXEL_WIDTH_MAX)
++						sx = DECSIXEL_WIDTH_MAX;
++					if (sy > DECSIXEL_HEIGHT_MAX)
++						sy = DECSIXEL_HEIGHT_MAX;
++
++					status = image_buffer_resize(image, sx, sy);
++					if (status < 0)
++						goto end;
++				}
++				st->state = PS_DECSIXEL;
++				st->param = 0;
++				st->nparams = 0;
++			}
++			break;
++
++		case PS_DECGRI:
++			/* DECGRI Graphics Repeat Introducer ! Pn Ch */
++			switch (*p) {
++			case '\x1b':
++				st->state = PS_ESC;
++				p++;
++				break;
++			case '0':
++			case '1':
++			case '2':
++			case '3':
++			case '4':
++			case '5':
++			case '6':
++			case '7':
++			case '8':
++			case '9':
++				st->param = st->param * 10 + *p - '0';
++				if (st->param > DECSIXEL_PARAMVALUE_MAX)
++					st->param = DECSIXEL_PARAMVALUE_MAX;
++				p++;
++				break;
++			default:
++				st->repeat_count = st->param;
++				if (st->repeat_count == 0)
++					st->repeat_count = 1;
++				st->state = PS_DECSIXEL;
++				st->param = 0;
++				st->nparams = 0;
++				break;
++			}
++			break;
++
++		case PS_DECGCI:
++			/* DECGCI Graphics Color Introducer # Pc; Pu; Px; Py; Pz */
++			switch (*p) {
++			case '\x1b':
++				st->state = PS_ESC;
++				p++;
++				break;
++			case '0':
++			case '1':
++			case '2':
++			case '3':
++			case '4':
++			case '5':
++			case '6':
++			case '7':
++			case '8':
++			case '9':
++				st->param = st->param * 10 + *p - '0';
++				if (st->param > DECSIXEL_PARAMVALUE_MAX)
++					st->param = DECSIXEL_PARAMVALUE_MAX;
++				p++;
++				break;
++			case ';':
++				if (st->nparams < DECSIXEL_PARAMS_MAX)
++					st->params[st->nparams++] = st->param;
++				st->param = 0;
++				p++;
++				break;
++			default:
++				st->state = PS_DECSIXEL;
++				if (st->nparams < DECSIXEL_PARAMS_MAX)
++					st->params[st->nparams++] = st->param;
++				st->param = 0;
++
++				if (st->nparams > 0) {
++					st->color_index = 1 + st->params[0];  /* offset 1(background color) added */
++					if (st->color_index < 0)
++						st->color_index = 0;
++					else if (st->color_index >= DECSIXEL_PALETTE_MAX)
++						st->color_index = DECSIXEL_PALETTE_MAX - 1;
++				}
++
++				if (st->nparams > 4) {
++					st->image.palette_modified = 1;
++					if (st->params[1] == 1) {
++						/* HLS */
++						if (st->params[2] > 360)
++							st->params[2] = 360;
++						if (st->params[3] > 100)
++							st->params[3] = 100;
++						if (st->params[4] > 100)
++							st->params[4] = 100;
++						image->palette[st->color_index]
++						    = hls_to_rgb(st->params[2], st->params[3], st->params[4]);
++					} else if (st->params[1] == 2) {
++						/* RGB */
++						if (st->params[2] > 100)
++							st->params[2] = 100;
++						if (st->params[3] > 100)
++							st->params[3] = 100;
++						if (st->params[4] > 100)
++							st->params[4] = 100;
++						image->palette[st->color_index]
++						    = SIXEL_XRGB(st->params[2], st->params[3], st->params[4]);
++					}
++				}
++				break;
++			}
++			break;
++		default:
++			break;
++		}
++	}
++
++	status = (0);
++
++end:
++	return status;
++}
++
++void
++sixel_parser_deinit(sixel_state_t *st)
++{
++	sixel_image_deinit(&st->image);
++}
+diff --git a/src/sixel.h b/src/sixel.h
+new file mode 100644
+index 00000000..8e06ea56
+--- /dev/null
++++ b/src/sixel.h
+@@ -0,0 +1,71 @@
++/*
++ * Copyright (C) Hayaki Saito
++ * originally written by kmiya@cluti (https://github.com/saitoha/sixel/blob/master/fromsixel.c)
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#pragma once
++
++#define DECSIXEL_PARAMS_MAX 16
++#define DECSIXEL_PALETTE_MAX 1024
++#define DECSIXEL_PARAMVALUE_MAX 65535
++#define DECSIXEL_WIDTH_MAX 4096
++#define DECSIXEL_HEIGHT_MAX 4096
++
++typedef unsigned short sixel_color_no_t;
++typedef struct sixel_image_buffer {
++	sixel_color_no_t *data;
++	int width;
++	int height;
++	int palette[DECSIXEL_PALETTE_MAX];
++	sixel_color_no_t ncolors;
++	int palette_modified;
++	int use_private_register;
++} sixel_image_t;
++
++typedef enum parse_state {
++	PS_ESC        = 1,  /* ESC */
++	PS_DCS        = 2,  /* DCS */
++	PS_DECSIXEL   = 3,  /* DECSIXEL body part ", $, -, ? ... ~ */
++	PS_DECGRA     = 4,  /* DECGRA Set Raster Attributes " Pan; Pad; Ph; Pv */
++	PS_DECGRI     = 5,  /* DECGRI Graphics Repeat Introducer ! Pn Ch */
++	PS_DECGCI     = 6,  /* DECGCI Graphics Color Introducer # Pc; Pu; Px; Py; Pz */
++} parse_state_t;
++
++typedef struct parser_context {
++	parse_state_t state;
++	int pos_x;
++	int pos_y;
++	int max_x;
++	int max_y;
++	int attributed_pan;
++	int attributed_pad;
++	int attributed_ph;
++	int attributed_pv;
++	int repeat_count;
++	int color_index;
++	int bgindex;
++	int param;
++	int nparams;
++	int params[DECSIXEL_PARAMS_MAX];
++	sixel_image_t image;
++} sixel_state_t;
++
++int sixel_parser_init(sixel_state_t *st, int fgcolor, int bgcolor, int use_private_register);
++int sixel_parser_parse(sixel_state_t *st, unsigned char *p, size_t len);
++int sixel_parser_set_default_color(sixel_state_t *st);
++int sixel_parser_finalize(sixel_state_t *st, unsigned char *pixels);
++void sixel_parser_deinit(sixel_state_t *st);
+diff --git a/src/vte.cc b/src/vte.cc
+index fdb9c0b6..571bf723 100644
+--- a/src/vte.cc
++++ b/src/vte.cc
+@@ -3855,6 +3855,9 @@ next_match:
+ 	/* Tell the input method where the cursor is. */
+         im_update_cursor();
+ 
++	if (m_sixel_enabled)
++		maybe_remove_images ();
++
+ 	_vte_debug_print (VTE_DEBUG_WORK, ")");
+ 	_vte_debug_print (VTE_DEBUG_IO,
+ 			"%ld chars and %ld bytes in %" G_GSIZE_FORMAT " chunks left to process.\n",
+@@ -3863,6 +3871,120 @@ next_match:
+ 			_vte_incoming_chunks_count(m_incoming));
+ }
+ 
++void
++VteTerminalPrivate::maybe_remove_images ()
++{
++	VteRing *ring = m_screen->row_data;
++	auto image_map = ring->image_map;
++	vte::image::image_object *image;
++
++	auto it = image_map->begin();
++
++	/* step 1. collect images out of scroll-back area */
++	while (it != image_map->end()) {
++		/* image_map is sorted from oldest to new */
++		image = it->second;
++
++		/* break if the image is still in scrollback area */
++		if (image->get_bottom () >= ring->start)
++			break;
++
++		/* otherwise, delete it */
++		if (image->is_freezed ())
++			ring->image_offscreen_resource_counter -= image->resource_size ();
++		else
++			ring->image_onscreen_resource_counter -= image->resource_size ();
++		image_map->erase (image->get_bottom ());
++		delete image;
++		_vte_debug_print (VTE_DEBUG_IMAGE,
++		                  "deleted, offscreen: %zu\n",
++		                  ring->image_offscreen_resource_counter);
++	}
++
++	/* step 2. If the resource amount of freezed images (serialized into VteBoa)
++	 * exceeds the upper limit, remove images from oldest.
++	 */
++	if (ring->image_offscreen_resource_counter > m_freezed_image_limit) {
++		_vte_debug_print (VTE_DEBUG_IMAGE,
++		                  "checked, offscreen: %zu, max: %zu\n",
++		                  ring->image_offscreen_resource_counter,
++		                  m_freezed_image_limit);
++		while (it != image_map->end()) {
++			image = it->second;
++			++it;
++
++			/* remove */
++			image_map->erase (image->get_bottom ());
++			if (image->is_freezed ())
++				ring->image_offscreen_resource_counter -= image->resource_size ();
++			else
++				ring->image_onscreen_resource_counter -= image->resource_size ();
++			_vte_debug_print (VTE_DEBUG_IMAGE,
++			                  "deleted, offscreen: %zu\n",
++			                  ring->image_offscreen_resource_counter);
++			delete image;
++
++			/* break if the resource amount becomes less than limit */
++			if (ring->image_offscreen_resource_counter <= m_freezed_image_limit)
++				break;
++		}
++	}
++
++	/* step 3. shrink image stream with calling _vte_stream_advance_tail() */
++	if (ring->has_streams)
++		_vte_ring_shrink_image_stream (ring);
++}
++
++void
++VteTerminalPrivate::freeze_hidden_images_before_view_area (double start_pos, double end_pos)
++{
++	VteRing *ring = m_screen->row_data;
++	auto image_map = ring->image_map;
++	/* for images before view area */
++	vte::grid::row_t top_of_view = (vte::grid::row_t)start_pos;
++	typedef std::remove_pointer<decltype(ring->image_map)>::type map_t;
++
++	/* iterate from new to old */
++	for (auto it = map_t::reverse_iterator (image_map->lower_bound (top_of_view)); it != image_map->rend (); ++it) {
++		vte::image::image_object *image = it->second;
++		if (image->get_bottom () + 1 < end_pos)
++			break;
++		if (! image->is_freezed ()) {
++			ring->image_onscreen_resource_counter -= image->resource_size ();
++			image->freeze ();
++			ring->image_offscreen_resource_counter += image->resource_size ();
++			_vte_debug_print (VTE_DEBUG_IMAGE,
++			                  "freezed, onscreen: %zu, offscreen: %zu\n",
++			                  ring->image_onscreen_resource_counter,
++			                  ring->image_offscreen_resource_counter);
++		}
++	}
++}
++
++void
++VteTerminalPrivate::freeze_hidden_images_after_view_area (double start_pos, double end_pos)
++{
++	VteRing *ring = m_screen->row_data;
++	auto image_map = ring->image_map;
++	vte::grid::row_t bottom_of_view = (vte::grid::row_t)(start_pos + m_row_count);
++
++	/* for images after view area */
++	for (auto it = image_map->lower_bound (bottom_of_view); it != image_map->end (); ++it) {
++		vte::image::image_object *image = it->second;
++		if (image->get_top () < end_pos + m_row_count)
++			break;
++		if (image->get_top () > bottom_of_view && ! image->is_freezed ()) {
++			ring->image_onscreen_resource_counter -= image->resource_size ();
++			image->freeze ();
++			ring->image_offscreen_resource_counter += image->resource_size ();
++			_vte_debug_print (VTE_DEBUG_IMAGE,
++			                  "freezed, onscreen: %zu, offscreen: %zu\n",
++			                  ring->image_onscreen_resource_counter,
++			                  ring->image_offscreen_resource_counter);
++		}
++	}
++}
++
+ void
+ VteTerminalPrivate::feed_chunks(struct _vte_incoming_chunk *chunks)
+ {
+@@ -7458,6 +7677,16 @@ VteTerminalPrivate::set_font_scale(gdouble scale)
+         return true;
+ }
+ 
++bool
++VteTerminalPrivate::set_freezed_image_limit(gulong limit)
++{
++        g_assert(limit >= 0);
++
++        m_freezed_image_limit = limit;
++
++        return true;
++}
++
+ /* Read and refresh our perception of the size of the PTY. */
+ void
+ VteTerminalPrivate::refresh_size()
+@@ -7613,6 +7842,14 @@ VteTerminalPrivate::screen_set_size(VteScreen *screen_,
+ 		screen_->scroll_delta = new_scroll_delta;
+ }
+ 
++bool
++VteTerminalPrivate::set_sixel_enabled(gboolean enabled)
++{
++        m_sixel_enabled = enabled;
++
++        return true;
++}
++
+ void
+ VteTerminalPrivate::set_size(long columns,
+                              long rows)
+@@ -7692,6 +7929,12 @@ VteTerminalPrivate::vadjustment_value_changed()
+ 
+         /* FIXME: do this check in pixel space */
+ 	if (dy != 0) {
++		if (dy > 0.0) {
++			freeze_hidden_images_before_view_area (adj, adj - dy);
++		} else {
++			freeze_hidden_images_after_view_area (adj, adj - dy);
++		}
++
+ 		_vte_debug_print(VTE_DEBUG_ADJ,
+ 			    "Scrolling by %f\n", dy);
+                 invalidate_all();
+@@ -7887,6 +8130,9 @@ VteTerminalPrivate::VteTerminalPrivate(VteTerminal *t) :
+         save_cursor(&m_normal_screen);
+         save_cursor(&m_alternate_screen);
+ 
++	/* Initialize SIXEL color register */
++	sixel_parser_set_default_color(&m_sixel_state);
++
+ 	/* Matching data. */
+ 	m_match_regexes = g_array_new(FALSE, TRUE,
+ 					 sizeof(struct vte_match_regex));
+@@ -7914,6 +8160,10 @@ VteTerminalPrivate::VteTerminalPrivate(VteTerminal *t) :
+         m_font_scale = 1.;
+ 	m_has_fonts = FALSE;
+ 
++        /* Image */
++        m_freezed_image_limit = VTE_DEFAULT_FREEZED_IMAGE_LIMIT;
++        m_sixel_enabled = TRUE;
++
+ 	/* Not all backends generate GdkVisibilityNotify, so mark the
+ 	 * window as unobscured initially. */
+ 	m_visibility_state = GDK_VISIBILITY_UNOBSCURED;
+@@ -9490,6 +9740,7 @@ VteTerminalPrivate::widget_draw(cairo_t *cr)
+         cairo_region_t *region;
+         int allocated_width, allocated_height;
+         int extra_area_for_cursor;
++        VteRing *ring = m_screen->row_data;
+ 
+         if (!gdk_cairo_get_clip_rectangle (cr, &clip_rect))
+                 return;
+@@ -9514,6 +9765,32 @@ VteTerminalPrivate::widget_draw(cairo_t *cr)
+ 			 allocated_width, allocated_height,
+                          get_color(VTE_DEFAULT_BG), m_background_alpha);
+ 
++	/* Draw SIXEL images */
++	if (m_sixel_enabled) {
++		vte::grid::row_t top_row = first_displayed_row();
++		vte::grid::row_t bottom_row = last_displayed_row();
++		auto image_map = ring->image_map;
++		auto it = image_map->lower_bound (top_row);
++		for (; it != image_map->end (); ++it) {
++			vte::image::image_object *image = it->second;
++			if (image->get_top () > bottom_row)
++				break;
++			if (image->is_freezed ()) {
++				ring->image_offscreen_resource_counter -= image->resource_size ();
++				image->thaw ();
++				ring->image_onscreen_resource_counter += image->resource_size ();
++				_vte_debug_print (VTE_DEBUG_IMAGE,
++				                  "thawn, onscreen: %zu, offscreen: %zu\n",
++				                  ring->image_onscreen_resource_counter,
++				                  ring->image_offscreen_resource_counter);
++			}
++			/* Display images */
++			int x = m_padding.left + image->get_left () * m_char_width;
++			int y = m_padding.top + (image->get_top () - m_screen->scroll_delta) * m_char_height;
++			image->paint (cr, x, y);
++		}
++	}
++
+         /* Clip vertically, for the sake of smooth scrolling. We want the top and bottom paddings to be unused.
+          * Don't clip horizontally so that antialiasing can legally overflow to the right padding. */
+         cairo_save(cr);
+@@ -10118,6 +10395,14 @@ VteTerminalPrivate::reset(bool clear_tabstops,
+ 	m_modifiers = 0;
+ 	/* Reset miscellaneous stuff. */
+ 	m_bracketed_paste_mode = FALSE;
++	/* Reset SIXEL display mode */
++	m_sixel_display_mode = FALSE;
++	/* Reset SIXEL-scrolls-right mode */
++	m_sixel_scrolls_right = FALSE;
++	/* Reset privae color register mode */
++	m_sixel_use_private_register = FALSE;
++	/* Reset SIXEL color register */
++	sixel_parser_set_default_color(&m_sixel_state);
+         /* Reset the saved cursor. */
+         save_cursor(&m_normal_screen);
+         save_cursor(&m_alternate_screen);
+diff --git a/src/vte/vteterminal.h b/src/vte/vteterminal.h
+index 3b22c4a5..25e44c51 100644
+--- a/src/vte/vteterminal.h
++++ b/src/vte/vteterminal.h
+@@ -459,6 +459,23 @@ gboolean vte_terminal_write_contents_sync (VteTerminal *terminal,
+                                            GCancellable *cancellable,
+                                            GError **error) _VTE_GNUC_NONNULL(1) _VTE_GNUC_NONNULL(2);
+ 
++/* Set or get maximum storage size for offscreen freezed images */
++_VTE_PUBLIC
++void vte_terminal_set_freezed_image_limit(VteTerminal *terminal,
++                                          gulong limit) _VTE_GNUC_NONNULL(1);
++
++_VTE_PUBLIC
++gulong vte_terminal_get_freezed_image_limit(VteTerminal *terminal) _VTE_GNUC_NONNULL(1);
++
++/* Set or get whether the SIXEL graphics feature is enabled */
++_VTE_PUBLIC
++void vte_terminal_set_sixel_enabled (VteTerminal *terminal,
++                                     gboolean enabled) _VTE_GNUC_NONNULL(1);
++
++_VTE_PUBLIC
++gboolean vte_terminal_get_sixel_enabled (VteTerminal *terminal) _VTE_GNUC_NONNULL(1);
++
++
+ #if GLIB_CHECK_VERSION(2, 44, 0)
+ G_DEFINE_AUTOPTR_CLEANUP_FUNC(VteTerminal, g_object_unref)
+ #endif
+diff --git a/src/vtedefines.hh b/src/vtedefines.hh
+index 7f56291a..0688f316 100644
+--- a/src/vtedefines.hh
++++ b/src/vtedefines.hh
+@@ -84,6 +84,7 @@
+ #define VTE_MAX_PROCESS_TIME		100
+ #define VTE_CELL_BBOX_SLACK		1
+ #define VTE_DEFAULT_UTF8_AMBIGUOUS_WIDTH 1
++#define VTE_DEFAULT_FREEZED_IMAGE_LIMIT (16 * 1024 * 1024)  /* 16 MB */
+ 
+ #define VTE_UTF8_BPC                    (6) /* Maximum number of bytes used per UTF-8 character */
+ 
+diff --git a/src/vtegtk.cc b/src/vtegtk.cc
+index 579d83b9..2d460dc1 100644
+--- a/src/vtegtk.cc
++++ b/src/vtegtk.cc
+@@ -1351,6 +1351,17 @@ vte_terminal_class_init(VteTerminalClass *klass)
+                                      NULL,
+                                      (GParamFlags) (G_PARAM_READABLE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY));
+ 
++        /**
++         * VteTerminal:freezed-image-limit:
++         *
++         * This property indicates allowed max storage size for offscreen freezed images
++         */
++        pspecs[PROP_FREEZED_IMAGE_LIMIT] =
++                g_param_spec_ulong ("freezed-image-limit", NULL, NULL,
++                                    0, G_MAXULONG, VTE_DEFAULT_FREEZED_IMAGE_LIMIT,
++                                    (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY));
++
++
+         /**
+          * VteTerminal:input-enabled:
+          *
+@@ -1435,6 +1446,17 @@ vte_terminal_class_init(VteTerminalClass *klass)
+                                       TRUE,
+                                       (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY));
+ 
++        /**
++         * VteTerminal:sixel-enabled:
++         *
++         * Controls whether the SIXEL graphics feature is enabled.
++         */
++        pspecs[PROP_SIXEL_ENABLED] =
++                g_param_spec_boolean ("sixel-enabled", NULL, NULL,
++                                      TRUE,
++                                      (GParamFlags) (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS | G_PARAM_EXPLICIT_NOTIFY));
++
++
+         /**
+          * VteTerminal:window-title:
+          *
+@@ -3793,3 +3815,67 @@ vte_terminal_write_contents_sync (VteTerminal *terminal,
+ 
+         return IMPL(terminal)->write_contents_sync(stream, flags, cancellable, error);
+ }
++
++/**
++ * vte_terminal_set_freezed_image_limit:
++ * @terminal: a #VteTerminal
++ * @limit: 0 to G_MAXINT
++ *
++ * Set allowed max storage size for offscreen freezed images
++ */
++void
++vte_terminal_set_freezed_image_limit(VteTerminal *terminal, gulong limit)
++{
++        g_return_if_fail(VTE_IS_TERMINAL(terminal));
++
++        if (IMPL(terminal)->set_freezed_image_limit(limit))
++                g_object_notify_by_pspec(G_OBJECT(terminal), pspecs[PROP_FREEZED_IMAGE_LIMIT]);
++}
++
++/**
++ * vte_terminal_get_freezed_image_limit:
++ * @terminal: a #VteTerminal
++ *
++ * Get allowed max storage size for offscreen freezed images
++ */
++gulong
++vte_terminal_get_freezed_image_limit(VteTerminal *terminal)
++{
++        g_return_val_if_fail(VTE_IS_TERMINAL(terminal), NULL);
++
++        return IMPL(terminal)->m_freezed_image_limit;
++}
++
++/**
++ * vte_terminal_set_sixel_enabled:
++ * @terminal: a #VteTerminal
++ * @enabled: %TRUE enables SIXEL graphics feature.
++ *
++ * Set whether to enable SIXEL graphics feature
++ */
++void
++vte_terminal_set_sixel_enabled (VteTerminal *terminal, gboolean enabled)
++{
++        g_return_if_fail(VTE_IS_TERMINAL(terminal));
++
++        if (IMPL(terminal)->set_sixel_enabled(enabled))
++                g_object_notify_by_pspec(G_OBJECT(terminal), pspecs[PROP_SIXEL_ENABLED]);
++}
++
++/**
++ * vte_terminal_set_sixel_enabled:
++ * @terminal: a #VteTerminal
++ *
++ * Get whether the SIXEL graphics feature is enabled.
++ *
++ * Returns: %TRUE if SIXEL graphics feature is enabled.
++ */
++
++gboolean
++vte_terminal_get_sixel_enabled (VteTerminal *terminal)
++{
++        g_return_val_if_fail(VTE_IS_TERMINAL(terminal), NULL);
++
++        return IMPL(terminal)->m_sixel_enabled;
++}
++
+diff --git a/src/vtegtk.hh b/src/vtegtk.hh
+index 5340725d..5bbcd1e9 100644
+--- a/src/vtegtk.hh
++++ b/src/vtegtk.hh
+@@ -74,6 +74,7 @@ enum {
+         PROP_ENCODING,
+         PROP_FONT_DESC,
+         PROP_FONT_SCALE,
++        PROP_FREEZED_IMAGE_LIMIT,
+         PROP_ICON_TITLE,
+         PROP_INPUT_ENABLED,
+         PROP_MOUSE_POINTER_AUTOHIDE,
+@@ -82,6 +83,7 @@ enum {
+         PROP_SCROLLBACK_LINES,
+         PROP_SCROLL_ON_KEYSTROKE,
+         PROP_SCROLL_ON_OUTPUT,
++        PROP_SIXEL_ENABLED,
+         PROP_WINDOW_TITLE,
+         PROP_WORD_CHAR_EXCEPTIONS,
+         LAST_PROP,
+diff --git a/src/vteimage.cc b/src/vteimage.cc
+new file mode 100644
+index 00000000..628d01d4
+--- /dev/null
++++ b/src/vteimage.cc
+@@ -0,0 +1,275 @@
++/*
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#include <config.h>
++#include <glib.h>
++#include <stdio.h>
++#include "vteimage.h"
++#include "vteinternal.hh"
++
++namespace vte {
++
++namespace image {
++
++/* image_object implementation */
++image_object::image_object (cairo_surface_t *surface, gint pixelwidth, gint pixelheight, gint col, gint row, gint w, gint h, _VteStream *stream)
++{
++	m_pixelwidth = pixelwidth;
++	m_pixelheight = pixelheight;
++	m_left = col;
++	m_top = row;
++	m_width = w;
++	m_height = h;
++	m_surface = surface;
++	m_stream = stream;
++
++	g_object_ref (m_stream);
++}
++
++image_object::~image_object ()
++{
++	if (m_surface)
++		cairo_surface_destroy (m_surface);
++	g_object_unref (m_stream);
++}
++
++glong
++image_object::get_left () const
++{
++	return (glong)m_left;
++}
++
++glong
++image_object::get_top () const
++{
++	return (glong)m_top;
++}
++
++glong
++image_object::get_bottom () const
++{
++	return (glong)(m_top + m_height - 1);
++}
++
++gulong
++image_object::get_stream_position () const
++{
++	return m_position;
++}
++
++/* Indicate whether the image is serialized to the stream */
++bool
++image_object::is_freezed () const
++{
++	return (m_surface == NULL);
++}
++
++/* Test whether this image includes given image */
++bool
++image_object::includes (const image_object *other) const
++{
++	g_assert_true (other != NULL);
++
++	return other->m_left >= m_left &&
++	       other->m_top >= m_top &&
++	       other->m_left + other->m_width <= m_left + m_width &&
++	       other->m_top + other->m_height <= m_top + m_height;
++}
++
++size_t
++image_object::resource_size () const
++{
++	size_t result_size;
++
++	if (is_freezed ()) {
++		/* If freezed, return the size sent to VteBoa.
++                 * In reality, it may be more compressed on the real storage.
++                 */
++		result_size = m_nwrite;
++	} else {
++		/* If not freezed, return the pixel buffer size
++                 * width x height x 4
++                 */
++		result_size = m_pixelwidth * m_pixelheight * 4;
++	}
++
++	return result_size;
++}
++
++/* Deserialize the cairo image from the temporary file */
++bool
++image_object::thaw ()
++{
++	if (m_surface)
++		return true;
++	if (m_position < _vte_stream_tail (m_stream))
++		return false;
++
++	m_nread = 0;
++	m_surface = cairo_image_surface_create_from_png_stream ((cairo_read_func_t)read_callback, this);
++	if (! m_surface)
++		return false;
++
++	return true;
++}
++
++/* Serialize the image for saving RAM */
++void
++image_object::freeze ()
++{
++	cairo_status_t status;
++	double x_scale, y_scale;
++
++	if (! m_surface)
++		return;
++
++	m_position = _vte_stream_head (m_stream);
++	m_nwrite = 0;
++
++	cairo_surface_get_device_scale (m_surface, &x_scale, &y_scale);
++	if (x_scale != 1.0 || y_scale != 1.0) {
++		/* If device scale exceeds 1.0, large size of PNG image created with cairo_surface_write_to_png_stream()
++                 * So we need to convert m_surface into an image surface with resizing it.
++                 */
++		cairo_surface_t *image_surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, m_pixelwidth, m_pixelheight);
++		cairo_t *cr = cairo_create (image_surface);
++		paint (cr, 0, 0);
++		cairo_destroy (cr);
++		cairo_surface_destroy (m_surface);
++		m_surface = image_surface;
++	}
++	status = cairo_surface_write_to_png_stream (m_surface, (cairo_write_func_t)write_callback, this);
++	if (status == CAIRO_STATUS_SUCCESS) {
++		cairo_surface_destroy (m_surface);
++		m_surface = NULL;
++	}
++}
++
++/* Merge another image into this image */
++bool
++image_object::combine (image_object *other, gulong char_width, gulong char_height)
++{
++	cairo_t *cr;
++
++	g_assert_true (other != NULL);
++
++	gulong offsetx = (other->m_left - m_left) * char_width;
++	gulong offsety = (other->m_top - m_top) * char_height;
++
++	if (is_freezed ())
++		if (! thaw ())
++			return false;
++
++	if (other->is_freezed ())
++		if (! other->thaw ())
++			return false;
++
++	cr = cairo_create (m_surface);
++	cairo_rectangle (cr, offsetx, offsety, m_pixelwidth, m_pixelheight);
++	cairo_clip (cr);
++	cairo_set_source_surface (cr, other->m_surface, offsetx, offsety);
++	cairo_paint (cr);
++	cairo_destroy (cr);
++
++	return true;
++}
++
++bool
++image_object::unite (image_object *other, gulong char_width, gulong char_height)
++{
++	if (is_freezed ())
++		if (! thaw ())
++			return false;
++
++	gint new_left = std::min (m_left, other->m_left);
++	gint new_top = std::min (m_top, other->m_top);
++	gint new_width = std::max (m_left + m_width, other->m_left + other->m_width) - new_left;
++	gint new_height = std::max (m_top + m_height, other->m_top + other->m_width) - new_top;
++	gint pixelwidth = new_width * char_width;
++	gint pixelheight = new_height * char_height;
++	gint offsetx = (m_left - new_left) * char_width;
++	gint offsety = (m_top - new_top) * char_height;
++
++	cairo_surface_t * new_surface = cairo_surface_create_similar (other->m_surface, CAIRO_CONTENT_COLOR_ALPHA, m_pixelwidth, m_pixelheight);
++	cairo_t *cr = cairo_create (new_surface);
++	cairo_rectangle (cr, offsetx, offsety, m_pixelwidth, m_pixelheight);
++	cairo_clip (cr);
++	cairo_set_source_surface (cr, m_surface, offsetx, offsety);
++	cairo_paint (cr);
++	cairo_destroy (cr);
++
++	cairo_surface_destroy (m_surface);
++
++	m_left = new_left;
++	m_top = new_top;
++	m_width = new_width;
++	m_height = new_height;
++	m_pixelwidth = pixelwidth;
++	m_pixelheight = pixelheight;
++	m_surface = new_surface;
++
++	return combine (other, char_width, char_height);
++}
++
++/* Paint the image into given cairo rendering context */
++bool
++image_object::paint (cairo_t *cr, gint offsetx, gint offsety)
++{
++	if (is_freezed ())
++		if (! thaw ())
++			return false;
++
++	cairo_save (cr);
++	cairo_rectangle (cr, offsetx, offsety, m_pixelwidth, m_pixelheight);
++	cairo_clip (cr);
++	cairo_set_source_surface (cr, m_surface, offsetx, offsety);
++	cairo_paint (cr);
++	cairo_restore (cr);
++
++	return true;
++}
++
++/* callback routines for stream I/O */
++
++cairo_status_t
++image_object::read_callback (void *closure, char *data, unsigned int length)
++{
++	image_object *image = (image_object *)closure;
++
++	g_assert_true (image != NULL);
++
++	_vte_stream_read (image->m_stream, image->m_position + image->m_nread, data, length);
++	image->m_nread += length;
++
++	return CAIRO_STATUS_SUCCESS;
++}
++
++cairo_status_t
++image_object::write_callback (void *closure, const char *data, unsigned int length)
++{
++	image_object *image = (image_object *)closure;
++
++	g_assert_true (image != NULL);
++
++	_vte_stream_append (image->m_stream, data, length);
++	image->m_nwrite += length;
++
++	return CAIRO_STATUS_SUCCESS;
++}
++
++} // namespace image
++
++} // namespace vte
+diff --git a/src/vteimage.h b/src/vteimage.h
+new file mode 100644
+index 00000000..76d4af20
+--- /dev/null
++++ b/src/vteimage.h
+@@ -0,0 +1,61 @@
++/*
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
++ */
++
++#pragma once
++
++#include <pango/pangocairo.h>
++#include "vtestream.h"
++
++namespace vte {
++
++namespace image {
++
++struct image_object {
++private:
++	gint m_left;                /* left position in cell unit at the vte virtual screen */
++	gint m_width;               /* width in cell unit */
++	gint m_top;                 /* top position in cell unit at the vte virtual screen */
++	gint m_height;              /* height in cell unit */
++	VteStream *m_stream;        /* NULL if it's serialized */
++	gint m_pixelwidth;          /* image width in pixels */
++	gint m_pixelheight;         /* image hieght in pixels */
++	gulong m_position;          /* indicates the position at the stream if it's serialized */
++	size_t m_nread;             /* private use: for read callback */
++	size_t m_nwrite;            /* private use: for write callback */
++	cairo_surface_t *m_surface; /* internal cairo image */
++public:
++	explicit image_object (cairo_surface_t *surface, gint pixelwidth, gint pixelheight, gint col, gint row, gint w, gint h, _VteStream *stream);
++	~image_object ();
++	glong get_left () const;
++	glong get_top () const;
++	glong get_bottom () const;
++	gulong get_stream_position () const;
++	bool is_freezed () const;
++	bool includes (const image_object *rhs) const;
++	size_t resource_size () const;
++	void freeze ();
++	bool thaw ();
++	bool combine (image_object *rhs, gulong char_width, gulong char_height);
++	bool unite (image_object *rhs, gulong char_width, gulong char_height);
++	bool paint (cairo_t *cr, gint offsetx, gint offsety);
++public:
++	static cairo_status_t read_callback (void *closure, char *data, unsigned int length);
++	static cairo_status_t write_callback (void *closure, const char *data, unsigned int length);
++};
++
++} // namespace image
++
++} // namespace vte
+diff --git a/src/vteinternal.hh b/src/vteinternal.hh
+index 3a8acfc9..48a7f9cf 100644
+--- a/src/vteinternal.hh
++++ b/src/vteinternal.hh
+@@ -29,6 +29,7 @@
+ 
+ #include "vtepcre2.h"
+ #include "vteregexinternal.hh"
++#include "sixel.h"
+ 
+ typedef enum {
+         VTE_REGEX_CURSOR_GDKCURSOR,
+@@ -433,6 +434,14 @@ public:
+ 
+         gboolean m_focus_tracking_mode;
+ 
++        /* SIXEL feature */
++        gboolean m_sixel_display_mode;
++        gboolean m_sixel_scrolls_right;
++        gboolean m_sixel_use_private_register;
++        sixel_state_t m_sixel_state;
++        gulong m_freezed_image_limit;
++        gboolean m_sixel_enabled;
++
+ 	/* State variables for handling match checks. */
+         char* m_match_contents;
+         GArray* m_match_attributes;
+@@ -1102,6 +1111,7 @@ public:
+         bool set_encoding(char const* codeset);
+         bool set_font_desc(PangoFontDescription const* desc);
+         bool set_font_scale(double scale);
++        bool set_freezed_image_limit(gulong limit);
+         bool set_input_enabled(bool enabled);
+         bool set_mouse_autohide(bool autohide);
+         bool set_pty(VtePty *pty);
+@@ -1109,6 +1119,7 @@ public:
+         bool set_scrollback_lines(long lines);
+         bool set_scroll_on_keystroke(bool scroll);
+         bool set_scroll_on_output(bool scroll);
++        bool set_sixel_enabled(gboolean enabled);
+         bool set_word_char_exceptions(char const* exceptions);
+ 
+         bool write_contents_sync (GOutputStream *stream,
+@@ -1191,7 +1202,7 @@ public:
+                                                       int index_fallback,
+                                                       int osc,
+                                                       char const *terminator);
+-
++        void seq_load_sixel(char const* p);
+         void subscribe_accessible_events();
+         void select_text(vte::grid::column_t start_col,
+                          vte::grid::row_t start_row,
+@@ -1199,6 +1210,11 @@ public:
+                          vte::grid::row_t end_row);
+         void select_empty(vte::grid::column_t col,
+                           vte::grid::row_t row);
++
++private:
++        void freeze_hidden_images_before_view_area(double start_pos, double end_pos);
++        void freeze_hidden_images_after_view_area(double start_pos, double end_pos);
++        void maybe_remove_images();
+ };
+ 
+ extern GTimer *process_timer;
+diff --git a/src/vteseq-n.gperf b/src/vteseq-n.gperf
+index 7cd1de50..589dfdca 100644
+--- a/src/vteseq-n.gperf
++++ b/src/vteseq-n.gperf
+@@ -97,7 +97,7 @@ struct vteseq_n_struct {
+ #"set-text-property-21", VTE_SEQUENCE_HANDLER_NULL
+ #"set-text-property-2L", VTE_SEQUENCE_HANDLER_NULL
+ "cursor-preceding-line", VTE_SEQUENCE_HANDLER(vte_sequence_handler_cursor_preceding_line)
+-#"device-control-string", VTE_SEQUENCE_HANDLER_NULL
++"device-control-string", VTE_SEQUENCE_HANDLER(vte_sequence_handler_device_control_string)
+ "screen-alignment-test", VTE_SEQUENCE_HANDLER(vte_sequence_handler_screen_alignment_test)
+ #"select-locator-events", VTE_SEQUENCE_HANDLER_NULL
+ #"set-conformance-level", VTE_SEQUENCE_HANDLER_NULL
+@@ -174,3 +174,4 @@
+ "iterm2-133", VTE_SEQUENCE_HANDLER(vte_sequence_handler_iterm2_133)
+ "iterm2-1337", VTE_SEQUENCE_HANDLER(vte_sequence_handler_iterm2_1337)
+ "send-notification", VTE_SEQUENCE_HANDLER(vte_sequence_handler_send_notification)
++"graphics-attributes", VTE_SEQUENCE_HANDLER(vte_sequence_handler_graphics_attributes)
+diff --git a/src/vteseq.cc b/src/vteseq.cc
+index 45fdcc24..75c63534 100644
+--- a/src/vteseq.cc
++++ b/src/vteseq.cc
+@@ -33,6 +33,7 @@
+ #include "vtegtk.hh"
+ #include "caps.h"
+ #include "debug.h"
++#include "sixel.h"
+ 
+ #define BEL "\007"
+ #define ST _VTE_CAP_ST
+@@ -693,6 +694,11 @@ vte_sequence_handler_decset_internal(VteTerminalPrivate *that,
+ 		 NULL, NULL,},
+ 		/* 67: disallowed, backspace key policy is set by user. */
+ 		{67, 0, 0, 0, 0, 0, NULL, NULL,},
++		/* 80: SIXEL display mode(DECSDM). */
++		{80, PRIV_OFFSET(m_sixel_display_mode), 0, 0,
++		 FALSE,
++		 TRUE,
++		 NULL, NULL,},
+ 		/* 1000: Send-coords-on-button. */
+ 		{1000, 0, PRIV_OFFSET(m_mouse_tracking_mode), 0,
+ 		 0,
+@@ -770,11 +776,21 @@ vte_sequence_handler_decset_internal(VteTerminalPrivate *that,
+                  0,
+                  vte_sequence_handler_normal_screen_and_restore_cursor,
+                  vte_sequence_handler_save_cursor_and_alternate_screen,},
++		/* 1070: private color register mode. */
++		{1070, PRIV_OFFSET(m_sixel_use_private_register), 0, 0,
++		 FALSE,
++		 TRUE,
++		 NULL, NULL,},
+ 		/* 2004: Bracketed paste mode. */
+ 		{2004, PRIV_OFFSET(m_bracketed_paste_mode), 0, 0,
+ 		 FALSE,
+ 		 TRUE,
+ 		 NULL, NULL,},
++		/* 8452: SIXEL-scrolls-right mode. */
++		{8452, PRIV_OFFSET(m_sixel_scrolls_right), 0, 0,
++		 FALSE,
++		 TRUE,
++		 NULL, NULL,},
+ #undef PRIV_OFFSET
+ #undef SCREEN_OFFSET
+ 	};
+@@ -2329,8 +2345,13 @@ vte_sequence_handler_return_terminal_status (VteTerminalPrivate *that, GValueArr
+ static void
+ vte_sequence_handler_send_primary_device_attributes (VteTerminalPrivate *that, GValueArray *params)
+ {
+-	/* Claim to be a VT220 with only national character set support. */
+-        that->feed_child("\e[?62;c", -1);
++	if (that->m_sixel_enabled) {
++		/* Claim to be a VT220 with SIXEL graphics support. */
++		that->feed_child("\e[?62;4c", -1);
++	} else {
++		/* Claim to be a VT220 */
++		that->feed_child("\e[?62c", -1);
++	}
+ }
+ 
+ /* Send terminal ID. */
+@@ -2967,6 +2988,151 @@ vte_sequence_handler_screen_alignment_test (VteTerminalPrivate *that, GValueArra
+         that->seq_screen_alignment_test();
+ }
+ 
++static void
++vte_sequence_handler_device_control_string (VteTerminalPrivate *that, GValueArray *params)
++{
++	GValue *value;
++	char *dcs = NULL;
++	char *p;
++	glong cmd = 0;
++	gint param;
++	size_t nparams = 0;
++	gint dcsparams[DECSIXEL_PARAMS_MAX];
++
++	value = g_value_array_get_nth(params, 0);
++	if (!value)
++		return;
++	if (G_VALUE_HOLDS_STRING(value)) {
++		/* Copy the string into the buffer. */
++		dcs = g_value_dup_string(value);
++	}
++	else if (G_VALUE_HOLDS_POINTER(value)) {
++		dcs = that->ucs4_to_utf8((const guchar *)g_value_get_pointer (value));
++	}
++	if (! dcs)
++		return;
++
++	for (p = dcs; p; ++p) {
++		switch (*p) {
++		case ' ' ... '/':
++			cmd = cmd << 8 | *p;
++			if (cmd > (1 << 24))
++				goto end;
++			break;
++		case '0' ... '9':
++			if (param < 0)
++				param = 0;
++			param = param * 10 + *p - '0';
++			break;
++		case ';':
++			if (param < 0)
++				param = 0;
++			if (nparams < sizeof(dcsparams) / sizeof(dcsparams[0]))
++				dcsparams[nparams++] = param;
++			param = 0;
++			break;
++		case '@' ... '~':
++			cmd = cmd << 8 | *p;
++			goto dispatch;
++		default:
++		    goto end;
++		}
++	}
++
++dispatch:
++	switch (cmd) {
++	case 'q':
++		if (that->m_sixel_enabled)
++			that->seq_load_sixel(dcs);
++		break;
++	default:
++		break;
++	}
++
++end:
++	g_free(dcs);
++}
++
++void
++VteTerminalPrivate::seq_load_sixel(char const* dcs)
++{
++	unsigned char *pixels = NULL;
++	auto fg = get_color(VTE_DEFAULT_FG);
++	auto bg = get_color(VTE_DEFAULT_BG);
++	int nfg = fg->red >> 8 | fg->green >> 8 << 8 | fg->blue >> 8 << 16;
++	int nbg = bg->red >> 8 | bg->green >> 8 << 8 | bg->blue >> 8 << 16;
++	glong left, top, width, height;
++	glong pixelwidth, pixelheight;
++	glong i;
++	cairo_surface_t *image_surface, *surface;
++	cairo_t *cr;
++
++	/* Parse images */
++	if (sixel_parser_init(&m_sixel_state, nfg, nbg, m_sixel_use_private_register) < 0) {
++		sixel_parser_deinit(&m_sixel_state);
++		return;
++	}
++	if (sixel_parser_parse(&m_sixel_state, (unsigned char *)dcs, strlen(dcs)) < 0) {
++		sixel_parser_deinit(&m_sixel_state);
++		return;
++	}
++	pixels = (unsigned char *)g_malloc(m_sixel_state.image.width * m_sixel_state.image.height * 4);
++	if (! pixels) {
++		sixel_parser_deinit(&m_sixel_state);
++		return;
++	}
++	if (sixel_parser_finalize(&m_sixel_state, pixels) < 0) {
++		sixel_parser_deinit(&m_sixel_state);
++		return;
++	}
++	sixel_parser_deinit(&m_sixel_state);
++
++	if (m_sixel_display_mode)
++		seq_home_cursor();
++
++	/* Append new image to VteRing */
++	left = m_screen->cursor.col;
++	top = m_screen->cursor.row;
++	width = (m_sixel_state.image.width + m_char_width - 1) / m_char_width;
++	height = (m_sixel_state.image.height + m_char_height - 1) / m_char_height;
++	pixelwidth = m_sixel_state.image.width;
++	pixelheight = m_sixel_state.image.height;
++
++	/* create image surface (in-memory, device-independant) */
++	image_surface = cairo_image_surface_create_for_data (pixels, CAIRO_FORMAT_ARGB32, pixelwidth, pixelheight, pixelwidth * 4);
++	g_assert (image_surface);
++
++	/* create device-dependant surface compatible with m_widget */
++	surface = gdk_window_create_similar_surface (gtk_widget_get_window (m_widget), CAIRO_CONTENT_COLOR_ALPHA, pixelwidth, pixelheight);
++	g_assert (surface);
++
++	/* copy image surface to a device-compatible surface */
++	cr = cairo_create (surface);
++	cairo_set_source_surface (cr, image_surface, 0, 0);
++	cairo_paint (cr);
++	cairo_destroy (cr);
++	cairo_surface_destroy (image_surface);
++	free (pixels);
++
++	/* create image object */
++	_vte_ring_append_image (m_screen->row_data, surface, pixelwidth, pixelheight, left, top, width, height);
++
++	/* Erase characters on the image */
++	for (i = 0; i < height; ++i) {
++		seq_erase_characters(width);
++		if (i == height - 1) {
++			if (m_sixel_scrolls_right)
++				seq_cursor_forward(width);
++			else
++				cursor_down(true);
++		} else {
++			cursor_down(true);
++		}
++	}
++	if (m_sixel_display_mode)
++		seq_home_cursor();
++}
++
+ void
+ VteTerminalPrivate::seq_screen_alignment_test()
+ {
+@@ -3436,6 +3602,56 @@ vte_sequence_handler_iterm2_1337(VteTerminalPrivate *that, GValueArray *params)
+          */
+ }
+ 
++/* graphics attributes */
++static void
++vte_sequence_handler_graphics_attributes(VteTerminalPrivate *that, GValueArray *params)
++{
++	if (params == NULL || params->n_values != 3) {
++		return;
++	}
++	GValue* value = g_value_array_get_nth(params, 0);
++	if (!G_VALUE_HOLDS_LONG(value)) {
++		return;
++	}
++	auto param = g_value_get_long(value);
++
++	char buf[128];
++	long arg1, arg2;
++	arg1 = arg2 = -1;
++	if (params->n_values > 1) {
++		value = g_value_array_get_nth(params, 1);
++		if (G_VALUE_HOLDS_LONG(value)) {
++			arg1 = g_value_get_long(value);
++		}
++	}
++	if (params->n_values > 2) {
++		value = g_value_array_get_nth(params, 2);
++		if (G_VALUE_HOLDS_LONG(value)) {
++			arg2 = g_value_get_long(value);
++		}
++	}
++
++	switch (arg1) {
++	case 1:
++		switch (arg2) {
++		case 1:
++			that->feed_child(_VTE_CAP_CSI "?1;0;256S", -1);
++			break;
++		case 2:
++			that->feed_child(_VTE_CAP_CSI "?1;0;256S", -1);
++			break;
++		case 3:
++			that->feed_child(_VTE_CAP_CSI "?1;3;0S", -1);
++			break;
++		default:
++			break;
++		}
++	default:
++                g_snprintf(buf, sizeof(buf), _VTE_CAP_CSI "?%ld;1;0S", arg1);
++		break;
++	}
++}
++
+ /* Lookup tables */
+ 
+ #define VTE_SEQUENCE_HANDLER(name) name
+-- 
+2.15.0
+

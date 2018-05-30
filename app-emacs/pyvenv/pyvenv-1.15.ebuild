@@ -9,7 +9,7 @@ inherit elisp
 
 DESCRIPTION="A helper library for integrating Python development in Emacs"
 HOMEPAGE="http://github.com/jorgenschaefer/pyvenv"
-SRC_URI="https://github.com/jorgenschaefer/${PN}/archive/v${PV}.tar.gz"
+SRC_URI="https://github.com/jorgenschaefer/${PN}/archive/v${PV}.tar.gz -> ${P}.tar.gz"
 
 KEYWORDS="~amd64 ~x86"
 IUSE=""

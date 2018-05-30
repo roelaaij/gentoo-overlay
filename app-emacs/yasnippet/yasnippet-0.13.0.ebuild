@@ -5,11 +5,11 @@
 EAPI=6
 
 inherit elisp
-SHA=12b385f3badb51bd3689a1a0986cc9410ea416c5
 DESCRIPTION="Yet another snippet extension for Emacs"
 HOMEPAGE="https://github.com/capitaomorte/yasnippet"
-SRC_URI="https://github.com/joaotavora/${PN}/archive/${PV}.tar.gz
-		 https://github.com/AndreaCrotti/${PN}-snippets/archive/${SHA}.zip -> yasnippet-${PV}-snippets.zip"
+SNIPPETS_VERSION="0.3"
+SRC_URI="https://github.com/joaotavora/${PN}/archive/${PV}.tar.gz -> ${P}.tar.gz
+		 https://github.com/AndreaCrotti/${PN}-snippets/archive/${SNIPPETS_VERSION}.tar.gz -> ${PN}-snippets-${SNIPPET_VERSION}.tar.gz"
 
 # Homepage says MIT licence, source contains GPL-2 copyright notice
 LICENSE="MIT GPL-2"
@@ -24,8 +24,7 @@ SITEFILE="50${PN}-gentoo.el"
 
 src_unpack() {
 	unpack ${A}
-	rm -r "${WORKDIR}/${P}/snippets"
-	mv "${WORKDIR}/${PN}-snippets-${SHA}" "${WORKDIR}/${P}/snippets"
+	mv "${WORKDIR}/${PN}-snippets-${SNIPPETS_VERSION}" "${WORKDIR}/${P}/snippets"
 	rm -r "${WORKDIR}/${P}/snippets/.{nosearch,gitignore}"
 }
 

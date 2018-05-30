@@ -1,0 +1,19 @@
+--- old/m4/kpse-freetype2-flags.m4	2016-11-25 19:08:35.000000000 +0100
++++ new/m4/kpse-freetype2-flags.m4	2018-05-30 15:48:13.239922667 +0200
+@@ -27,11 +27,11 @@
+ # ---------------------------
+ AC_DEFUN([KPSE_FREETYPE2_SYSTEM_FLAGS], [dnl
+ AC_REQUIRE([AC_CANONICAL_HOST])[]dnl
+-AC_CHECK_TOOL([FT2_CONFIG], [freetype-config], [false])[]dnl
+-if $FT2_CONFIG --ftversion >/dev/null 2>&1; then
+-  FREETYPE2_INCLUDES=`$FT2_CONFIG --cflags`
+-  FREETYPE2_LIBS=`$FT2_CONFIG --libs`
+-elif test "x$need_freetype2:$with_system_freetype2" = xyes:yes; then
++PKG_CHECK_MODULES([FREETYPE2], [freetype2])
++if test "x$need_freetype2:$with_system_freetype2" = xyes:yes; then
+   AC_MSG_ERROR([did not find freetype-config required for system freetype2 library])
++else
++  FREETYPE2_INCLUDES=$FREETYPE2_CFLAGS
++  AC_SUBST([FREETYPE2_INCLUDES])
+ fi
+ ]) # KPSE_FREETYPE2_SYSTEM_FLAGS

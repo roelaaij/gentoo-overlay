@@ -3,7 +3,7 @@
 
 EAPI=6
 
-PYTHON_COMPAT=( python{2_7,3_4,3_5} )
+PYTHON_COMPAT=( python{2_7,3_4,3_5,3_6} )
 SITEFILE="50${PN}-gentoo.el"
 
 inherit distutils-r1 elisp-common
@@ -22,6 +22,7 @@ DEPEND="dev-python/setuptools[${PYTHON_USEDEP}]
 		>=app-emacs/find-file-in-project-3.3
 		>=app-emacs/pyvenv-1.3
 		>=app-emacs/highlight-indentation-0.5.0
+		>=app-emacs/company-mode-0.9.6
 		>=app-emacs/yasnippet-0.8.0
 		>=app-emacs/s-1.11.0"
 RDEPEND="${DEPEND}

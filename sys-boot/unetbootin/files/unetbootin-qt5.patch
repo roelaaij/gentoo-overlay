@@ -1,0 +1,988 @@
+From d8266c51317d279caf8f6a0f595dc2642014b12b Mon Sep 17 00:00:00 2001
+From: Valeriy Malov <jazzvoid@gmail.com>
+Date: Fri, 28 Jul 2017 19:45:04 +0300
+Subject: [PATCH 1/4] rought Qt5 port this breaks unetbootin::lstFtpDirFiles
+ due to https://bugreports.qt.io/ browse/QTBUG-26294
+
+---
+ src/unetbootin/main.cpp       |  24 +++---
+ src/unetbootin/unetbootin.cpp | 194 +++++++++++++++---------------------------
+ src/unetbootin/unetbootin.h   |  12 +--
+ src/unetbootin/unetbootin.pro |   1 +
+ 4 files changed, 84 insertions(+), 147 deletions(-)
+
+diff --git a/main.cpp b/main.cpp
+index 486b75b2..1ef73048 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -9,6 +9,8 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ 
+ #include "unetbootin.h"
+ 
++#include <QMessageBox>
++
+ #ifdef Q_OS_WIN32
+ 
+ void configsysUndo(QString uninstPathL)
+@@ -380,18 +382,16 @@ int main(int argc, char **argv)
+ 		uninstmsgb.setIcon(QMessageBox::Information);
+ 		uninstmsgb.setWindowTitle(uninstaller::tr("%1 Uninstaller").arg(UNETBOOTINB));
+ 		uninstmsgb.setText(uninstaller::tr("%1 is currently installed. Remove the existing version?").arg(UNETBOOTINB));
+- 		uninstmsgb.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+- 		switch (uninstmsgb.exec())
+- 		{
+- 			case QMessageBox::Ok:
+- 			{
+- 				ubnUninst();
+-			}
+-			case QMessageBox::Cancel:
+-				break;
+-	 		default:
+-				break;
+- 		}
++		uninstmsgb.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
++		switch (uninstmsgb.exec())
++		{
++		case QMessageBox::Ok:
++			ubnUninst();
++			break;
++		case QMessageBox::Cancel:
++		default:
++			break;
++		}
+ 		return 0;
+ 	}
+ #endif
+diff --git a/unetbootin.cpp b/unetbootin.cpp
+index 3982f617..0767fc87 100644
+--- a/unetbootin.cpp
++++ b/unetbootin.cpp
+@@ -9,6 +9,10 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ 
+ #include "unetbootin.h"
+ 
++#include <QMessageBox>
++#include <QFileDialog>
++#include <QProgressDialog>
++
+ static const QList<QRegExp> ignoredtypesbothRL = QList<QRegExp>()
+ << QRegExp("isolinux.bin$", Qt::CaseInsensitive)
+ << QRegExp("isolinux.cfg$", Qt::CaseInsensitive)
+@@ -101,8 +105,8 @@ void callexternappT::run()
+ void callexternappWriteToStdinT::run()
+ {
+ 	QProcess lnexternapp;
+-    lnexternapp.start("\"" + execFile + "\" " + execParm);
+-	lnexternapp.write(writeToStdin.toAscii().data());
++	lnexternapp.start("\"" + execFile + "\" " + execParm);
++	lnexternapp.write(writeToStdin.toLatin1().data());
+ 	lnexternapp.closeWriteChannel();
+ 	lnexternapp.waitForFinished(-1);
+ 	retnValu = QString(lnexternapp.readAll());
+@@ -133,16 +137,6 @@ void copyfileT::run()
+ 	emit finished();
+ }
+ 
+-ubngetrequestheader::ubngetrequestheader(QString urhost, QString urpath)
+-{
+-	this->setRequest("GET", urpath);
+-	this->setValue("HOST", urhost);
+-	this->setValue("User-Agent", "UNetbootin/1.1.1");
+-//	this->setValue("User-Agent", "Wget/1.10.2");
+-	this->setValue("Accept", "*/*");
+-	this->setValue("Connection", "Keep-Alive");
+-}
+-
+ randtmpfile::randtmpfile(QString rfpath, QString rfextn)
+ {
+ 	QString basefn = getrandfilename(rfpath, rfextn);
+@@ -159,7 +153,7 @@ QString randtmpfile::getrandfilename(QString rfpath, QString rfextn)
+ 	}
+ 	return basefn;
+ }
+-
++/*
+ void nDirListStor::sAppendSelfUrlInfoList(QUrlInfo curDirUrl)
+ {
+ 	if (curDirUrl.isValid() && curDirUrl.isReadable() && curDirUrl.isFile() && curDirUrl.size() > nMinFileSizeBytes && curDirUrl.size() < nMaxFileSizeBytes)
+@@ -171,7 +165,7 @@ void nDirListStor::sAppendSelfUrlInfoList(QUrlInfo curDirUrl)
+ 		nDirFileListSL.append(curDirUrl.name());
+ 	}
+ }
+-
++*/
+ unetbootin::unetbootin(QWidget *parent)
+ 	: QWidget(parent)
+ {
+@@ -471,18 +465,20 @@ bool unetbootin::ubninitialize(QList<QPair<QString, QString> > oppairs)
+ 		{
+ 			if (psecond.contains("listdistros", Qt::CaseInsensitive))
+ 			{
++				QTextStream out(stdout);
+ 				for (int i = 1; i < this->distroselect->count(); ++i)
+ 				{
+-					printf("%s\n", this->distroselect->itemText(i).toAscii().constData());
++					out << this->distroselect->itemText(i);
+ 				}
+ 				QApplication::exit();
+ 				exit(0);
+ 			}
+ 			else if (psecond.contains("listversions", Qt::CaseInsensitive))
+ 			{
++				QTextStream out(stdout);
+ 				for (int i = 0; i < this->dverselect->count(); ++i)
+ 				{
+-					printf("%s\n", this->dverselect->itemText(i).toAscii().constData());
++					out << this->dverselect->itemText(i);
+ 				}
+ 				QApplication::exit();
+ 				exit(0);
+@@ -1098,7 +1094,7 @@ bool unetbootin::checkifoutofspace(QString destindir)
+ 	bool outofspace = false;
+ 	#ifdef Q_OS_UNIX
+ 	struct statfs diskstatS;
+-	if (!statfs(QString(destindir+"/.").toAscii(), &diskstatS))
++	if (!statfs(QString(destindir+"/.").toLatin1(), &diskstatS))
+ 	{
+ 		if (diskstatS.f_bavail * diskstatS.f_bfree < 1024)
+ 			outofspace = true;
+@@ -2620,31 +2616,41 @@ void unetbootin::downloadfile(QString fileurl, QString targetfile, int minsize=5
+ 	{
+ 		rmFile(targetfile);
+ 	}
+-	QUrl dlurl(fileurl);
+-	bool isftp = false;
+-	if (dlurl.scheme() == "ftp")
+-	{
+-		isftp = true;
+-	}
+-	QHttp dlhttp;
+-	QFtp dlftp;
++	QNetworkAccessManager manager;
++	QNetworkRequest dlurl(fileurl);
++	QNetworkReply * networkReply = manager.get(dlurl);
++
+ 	QEventLoop dlewait;
+ 	pdesc5->setText("");
+ 	pdesc4->setText(tr("Downloading files, please wait..."));
+ 	pdesc3->setText(tr("<b>Source:</b> <a href=\"%1\">%1</a>").arg(fileurl));
+ 	pdesc2->setText(tr("<b>Destination:</b> %1").arg(targetfile));
+ 	pdesc1->setText(tr("<b>Downloaded:</b> 0 bytes"));
+-	QString realupath = QString(fileurl).remove(0, fileurl.indexOf(QString("://%1").arg(dlurl.host())) + QString("://%1").arg(dlurl.host()).length());
+-	if (isftp)
++
++	QUrl redirectUrl;
++	bool downloadFailed = false;
++
++	connect(networkReply, &QNetworkReply::finished, &dlewait, &QEventLoop::quit);
++	connect(networkReply, &QNetworkReply::downloadProgress, this, &unetbootin::dlprogressupdate64);
++	connect(networkReply, &QNetworkReply::redirected, [&redirectUrl](const QUrl &url){ redirectUrl = url; });
++	connect(networkReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
++			[&downloadFailed](QNetworkReply::NetworkError){ downloadFailed = true; });
++
++	dlewait.exec();
++
++	if (!redirectUrl.isEmpty())
+ 	{
+-		connect(&dlftp, SIGNAL(done(bool)), &dlewait, SLOT(quit()));
+-		connect(&dlftp, SIGNAL(dataTransferProgress(qint64, qint64)), this, SLOT(dlprogressupdate64(qint64, qint64)));
++		downloadfile(redirectUrl.toString(), targetfile, minsize);
++		return;
+ 	}
+-	else
++
++	if (downloadFailed)
+ 	{
+-		connect(&dlhttp, SIGNAL(done(bool)), &dlewait, SLOT(quit()));
+-		connect(&dlhttp, SIGNAL(dataReadProgress(int, int)), this, SLOT(dlprogressupdate(int, int)));
++		QString errorStr = networkReply->errorString();
++		showDownloadFailedScreen(fileurl);
++		return;
+ 	}
++
+ 	QFile dloutfile;
+ 	if (installType == tr("USB Drive"))
+ 	{
+@@ -2654,83 +2660,17 @@ void unetbootin::downloadfile(QString fileurl, QString targetfile, int minsize=5
+ 	{
+ 		dloutfile.setFileName(targetfile);
+ 	}
++
+ 	dloutfile.open(QIODevice::WriteOnly);
+-	if (isftp)
+-	{
+-		dlftp.connectToHost(dlurl.host());
+-		dlftp.login();
+-		dlftp.get(realupath, &dloutfile);
+-	}
+-	else
+-	{
+-		dlhttp.setHost(dlurl.host());
+-		ubngetrequestheader dlrequest(dlurl.host(), realupath);
+-		dlhttp.request(dlrequest, 0, &dloutfile);
+-	}
+-	dlewait.exec();
+-	if (!isftp)
+-	{
+-		QHttpResponseHeader dlresponse(dlhttp.lastResponse());
+-		int dlrstatus = dlresponse.statusCode();
+-		if (dlrstatus >= 300 && dlrstatus < 400 && dlresponse.hasKey("Location"))
+-		{
+-			dloutfile.close();
+-			rmFile(dloutfile);
+-			downloadfile(dlresponse.value("Location"), targetfile, minsize);
+-			return;
+-		}
+-	}
+-	if (isftp)
+-	{
+-		dlftp.close();
+-	}
+-	else
+-	{
+-		dlhttp.close();
+-	}
++	dloutfile.write(networkReply->readAll());
++	networkReply->close();
++	networkReply->deleteLater();
+ 	dloutfile.close();
+ 	if (installType == tr("USB Drive"))
+ 	{
+ 		dloutfile.rename(targetfile);
+ 	}
+-    if (QFile(targetfile).size() <= 4096)
+-    {
+-        QString redirectTargetURL;
+-        QFile seeRedirect(targetfile);
+-        seeRedirect.open(QIODevice::ReadOnly | QIODevice::Text);
+-        QTextStream seeRedirectTextStream(&seeRedirect);
+-        while (!seeRedirectTextStream.atEnd())
+-        {
+-            QString curline = seeRedirectTextStream.readLine();
+-            if (curline.contains("content=\"0;url="))
+-            {
+-                int urlstartidx = curline.indexOf("content=\"0;url=") + QString("content=\"0;url=").size();
+-                redirectTargetURL = curline.mid(urlstartidx);
+-                if (redirectTargetURL.contains("\""))
+-                {
+-                    redirectTargetURL = redirectTargetURL.left(redirectTargetURL.indexOf("\""));
+-                }
+-                break;
+-            }
+-            if (curline.contains("content='0;url="))
+-            {
+-                int urlstartidx = curline.indexOf("content='0;url=") + QString("content='0;url=").size();
+-                redirectTargetURL = curline.mid(urlstartidx);
+-                if (redirectTargetURL.contains("'"))
+-                {
+-                    redirectTargetURL = redirectTargetURL.left(redirectTargetURL.indexOf("'"));
+-                }
+-                break;
+-            }
+-        }
+-        seeRedirect.close();
+-        if (!redirectTargetURL.isEmpty())
+-        {
+-            rmFile(targetfile);
+-            downloadfile(redirectTargetURL, targetfile, minsize);
+-            return;
+-        }
+-    }
++
+ 	if (QFile(targetfile).size() < minsize)
+ 	{
+ 		// download failed
+@@ -2812,31 +2752,33 @@ void unetbootin::cpprogressupdate64(qint64 dlbytes, qint64 maxbytes)
+  }
+ }
+ 
+-QString unetbootin::downloadpagecontents(QString pageurl)
++QString unetbootin::downloadpagecontents(QUrl pageurl)
+ {
+-	QUrl pgurl(pageurl);
+-	QHttp pghttp;
++	QNetworkAccessManager _manager;
++	QNetworkRequest dlurl(pageurl);
++	QNetworkReply * networkReply = _manager.get(dlurl);
+ 	QEventLoop pgwait;
+-	connect(&pghttp, SIGNAL(done(bool)), &pgwait, SLOT(quit()));
+-	pghttp.setHost(pgurl.host());
+-	QString realpgupath = QString(pageurl).remove(0, pageurl.indexOf(QString("://%1").arg(pgurl.host())) + QString("://%1").arg(pgurl.host()).length());
+-	ubngetrequestheader pgrequest(pgurl.host(), realpgupath);
+-	pghttp.request(pgrequest);
++	QUrl redirectUrl;
++	connect(networkReply, &QNetworkReply::finished, &pgwait, &QEventLoop::quit);
++	connect(networkReply, &QNetworkReply::redirected, [&redirectUrl](const QUrl &url){ redirectUrl = url; });
++
+ 	pgwait.exec();
+-	QHttpResponseHeader pgresponse(pghttp.lastResponse());
+-	int pgrstatus = pgresponse.statusCode();
+-	if (pgrstatus >= 300 && pgrstatus < 400 && pgresponse.hasKey("Location"))
+-	{
+-		return downloadpagecontents(pgresponse.value("Location"));
+-	}
+-	else
++
++	if (!redirectUrl.isEmpty())
+ 	{
+-		return QString(pghttp.readAll());
++		return downloadpagecontents(redirectUrl);
+ 	}
++
++	QString result = networkReply->readAll();
++	networkReply->close();
++	networkReply->deleteLater();
++	return result;
+ }
+ 
+ QStringList unetbootin::lstFtpDirFiles(QString ldfDirStringUrl, int ldfMinSize, int ldfMaxSize)
+ {
++	return {};
++/*
+ 	QUrl ldfDirUrl(ldfDirStringUrl);
+ 	QFtp ldfFtp;
+ 	QEventLoop ldfWait;
+@@ -2851,14 +2793,14 @@ QStringList unetbootin::lstFtpDirFiles(QString ldfDirStringUrl, int ldfMinSize,
+ 	ldfFtp.list(ldfDirUrl.path());
+ 	ldfWait.exec();
+ 	ldfFtp.close();
+-	return nDirListStorL.nDirFileListSL;
++	return nDirListStorL.nDirFileListSL;*/
+ }
+ 
+ QStringList unetbootin::lstHttpDirFiles(QString ldfDirStringUrl)
+ {
+ 	QStringList relativefilelinksL;
+ 	QStringList relativelinksLPreFilter =
+-		downloadpagecontents(ldfDirStringUrl)
++		downloadpagecontents(QUrl(ldfDirStringUrl))
+ 		.replace(">", ">\n")
+ 		.replace("<", "\n<")
+ 		.split("\n");
+@@ -3218,11 +3160,11 @@ int unetbootin::letterToNumber(QChar lettertoconvert)
+ {
+ 	if (lettertoconvert.isLower())
+ 	{
+-		return static_cast<int>(lettertoconvert.toAscii() - 'a');
++		return static_cast<int>(lettertoconvert.toLatin1() - 'a');
+ 	}
+ 	if (lettertoconvert.isUpper())
+ 	{
+-		return static_cast<int>(lettertoconvert.toAscii() - 'A');
++		return static_cast<int>(lettertoconvert.toLatin1() - 'A');
+ 	}
+ 	else
+ 	{
+@@ -3724,7 +3666,7 @@ void unetbootin::writegrub2cfg()
+ 	QString menulstxt = QString(
+ 	"%9\n\n"
+ #ifndef NODEFAULTBOOT
+-	"\nmenuentry \""UNETBOOTINB"\" {\n"
++	"\nmenuentry \"" UNETBOOTINB"\" {\n"
+ 	"\tset root=%8\n"
+ 	"\t%1 %2 %3 %4\n"
+ 	"\t%5 %6 %7\n"
+@@ -3845,7 +3787,7 @@ void unetbootin::runinsthdd()
+ 	"timeout 10\n"
+ 	#endif
+ #ifndef NODEFAULTBOOT
+-	"\ntitle "UNETBOOTINB"\n"
++	"\ntitle " UNETBOOTINB"\n"
+ 	#ifdef Q_OS_WIN32
+ 	"find --set-root %3\n"
+ 	#endif
+@@ -4343,7 +4285,7 @@ void unetbootin::fininstall()
+ 	sdesc4->setText(QString("<b>%1 %2</b>").arg(sdesc4->text()).arg(trcurrent));
+ 	if (installType == tr("Hard Disk"))
+ 	{
+-		rebootmsgtext->setText(tr("After rebooting, select the "UNETBOOTINB" menu entry to boot.%1").arg(postinstmsg));
++		rebootmsgtext->setText(tr("After rebooting, select the " UNETBOOTINB" menu entry to boot.%1").arg(postinstmsg));
+ 	}
+ 	if (installType == tr("USB Drive"))
+ 	{
+diff --git a/unetbootin.h b/unetbootin.h
+index ea607c88..8cb45d81 100644
+--- a/unetbootin.h
++++ b/unetbootin.h
+@@ -152,19 +152,13 @@ class copyfileT : public QThread
+ 	void finished();
+ };
+ 
+-class ubngetrequestheader : public QHttpRequestHeader
+-{
+-public:
+-	ubngetrequestheader(QString urhost, QString urpath);
+-};
+-
+ class randtmpfile : public QFile
+ {
+ public:
+ 	randtmpfile(QString rfpath, QString rfextn);
+ 	static QString getrandfilename(QString rfpath, QString rfextn);
+ };
+-
++/*
+ class nDirListStor : public QObject
+ {
+ 	Q_OBJECT
+@@ -178,7 +172,7 @@ class nDirListStor : public QObject
+ public slots:
+ 	void sAppendSelfUrlInfoList(QUrlInfo curDirUrl);
+ };
+-
++*/
+ class unetbootin : public QWidget, private Ui::unetbootinui
+ {
+ 	Q_OBJECT
+@@ -280,7 +274,7 @@ class unetbootin : public QWidget, private Ui::unetbootinui
+ 	QString searchforgrub2includesfile(QString includesfile, QString archivefile, QStringList archivefileconts, QStringList visitedincludes);
+ 	QPair<QPair<QStringList, QStringList>, QPair<QStringList, QStringList> > searchforgrub2includesfileL(QString includesfile, QString archivefile, QStringList archivefileconts, QStringList visitedincludes);
+ 	void downloadfile(QString fileurl, QString targetfile, int minsize);
+-	QString downloadpagecontents(QString pageurl);
++	QString downloadpagecontents(QUrl pageurl);
+ 	QStringList lstFtpDirFiles(QString ldfDirStringUrl, int ldfMinSize, int ldfMaxSize);
+ 	QStringList lstHttpDirFiles(QString ldfDirStringUrl);
+ 	QStringList lstNetDirFiles(QString ldfDirStringUrl, int ldfMinSize, int ldfMaxSize);
+diff --git a/unetbootin.pro b/unetbootin.pro
+index 3d4cece5..f3af65f8 100644
+--- a/unetbootin.pro
++++ b/unetbootin.pro
+@@ -14,6 +14,7 @@ SOURCES += main.cpp \
+     distrovercust.cpp
+ QT += core \
+     gui \
++    widgets \
+     network
+ ICON = unetbootin.icns
+ TRANSLATIONS += unetbootin.ts \
+
+From e5ae50b8336b115611478af0bf036c3c7b76274d Mon Sep 17 00:00:00 2001
+From: Valeriy Malov <jazzvoid@gmail.com>
+Date: Fri, 28 Jul 2017 19:45:57 +0300
+Subject: [PATCH 2/4] comment out all sources that require FTP LIST except for
+ DrWeb, which seems to be no longer a public ftp
+
+---
+ src/unetbootin/distrolst.cpp | 56 ++++++++++++++++++++++----------------------
+ 1 file changed, 28 insertions(+), 28 deletions(-)
+
+diff --git a/distrolst.cpp b/distrolst.cpp
+index 034f07a0..b4829f4c 100644
+--- a/distrolst.cpp
++++ b/distrolst.cpp
+@@ -278,14 +278,14 @@ if (nameDistro == "CloneZilla")
+ if (nameDistro == "Damn Small Linux")
+ {
+ 	downloadfile(fileFilterNetDir(QStringList() << 
+-	"ftp://ibiblio.org/pub/Linux/distributions/damnsmall/current/" << 
++//	"ftp://ibiblio.org/pub/Linux/distributions/damnsmall/current/" <<
+ 	"http://ibiblio.org/pub/Linux/distributions/damnsmall/current/" << 
+-	"ftp://gd.tuwien.ac.at/opsys/linux/damnsmall/current/" << 
++//	"ftp://gd.tuwien.ac.at/opsys/linux/damnsmall/current/" <<
+ 	"http://gd.tuwien.ac.at/opsys/linux/damnsmall/current/" << 
+-	"ftp://ftp.is.co.za/linux/distributions/damnsmall/current/" << 
++//	"ftp://ftp.is.co.za/linux/distributions/damnsmall/current/" <<
+ //	"ftp://ftp.belnet.be/packages/damnsmalllinux/current/" << 
+ 	"http://ftp.belnet.be/packages/damnsmalllinux/current/" << 
+-	"ftp://ftp.heanet.ie/mirrors/damnsmalllinux.org/current/" << 
++//	"ftp://ftp.heanet.ie/mirrors/damnsmalllinux.org/current/" <<
+ 	"http://ftp.heanet.ie/mirrors/damnsmalllinux.org/current/"
+ //	"ftp://ftp.oss.cc.gatech.edu/pub/linux/distributions/damnsmall/current/" << 
+ //	"http://ftp.oss.cc.gatech.edu/pub/linux/distributions/damnsmall/current/" <<
+@@ -333,9 +333,9 @@ if (nameDistro == "Debian")
+ if (nameDistro == "Dreamlinux")
+ {
+ 	downloadfile(fileFilterNetDir(QStringList() << 
+-	"ftp://ftp.nluug.nl/pub/os/Linux/distr/dreamlinux/stable/" << 
++//	"ftp://ftp.nluug.nl/pub/os/Linux/distr/dreamlinux/stable/" <<
+ 	"http://ftp.nluug.nl/pub/os/Linux/distr/dreamlinux/stable/" << 
+-	"ftp://ftp.surfnet.nl/pub/os/Linux/distr/dreamlinux/stable/" << 
++//	"ftp://ftp.surfnet.nl/pub/os/Linux/distr/dreamlinux/stable/" <<
+ 	"http://ftp.surfnet.nl/pub/os/Linux/distr/dreamlinux/stable/"
+ 	, 524288000, 1048576000, QList<QRegExp>() << 
+ 	QRegExp(".iso$", Qt::CaseInsensitive) << 
+@@ -467,16 +467,16 @@ if (nameDistro == "Frugalware")
+ 	QStringList frugalwaremirrorsL = QStringList() <<
+ //	"ftp://ftp5.frugalware.org/packages/frugalware/pub/frugalware-"+relname+"/boot/" <<
+ //	"http://www5.frugalware.org/packages/frugalware/pub/frugalware-"+relname+"/boot/" <<
+-	"ftp://ftp8.frugalware.org/distro/frugalware/frugalware-"+relname+"/boot/" <<
++//	"ftp://ftp8.frugalware.org/distro/frugalware/frugalware-"+relname+"/boot/" <<
+ 	"http://www8.frugalware.org/distro/frugalware/frugalware-"+relname+"/boot/" <<
+-	"ftp://ftp10.frugalware.org/pub/linux/frugalware/frugalware-"+relname+"/boot/" <<
++//	"ftp://ftp10.frugalware.org/pub/linux/frugalware/frugalware-"+relname+"/boot/" <<
+ 	"http://www10.frugalware.org/pub/linux/frugalware/frugalware-"+relname+"/boot/" <<
+-	"ftp://ftp12.frugalware.org/mirrors/ftp.frugalware.org/pub/frugalware/frugalware-"+relname+"/boot/" <<
++//	"ftp://ftp12.frugalware.org/mirrors/ftp.frugalware.org/pub/frugalware/frugalware-"+relname+"/boot/" <<
+ 	"http://www12.frugalware.org/mirrors/ftp.frugalware.org/pub/frugalware/frugalware-"+relname+"/boot/" <<
+-	"ftp://ftp4.frugalware.org/pub/linux/distributions/frugalware/frugalware-"+relname+"/boot/" <<
++//	"ftp://ftp4.frugalware.org/pub/linux/distributions/frugalware/frugalware-"+relname+"/boot/" <<
+ 	"http://www4.frugalware.org/pub/linux/distributions/frugalware/frugalware-"+relname+"/boot/" <<
+-	"ftp://ftp2.frugalware.org/frugalware/pub/frugalware/frugalware-"+relname+"/boot/" <<
+-	"ftp://ftp3.frugalware.org/mirrors/frugalware/pub/frugalware/frugalware-"+relname+"/boot/";
++//	"ftp://ftp2.frugalware.org/frugalware/pub/frugalware/frugalware-"+relname+"/boot/" <<
++//	"ftp://ftp3.frugalware.org/mirrors/frugalware/pub/frugalware/frugalware-"+relname+"/boot/";
+ 	downloadfile(fileFilterNetDir(frugalwaremirrorsL
+ 	, 307200, 104857600, QList<QRegExp>() << 
+ 	QRegExp("vmlinuz", Qt::CaseInsensitive) <<
+@@ -551,7 +551,7 @@ if (nameDistro == "Kaspersky Rescue Disk")
+ 		downloadfile(fileFilterNetDir(QStringList() <<
+ 		"http://devbuilds.kaspersky-labs.com/devbuilds/RescueDisk/" <<
+ 		"http://ftp.kaspersky.com/devbuilds/RescueDisk/" <<
+-		"ftp://ftp.kaspersky.com/devbuilds/RescueDisk/"
++//		"ftp://ftp.kaspersky.com/devbuilds/RescueDisk/"
+ 		, 9288000, 1048576000, QList<QRegExp>() <<
+ 		QRegExp(".iso$", Qt::CaseInsensitive) <<
+ 		QRegExp("k\\S{0,}.iso$", Qt::CaseInsensitive)
+@@ -562,7 +562,7 @@ if (nameDistro == "Kaspersky Rescue Disk")
+ 		downloadfile(fileFilterNetDir(QStringList() <<
+ 		"http://devbuilds.kaspersky-labs.com/devbuilds/RescueDisk10/" <<
+ 		"http://ftp.kaspersky.com/devbuilds/RescueDisk10/" <<
+-		"ftp://ftp.kaspersky.com/devbuilds/RescueDisk10/"
++//		"ftp://ftp.kaspersky.com/devbuilds/RescueDisk10/"
+ 		, 9288000, 1048576000, QList<QRegExp>() <<
+ 		QRegExp(".iso$", Qt::CaseInsensitive) <<
+ 		QRegExp("k\\S{0,}.iso$", Qt::CaseInsensitive)
+@@ -624,11 +624,11 @@ if (nameDistro == "Linux Mint")
+ 	QString("http://mirror.sov.uk.goscomb.net/linuxmint.com/stable/%1/").arg(relname) <<
+ 	QString("http://mirror.csclub.uwaterloo.ca/linuxmint/stable/%1/").arg(relname) <<
+ 	QString("http://mirror.aarnet.edu.au/pub/linuxmint/stable/%1/").arg(relname) <<
+-	QString("http://mirror.waia.asn.au/pub/linux/linuxmint/linuxmint-isos/linuxmint.com/stable/%1/").arg(relname) <<
+-	QString("ftp://mirrors.secution.com/linuxmint.com/stable/%1/").arg(relname) <<
+-	QString("ftp://ftp.is.co.za/mirror/linuxmint.com/stable/%1/").arg(relname) <<
+-	QString("ftp://ftp.tpnet.pl/pub/linux/linuxmint/isos/stable/%1/").arg(relname) <<
+-	QString("ftp://mirror.unej.ac.id/pub/iso/linux-mint/stable/%1/").arg(relname)
++	QString("http://mirror.waia.asn.au/pub/linux/linuxmint/linuxmint-isos/linuxmint.com/stable/%1/").arg(relname) //<<
++//	QString("ftp://mirrors.secution.com/linuxmint.com/stable/%1/").arg(relname) <<
++//	QString("ftp://ftp.is.co.za/mirror/linuxmint.com/stable/%1/").arg(relname) <<
++//	QString("ftp://ftp.tpnet.pl/pub/linux/linuxmint/isos/stable/%1/").arg(relname) <<
++//	QString("ftp://mirror.unej.ac.id/pub/iso/linux-mint/stable/%1/").arg(relname)
+ 	, 61440000, 1048576000, mintregex), isotmpf);
+ 	extractiso(isotmpf);
+ }
+@@ -675,11 +675,11 @@ if (nameDistro == "MEPIS")
+ 	if (relname == "antix")
+ 	{
+ 		downloadfile(fileFilterNetDir(QStringList() << 
+-		"ftp://ftp.ibiblio.org/pub/linux/distributions/mepis/released/antix/" << 
++//		"ftp://ftp.ibiblio.org/pub/linux/distributions/mepis/released/antix/" <<
+ 		"http://distro.ibiblio.org/pub/linux/distributions/mepis/released/antix/" <<
+-		"ftp://ftp-linux.cc.gatech.edu/pub/linux/distributions/mepis/released/antix/" << 
++//		"ftp://ftp-linux.cc.gatech.edu/pub/linux/distributions/mepis/released/antix/" <<
+ 		"http://ftp.uwsg.indiana.edu/linux/mepis/released/antix/" <<
+-		"ftp://ftp.ussg.iu.edu/pub/linux/mepis/released/antix/" <<
++//		"ftp://ftp.ussg.iu.edu/pub/linux/mepis/released/antix/" <<
+ 		"http://mirror.cs.vt.edu/pub/MEPIS/antix/"
+ 		, 61440000, 1048576000, QList<QRegExp>() << 
+ 		QRegExp("antiX\\S{0,}.iso$", Qt::CaseInsensitive) << 
+@@ -689,11 +689,11 @@ if (nameDistro == "MEPIS")
+ 	else
+ 	{
+ 		downloadfile(fileFilterNetDir(QStringList() << 
+-		"ftp://ftp.ibiblio.org/pub/linux/distributions/mepis/released/" << 
++//		"ftp://ftp.ibiblio.org/pub/linux/distributions/mepis/released/" <<
+ 		"http://distro.ibiblio.org/pub/linux/distributions/mepis/released/" <<
+-		"ftp://ftp-linux.cc.gatech.edu/pub/linux/distributions/mepis/released/" << 
++//		"ftp://ftp-linux.cc.gatech.edu/pub/linux/distributions/mepis/released/" <<
+ 		"http://ftp.uwsg.indiana.edu/linux/mepis/released/" <<
+-		"ftp://ftp.ussg.iu.edu/pub/linux/mepis/released/" <<
++//		"ftp://ftp.ussg.iu.edu/pub/linux/mepis/released/" <<
+ 		"http://mirror.cs.vt.edu/pub/MEPIS/"
+ 		, 61440000, 1048576000, QList<QRegExp>() << 
+ 		QRegExp("MEPIS\\S{0,}.iso$", Qt::CaseInsensitive) << 
+@@ -805,9 +805,9 @@ if (nameDistro == "PCLinuxOS")
+ if (nameDistro == "Puppy Linux")
+ {
+ 	downloadfile(fileFilterNetDir(QStringList() << 
+-	"ftp://ibiblio.org/pub/linux/distributions/puppylinux/" << 
++//	"ftp://ibiblio.org/pub/linux/distributions/puppylinux/" <<
+ 	"http://distro.ibiblio.org/pub/linux/distributions/puppylinux/" <<
+-	"ftp://ftp.nluug.nl/ftp/pub/os/Linux/distr/puppylinux/" << 
++//	"ftp://ftp.nluug.nl/ftp/pub/os/Linux/distr/puppylinux/" <<
+ 	"http://ftp.nluug.nl/ftp/pub/os/Linux/distr/puppylinux/"
+ 	, 61440000, 1048576000, QList<QRegExp>() << 
+ 	QRegExp(".iso$", Qt::CaseInsensitive) << 
+@@ -1018,7 +1018,7 @@ if (nameDistro == "Ubuntu")
+ 			downloadfile(fileFilterNetDir(QStringList() << 
+ 			"http://releases.ubuntu.com/"+relname << 
+ 			"http://releases.ubuntu.com/releases/"+relname <<
+-			"ftp://releases.ubuntu.com/releases/.pool/" << 
++//			"ftp://releases.ubuntu.com/releases/.pool/" <<
+ 			"http://mirrors.gigenet.com/ubuntu/"+relname <<
+ 			"http://mirrors.easynews.com/linux/ubuntu-releases/"+relname <<
+ 			"http://www.gtlib.gatech.edu/pub/ubuntu-releases/"+relname <<
+
+From 879f90846abf164f1521c23e494bda986653a1e4 Mon Sep 17 00:00:00 2001
+From: Valeriy Malov <jazzvoid@gmail.com>
+Date: Fri, 28 Jul 2017 21:33:28 +0300
+Subject: [PATCH 3/4] fix distrolst.cpp fix listdistros/listversions output
+ findbrokendownloads.rb doesn't need root, use default ruby use default CONFIG
+ to allow debug builds
+
+---
+ src/unetbootin/distrolst.cpp          |  6 +++---
+ src/unetbootin/findbrokendownloads.rb | 13 ++++---------
+ src/unetbootin/unetbootin.cpp         | 25 +++++++++++++++++--------
+ src/unetbootin/unetbootin.pro         |  3 +--
+ 4 files changed, 25 insertions(+), 22 deletions(-)
+
+diff --git a/distrolst.cpp b/distrolst.cpp
+index b4829f4c..3b45583e 100644
+--- a/distrolst.cpp
++++ b/distrolst.cpp
+@@ -474,7 +474,7 @@ if (nameDistro == "Frugalware")
+ //	"ftp://ftp12.frugalware.org/mirrors/ftp.frugalware.org/pub/frugalware/frugalware-"+relname+"/boot/" <<
+ 	"http://www12.frugalware.org/mirrors/ftp.frugalware.org/pub/frugalware/frugalware-"+relname+"/boot/" <<
+ //	"ftp://ftp4.frugalware.org/pub/linux/distributions/frugalware/frugalware-"+relname+"/boot/" <<
+-	"http://www4.frugalware.org/pub/linux/distributions/frugalware/frugalware-"+relname+"/boot/" <<
++	"http://www4.frugalware.org/pub/linux/distributions/frugalware/frugalware-"+relname+"/boot/"; //<<
+ //	"ftp://ftp2.frugalware.org/frugalware/pub/frugalware/frugalware-"+relname+"/boot/" <<
+ //	"ftp://ftp3.frugalware.org/mirrors/frugalware/pub/frugalware/frugalware-"+relname+"/boot/";
+ 	downloadfile(fileFilterNetDir(frugalwaremirrorsL
+@@ -550,7 +550,7 @@ if (nameDistro == "Kaspersky Rescue Disk")
+ 	{
+ 		downloadfile(fileFilterNetDir(QStringList() <<
+ 		"http://devbuilds.kaspersky-labs.com/devbuilds/RescueDisk/" <<
+-		"http://ftp.kaspersky.com/devbuilds/RescueDisk/" <<
++		"http://ftp.kaspersky.com/devbuilds/RescueDisk/" //<<
+ //		"ftp://ftp.kaspersky.com/devbuilds/RescueDisk/"
+ 		, 9288000, 1048576000, QList<QRegExp>() <<
+ 		QRegExp(".iso$", Qt::CaseInsensitive) <<
+@@ -561,7 +561,7 @@ if (nameDistro == "Kaspersky Rescue Disk")
+ 	{
+ 		downloadfile(fileFilterNetDir(QStringList() <<
+ 		"http://devbuilds.kaspersky-labs.com/devbuilds/RescueDisk10/" <<
+-		"http://ftp.kaspersky.com/devbuilds/RescueDisk10/" <<
++		"http://ftp.kaspersky.com/devbuilds/RescueDisk10/" //<<
+ //		"ftp://ftp.kaspersky.com/devbuilds/RescueDisk10/"
+ 		, 9288000, 1048576000, QList<QRegExp>() <<
+ 		QRegExp(".iso$", Qt::CaseInsensitive) <<
+diff --git a/findbrokendownloads.rb b/findbrokendownloads.rb
+index a9ccd896..53f0809f 100755
+--- a/findbrokendownloads.rb
++++ b/findbrokendownloads.rb
+@@ -1,20 +1,15 @@
+-#!/usr/bin/ruby1.9
++#!/usr/bin/ruby
+ 
+ # Supply as command line arg the path to the UNetbootin executable
+ # Outputs distribution:version tuples that failed to download
+ 
+-if `whoami`.strip != 'root'
+-puts 'Must be run as root'
+-exit()
+-end
+-
+ unetbootin = ARGV[0]
+ 
+-distrolist = `#{unetbootin} action=listdistros`.split("\n")
++distrolist = `#{unetbootin} rootcheck=n action=listdistros`.split("\n")
+ distrolist.each {|distro|
+-  versions = `#{unetbootin} distribution="#{distro}" action=listversions`.split("\n")
++  versions = `#{unetbootin} rootcheck=n distribution="#{distro}" action=listversions`.split("\n")
+   versions.each {|version|
+-  exitstatus = `#{unetbootin} method=distribution installtype=HDD distribution="#{distro}" version="#{version}" testingdownload=y autoinstall=y`
++  exitstatus = `#{unetbootin} rootcheck=n method=distribution installtype=HDD distribution="#{distro}" version="#{version}" testingdownload=y autoinstall=y`
+   if exitstatus.include? 'downloadfailed'
+     puts distro + ':' + version
+   end
+diff --git a/unetbootin.cpp b/unetbootin.cpp
+index 0767fc87..6ffd6fc0 100644
+--- a/unetbootin.cpp
++++ b/unetbootin.cpp
+@@ -12,6 +12,7 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ #include <QMessageBox>
+ #include <QFileDialog>
+ #include <QProgressDialog>
++#include <QDebug>
+ 
+ static const QList<QRegExp> ignoredtypesbothRL = QList<QRegExp>()
+ << QRegExp("isolinux.bin$", Qt::CaseInsensitive)
+@@ -468,8 +469,9 @@ bool unetbootin::ubninitialize(QList<QPair<QString, QString> > oppairs)
+ 				QTextStream out(stdout);
+ 				for (int i = 1; i < this->distroselect->count(); ++i)
+ 				{
+-					out << this->distroselect->itemText(i);
++					out << this->distroselect->itemText(i) << endl;
+ 				}
++				out.flush();
+ 				QApplication::exit();
+ 				exit(0);
+ 			}
+@@ -478,8 +480,9 @@ bool unetbootin::ubninitialize(QList<QPair<QString, QString> > oppairs)
+ 				QTextStream out(stdout);
+ 				for (int i = 0; i < this->dverselect->count(); ++i)
+ 				{
+-					out << this->dverselect->itemText(i);
++					out << this->dverselect->itemText(i) << endl;
+ 				}
++				out.flush();
+ 				QApplication::exit();
+ 				exit(0);
+ 			}
+@@ -2629,12 +2632,13 @@ void unetbootin::downloadfile(QString fileurl, QString targetfile, int minsize=5
+ 
+ 	QUrl redirectUrl;
+ 	bool downloadFailed = false;
++	QNetworkReply::NetworkError errorCode;
+ 
+ 	connect(networkReply, &QNetworkReply::finished, &dlewait, &QEventLoop::quit);
+ 	connect(networkReply, &QNetworkReply::downloadProgress, this, &unetbootin::dlprogressupdate64);
+-	connect(networkReply, &QNetworkReply::redirected, [&redirectUrl](const QUrl &url){ redirectUrl = url; });
++	connect(networkReply, &QNetworkReply::redirected, [&](const QUrl &url){ redirectUrl = url; });
+ 	connect(networkReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
+-			[&downloadFailed](QNetworkReply::NetworkError){ downloadFailed = true; });
++			[&](QNetworkReply::NetworkError code){ downloadFailed = true; errorCode = code; });
+ 
+ 	dlewait.exec();
+ 
+@@ -2646,7 +2650,8 @@ void unetbootin::downloadfile(QString fileurl, QString targetfile, int minsize=5
+ 
+ 	if (downloadFailed)
+ 	{
+-		QString errorStr = networkReply->errorString();
++		qDebug() << networkReply->errorString();
++		qDebug() << "Error code: " << errorCode;
+ 		showDownloadFailedScreen(fileurl);
+ 		return;
+ 	}
+@@ -2685,7 +2690,8 @@ void unetbootin::downloadfile(QString fileurl, QString targetfile, int minsize=5
+ 	if (testingDownload)
+ 	{
+ 		// Note that this only tests that the first download succeeds
+-		printf("exitstatus:downloadcomplete\n");
++		QTextStream out(stdout);
++		out << "exitstatus:downloadcomplete" << endl << flush;
+ 		QApplication::exit();
+ 		exit(0);
+ 	}
+@@ -2701,7 +2707,8 @@ void unetbootin::showDownloadFailedScreen(const QString &fileurl)
+ 	this->downloadFailed = true;
+ 	if (exitOnCompletion)
+ 	{
+-		printf("exitstatus:downloadfailed\n");
++		QTextStream out(stdout);
++		out << "exitstatus:downloadfailed" << endl << flush;
+ 		QApplication::exit();
+ 		exit(0);
+ 	}
+@@ -2777,6 +2784,7 @@ QString unetbootin::downloadpagecontents(QUrl pageurl)
+ 
+ QStringList unetbootin::lstFtpDirFiles(QString ldfDirStringUrl, int ldfMinSize, int ldfMaxSize)
+ {
++	qDebug() << "lstFtpDirFiles called for " << ldfDirStringUrl;
+ 	return {};
+ /*
+ 	QUrl ldfDirUrl(ldfDirStringUrl);
+@@ -4299,7 +4307,8 @@ void unetbootin::fininstall()
+     finishLogging();
+ 	if (exitOnCompletion)
+ 	{
+-		printf("exitstatus:success\n");
++		QTextStream out(stdout);
++		out << "exitstatus:success" << endl << flush;
+ 		QApplication::exit();
+ 		exit(0);
+ 	}
+diff --git a/unetbootin.pro b/unetbootin.pro
+index f3af65f8..6405ba27 100644
+--- a/unetbootin.pro
++++ b/unetbootin.pro
+@@ -2,13 +2,12 @@ TEMPLATE = app
+ TARGET = unetbootin
+ DEPENDPATH += .
+ INCLUDEPATH += .
+-CONFIG += release \
+-    static
+ 
+ HEADERS += unetbootin.h
+ FORMS += unetbootin.ui
+ SOURCES += main.cpp \
+     unetbootin.cpp \
++    customdistrolst.cpp \
+     distrolst.cpp \
+     distrover.cpp \
+     distrovercust.cpp
+
+From 9cc0841af5d129832d8e2df87355a53f45fca417 Mon Sep 17 00:00:00 2001
+From: Valeriy Malov <jazzvoid@gmail.com>
+Date: Fri, 28 Jul 2017 22:13:20 +0300
+Subject: [PATCH 4/4] don't wait until the file is downloaded fully before
+ dumping it on disk fix some QNetworkReply/QFile resource freeing delete
+ dlprogressupdate64 because it's never used fix some slot warnings
+
+---
+ src/unetbootin/unetbootin.cpp | 80 +++++++++++++++++++------------------------
+ src/unetbootin/unetbootin.h   |  7 ++--
+ 2 files changed, 39 insertions(+), 48 deletions(-)
+
+diff --git a/unetbootin.cpp b/unetbootin.cpp
+index 6ffd6fc0..5a6750e7 100644
+--- a/unetbootin.cpp
++++ b/unetbootin.cpp
+@@ -699,17 +699,17 @@ QStringList unetbootin::listalldrives()
+ 	return fulldrivelist;
+ }
+ 
+-void unetbootin::on_typeselect_currentIndexChanged(int typeselectIndex)
++void unetbootin::on_typeselect_currentIndexChanged(int)
+ {
+ 	refreshdriveslist();
+ }
+ 
+-void unetbootin::on_dverselect_currentIndexChanged()
++void unetbootin::on_dverselect_currentIndexChanged(int)
+ {
+ 	radioDistro->setChecked(true);
+ }
+ 
+-void unetbootin::on_diskimagetypeselect_currentIndexChanged()
++void unetbootin::on_diskimagetypeselect_currentIndexChanged(int)
+ {
+ 	radioFloppy->setChecked(true);
+ }
+@@ -2640,35 +2640,41 @@ void unetbootin::downloadfile(QString fileurl, QString targetfile, int minsize=5
+ 	connect(networkReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
+ 			[&](QNetworkReply::NetworkError code){ downloadFailed = true; errorCode = code; });
+ 
++	QFile dloutfile;
++	if (installType == tr("USB Drive"))
++	{
++		dloutfile.setFileName(randtmpfile::getrandfilename(ubntmpf, "tmp"));
++	}
++	else
++	{
++		dloutfile.setFileName(targetfile);
++	}
++	dloutfile.open(QIODevice::WriteOnly);
++
++	connect(networkReply, &QNetworkReply::downloadProgress, [&](qint64, qint64){
++		dloutfile.write(networkReply->readAll());
++	});
++
+ 	dlewait.exec();
+ 
+ 	if (!redirectUrl.isEmpty())
+ 	{
++		networkReply->deleteLater();
+ 		downloadfile(redirectUrl.toString(), targetfile, minsize);
+ 		return;
+ 	}
+ 
+ 	if (downloadFailed)
+ 	{
+-		qDebug() << networkReply->errorString();
++		qDebug() << "Failed to download URL: " << fileurl;
+ 		qDebug() << "Error code: " << errorCode;
++		qDebug() << "Error string: " << networkReply->errorString();
++		networkReply->deleteLater();
+ 		showDownloadFailedScreen(fileurl);
+ 		return;
+ 	}
+ 
+-	QFile dloutfile;
+-	if (installType == tr("USB Drive"))
+-	{
+-		dloutfile.setFileName(randtmpfile::getrandfilename(ubntmpf, "tmp"));
+-	}
+-	else
+-	{
+-		dloutfile.setFileName(targetfile);
+-	}
+-
+-	dloutfile.open(QIODevice::WriteOnly);
+ 	dloutfile.write(networkReply->readAll());
+-	networkReply->close();
+ 	networkReply->deleteLater();
+ 	dloutfile.close();
+ 	if (installType == tr("USB Drive"))
+@@ -2714,34 +2720,19 @@ void unetbootin::showDownloadFailedScreen(const QString &fileurl)
+ 	}
+ }
+ 
+-void unetbootin::dlprogressupdate(int dlbytes, int maxbytes)
+-{
+- QTime time = QTime::currentTime();
+- static int oldsec = 0;
+- // refresh the progress bar every second
+- if(oldsec != time.second())
+- {
+-   oldsec = time.second();
+-     tprogress->setValue(dlbytes);
+-     tprogress->setMaximum(maxbytes);
+-   // display the downloaded size with suffix
+-     pdesc1->setText(tr("<b>Downloaded:</b> %1 of %2").arg(displayfisize(dlbytes)).arg(displayfisize(maxbytes)));
+- }
+-}
+-
+ void unetbootin::dlprogressupdate64(qint64 dlbytes, qint64 maxbytes)
+ {
+- QTime time = QTime::currentTime();
+- static int oldsec = 0;
+- // refresh the progress bar every second
+- if(oldsec != time.second())
+- {
+-   oldsec = time.second();
+-     tprogress->setValue(dlbytes);
+-     tprogress->setMaximum(maxbytes);
+-   // display the downloaded size with suffix
+-     pdesc1->setText(tr("<b>Downloaded:</b> %1 of %2").arg(displayfisize(dlbytes)).arg(displayfisize(maxbytes)));
+- }
++	QTime time = QTime::currentTime();
++	static int oldsec = 0;
++	// refresh the progress bar every second
++	if(oldsec != time.second())
++	{
++		oldsec = time.second();
++		tprogress->setValue(dlbytes);
++		tprogress->setMaximum(maxbytes);
++		// display the downloaded size with suffix
++		pdesc1->setText(tr("<b>Downloaded:</b> %1 of %2").arg(displayfisize(dlbytes)).arg(displayfisize(maxbytes)));
++	}
+ }
+ 
+ void unetbootin::cpprogressupdate64(qint64 dlbytes, qint64 maxbytes)
+@@ -2761,9 +2752,9 @@ void unetbootin::cpprogressupdate64(qint64 dlbytes, qint64 maxbytes)
+ 
+ QString unetbootin::downloadpagecontents(QUrl pageurl)
+ {
+-	QNetworkAccessManager _manager;
++	QNetworkAccessManager manager;
+ 	QNetworkRequest dlurl(pageurl);
+-	QNetworkReply * networkReply = _manager.get(dlurl);
++	QNetworkReply * networkReply = manager.get(dlurl);
+ 	QEventLoop pgwait;
+ 	QUrl redirectUrl;
+ 	connect(networkReply, &QNetworkReply::finished, &pgwait, &QEventLoop::quit);
+@@ -2773,6 +2764,7 @@ QString unetbootin::downloadpagecontents(QUrl pageurl)
+ 
+ 	if (!redirectUrl.isEmpty())
+ 	{
++		networkReply->deleteLater();
+ 		return downloadpagecontents(redirectUrl);
+ 	}
+ 
+diff --git a/unetbootin.h b/unetbootin.h
+index 8cb45d81..99c93a28 100644
+--- a/unetbootin.h
++++ b/unetbootin.h
+@@ -336,9 +336,9 @@ class unetbootin : public QWidget, private Ui::unetbootinui
+ 
+ private slots:
+ 	void on_distroselect_currentIndexChanged(int distroselectIndex);
+-	void on_typeselect_currentIndexChanged(int typeselectIndex);
+-	void on_dverselect_currentIndexChanged();
+-	void on_diskimagetypeselect_currentIndexChanged();
++	void on_typeselect_currentIndexChanged(int);
++	void on_dverselect_currentIndexChanged(int);
++	void on_diskimagetypeselect_currentIndexChanged(int);
+ 	void on_FloppyFileSelector_clicked();
+ 	void on_KernelFileSelector_clicked();
+ 	void on_InitrdFileSelector_clicked();
+@@ -347,7 +347,6 @@ private slots:
+ 	void on_fexitbutton_clicked();
+ 
+ public slots:
+-	void dlprogressupdate(int dlbytes, int maxbytes);
+ 	void dlprogressupdate64(qint64 dlbytes, qint64 maxbytes);
+ 	void cpprogressupdate64(qint64 dlbytes, qint64 maxbytes);
+ 	void on_okbutton_clicked();

@@ -1,0 +1,11 @@
+AC_PREREQ([2.69])
+
+AC_INIT([sha2], [1.0.1], [])
+AM_INIT_AUTOMAKE([foreign])
+LT_PREREQ([2.2])
+LT_INIT([dlopen])
+
+AC_CONFIG_MACRO_DIRS([m4])
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

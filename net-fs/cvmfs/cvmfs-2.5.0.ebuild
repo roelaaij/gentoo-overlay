@@ -1,9 +1,9 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
 
-inherit cmake-utils linux-info bash-completion-r1
+inherit cmake-utils linux-info bash-completion-r1 flag-o-matic
 
 MYP=${PN}-${PV/_p/-fix}
 
@@ -29,6 +29,9 @@ CDEPEND="
 	sys-fs/fuse:0=
 	sys-libs/libcap:0=
 	sys-libs/zlib:0=
+	dev-cpp/vjson
+	dev-libs/libsha2
+	dev-libs/libsha3
 	preload? ( >=dev-cpp/tbb-4.4:0=[debug?] )
 	server? (
 		>=dev-cpp/tbb-4.4:0=[debug?]
@@ -62,6 +65,9 @@ REQUIRED_USE="test-programs? ( server )"
 
 S="${WORKDIR}/${PN}-${MYP}"
 
+# PATCHES=( "${FILESDIR}/fix-find-tbb.patch"
+# 		  "${FILESDIR}/fix-build.patch" )
+
 pkg_setup() {
 	if use server; then
 		if use aufs; then
@@ -82,37 +88,11 @@ src_prepare() {
 	rm bootstrap.sh || die
 	sed -e "s:cvmfs-\${CernVM-FS_VERSION_STRING}:${PF}:" \
 		-i CMakeLists.txt || die
-
-	# hack for bundled packages
-	# not worth unbundling upstreams are flaky/dead
-	local pkg
-	for pkg in vjson sha2 sha3; do
-		# respect toolchain variables
-		sed -e 's/g++/$(CXX)/g' \
-			-e 's/gcc/$(CC)/g' \
-			-e 's/CFLAGS/MYCFLAGS/g' \
-			-e 's/-O2/$(CFLAGS)/g' \
-			-e 's/-O2/$(CXXFLAGS)/g' \
-			-e 's/ar/$(AR)/' \
-			-e 's/ranlib/$(RANLIB)/' \
-			-i externals/${pkg}/src/Makefile || die
-		mkdir -p "${WORKDIR}/${P}_build"/externals/build_${pkg}
-		cp -r externals/${pkg}/src/* \
-		   "${WORKDIR}/${P}_build"/externals/build_${pkg}/ || die
-	done
 }
 
 src_configure() {
 	local mycmakeargs=(
-		-DGEOIP_BUILTIN=OFF
-		-DGOOGLETEST_BUILTIN=OFF
-		-DLEVELDB_BUILTIN=OFF
-		-DLIBCURL_BUILTIN=OFF
-		-DPACPARSER_BUILTIN=OFF
-		-DSPARSEHASH_BUILTIN=OFF
-		-DSQLITE3_BUILTIN=OFF
-		-DTBB_PRIVATE_LIB=OFF
-		-DZLIB_BUILTIN=OFF
+		-DBUILTIN_EXTERNALS=OFF
 		-DBUILD_CVMFS=ON
 		-DBUILD_LIBCVMFS=ON
 		-DINSTALL_MOUNT_SCRIPTS=ON
@@ -136,6 +116,7 @@ src_configure() {
 }
 
 src_compile() {
+	append-cflags -Wno-unused-variable
 	cmake-utils_src_compile
 	use doc && cmake-utils_src_compile doc
 }

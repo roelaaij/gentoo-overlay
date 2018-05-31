@@ -1,4 +1,4 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -19,30 +19,16 @@ IUSE="autoshutdown bidi debug mpris qt5 streaming"
 
 COMMON_DEPEND="
 	sys-libs/zlib
-	!qt5? (
-		dev-qt/qtcore:4
-		dev-qt/qtgui:4
-		dev-qt/qtsingleapplication[X,qt4]
-		autoshutdown? ( dev-qt/qtdbus:4 )
-		mpris? ( dev-qt/qtdbus:4 )
-		streaming? (
-			dev-qt/qtcore:4[ssl]
-			dev-qt/qtscript:4
-		)
-	)
-	qt5? (
-		dev-qt/qtcore:5
-		dev-qt/qtgui:5
-		dev-qt/qtnetwork:5
-		dev-qt/qtsingleapplication[X,qt5]
-		dev-qt/qtwidgets:5
-		dev-qt/qtxml:5
-		autoshutdown? ( dev-qt/qtdbus:5 )
-		mpris? ( dev-qt/qtdbus:5 )
-		streaming? (
-			dev-qt/qtnetwork:5[ssl]
-			dev-qt/qtscript:5
-		)
+	dev-qt/qtcore:5
+	dev-qt/qtgui:5=
+	dev-qt/qtnetwork:5[ssl]
+	dev-qt/qtsingleapplication[X,qt5(+)]
+	dev-qt/qtwidgets:5
+	dev-qt/qtxml:5
+	autoshutdown? ( dev-qt/qtdbus:5 )
+	mpris? ( dev-qt/qtdbus:5 )
+	streaming? (
+		dev-qt/qtscript:5
 	)
 "
 DEPEND="${COMMON_DEPEND}

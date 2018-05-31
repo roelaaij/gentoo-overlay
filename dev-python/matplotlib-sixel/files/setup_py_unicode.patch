@@ -1,0 +1,8 @@
+--- a/setup.py	2017-11-07 09:14:52.310025365 +0100
++++ b/setup.py	2017-11-06 17:25:51.299818200 +0100
+@@ -1,4 +1,5 @@
+ #!/usr/bin/env python
++# -*- coding: utf-8 -*-
+ 
+ from distutils.core import setup
+ 

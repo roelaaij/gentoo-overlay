@@ -1,9 +1,9 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
 
-PLOCALES="ar ca cs da_DK de el en es fa fr hr hu it ja ko ms_MY nb nl pl pt_BR pt ro_RO ru sr sv tr zh_CN zh_TW"
+PLOCALES="ar ca cs da de el en es fa fr hr hu it ja ko ms nb nl pl pt pt_BR ro ru sr sv tr zh_CN zh_TW"
 PLOCALE_BACKUP="en"
 WX_GTK_VER="3.1-gtk3"
 
@@ -77,6 +77,7 @@ DEPEND="${RDEPEND}
 	>=dev-util/cmake-2.8.8
 	>=sys-devel/gcc-4.9.0
 	>=dev-libs/xxhash-0.6.2
+	dev-cpp/picojson
 	dev-cpp/gtest
 	app-arch/zip
 	media-libs/freetype
@@ -126,11 +127,9 @@ src_prepare() {
 	pushd `pwd`
 	cd "$S"
 	# Remove ALL the bundled libraries, aside from:
-	# - SOIL: The sources are not public.
 	# - cpp-optparse: not in tree
 	# - Bochs-disasm: Don't know what it is.
 	# - cubeb: Not in tree.
-	mv Externals/SOIL . || die
 	mv Externals/Bochs_disasm . || die
 	mv Externals/gtest . || die
 	mv Externals/cpp-optparse . || die
@@ -138,7 +137,6 @@ src_prepare() {
 	mv Externals/cubeb . || die
 	rm -r Externals/* || die "Failed to delete Externals dir."
 	mv Bochs_disasm Externals || die
-	mv SOIL Externals || die
 	mv gtest Externals || die
 	mv cpp-optparse Externals || die
 	mv soundtouch Externals || die

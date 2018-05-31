@@ -1,0 +1,10 @@
+--- a/gtk/main.c	2018-05-31 15:46:49.409698789 +0200
++++ b/gtk/main.c	2018-05-31 15:47:42.129698588 +0200
+@@ -22,7 +22,6 @@
+ 
+ #include "linphone.h"
+ #include "linphone/lpconfig.h"
+-#include "liblinphone_gitversion.h"
+ #include <bctoolbox/vfs.h>
+ #include <bctoolbox/defs.h>
+ 

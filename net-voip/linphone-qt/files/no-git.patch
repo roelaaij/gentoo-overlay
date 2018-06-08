@@ -1,0 +1,33 @@
+--- a/CMakeLists.txt	2018-06-01 11:17:52.629760270 +0200
++++ b/CMakeLists.txt	2018-06-01 11:18:49.089760055 +0200
+@@ -25,7 +25,7 @@
+ 
+ set(APP_LIBRARY app-library)
+ 
+-set(EXECUTABLE_NAME linphone)
++set(EXECUTABLE_NAME linphone-qt)
+ set(TESTER_EXECUTABLE_NAME "${EXECUTABLE_NAME}-tester")
+ 
+ set(TARGET_NAME linphone-qt)
+@@ -291,10 +291,12 @@
+   )
+ endif ()
+ 
++if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+ execute_process(COMMAND ${CMAKE_COMMAND} -E copy
+   "${CMAKE_CURRENT_SOURCE_DIR}/tools/private/pre-commit"
+   "${CMAKE_CURRENT_SOURCE_DIR}/.git/hooks/pre-commit"
+ )
++endif()
+ 
+ # ------------------------------------------------------------------------------
+ # Create config.h file
+@@ -392,7 +394,7 @@
+   )
+ endforeach ()
+ 
+-install(FILES "assets/linphone.desktop"
++install(FILES "assets/linphone-qt.desktop"
+   DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
+ )
+ install(FILES "${ASSETS_DIR}/images/linphone_logo.svg"

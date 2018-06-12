@@ -1,0 +1,82 @@
+--- a/cvmfs/authz/helper_util.cc	2018-02-26 17:07:29.819404628 +0100
++++ b/cvmfs/authz/helper_util.cc	2018-02-26 16:55:44.449409831 +0100
+@@ -40,7 +40,7 @@
+ 
+ void ParseHandshakeInit(const string &msg) {
+   block_allocator allocator(2048);
+-  char *err_pos; char *err_desc; int err_line;
++  char *err_pos; const char *err_desc; int err_line;
+   JSON *json = json_parse(strdupa(msg.c_str()),
+                           &err_pos, &err_desc, &err_line,
+                           &allocator);
+@@ -67,7 +67,7 @@
+ 
+ void ParseRequest(const string &msg) {
+   block_allocator allocator(2048);
+-  char *err_pos; char *err_desc; int err_line;
++  char *err_pos; const char *err_desc; int err_line;
+   JSON *json = json_parse(strdupa(msg.c_str()),
+                           &err_pos, &err_desc, &err_line,
+                           &allocator);
+--- a/cvmfs/json_document.cc	2018-02-26 17:08:45.649404068 +0100
++++ b/cvmfs/json_document.cc	2018-02-26 16:56:26.819409519 +0100
+@@ -79,7 +79,7 @@
+   raw_text_ = strdup(text.c_str());
+ 
+   char *error_pos = 0;
+-  char *error_desc = 0;
++  const char *error_desc = 0;
+   int error_line = 0;
+   JSON *root =
+       json_parse(raw_text_, &error_pos, &error_desc, &error_line, &allocator_);
+--- a/cvmfs/CMakeLists.txt.orig	2018-06-13 00:00:16.005960285 +0200
++++ b/cvmfs/CMakeLists.txt	2018-06-13 00:00:37.055960204 +0200
+@@ -561,8 +561,7 @@
+ if (BUILD_LIBCVMFS_CACHE)
+   add_library (cvmfs_cache_only STATIC ${LIBCVMFS_CACHE_SOURCES})
+   add_dependencies (cvmfs_cache_only cache.pb.generated)
+-  set (LIBCVMFS_CACHE_LIBS ${SHA3_LIBRARIES} ${PROTOBUF_LITE_LIBRARY}
+-    ${LIBCVMFS_CACHE_LIBS} ${CMAKE_CURRENT_BINARY_DIR}/libcvmfs_cache_only.a)
++  set (LIBCVMFS_CACHE_LIBS ${LIBCVMFS_CACHE_LIBS} ${CMAKE_CURRENT_BINARY_DIR}/libcvmfs_cache_only.a)
+   if (MACOSX)
+     list(APPEND LIBCVMFS_CACHE_LIBS ${OPENSSL_LIBRARIES})
+   endif (MACOSX)
+@@ -600,6 +600,7 @@
+   add_executable(cvmfs_cache_null ${CVMFS_CACHE_NULL_SOURCES})
+   target_link_libraries(cvmfs_cache_null
+                         ${CMAKE_CURRENT_BINARY_DIR}/libcvmfs_cache.a
++                        ${SHA3_LIBRARIES} ${PROTOBUF_LITE_LIBRARY}
+                         ${OPENSSL_LIBRARIES} ${RT_LIBRARY} pthread)
+   add_dependencies(cvmfs_cache_null libcvmfs_cache)
+ 
+@@ -609,6 +610,7 @@
+                          "${CVMFS_CACHE_RAM_CFLAGS}")
+   target_link_libraries(cvmfs_cache_ram
+                         ${CMAKE_CURRENT_BINARY_DIR}/libcvmfs_cache.a
++                        ${SHA3_LIBRARIES} ${PROTOBUF_LITE_LIBRARY}
+                         ${OPENSSL_LIBRARIES} ${RT_LIBRARY} pthread)
+   add_dependencies(cvmfs_cache_ram libcvmfs_cache)
+ endif (BUILD_LIBCVMFS_CACHE)
+@@ -618,12 +620,7 @@
+   add_library (cvmfs_only STATIC ${LIBCVMFS_SOURCES})
+   add_dependencies (cvmfs_only cache.pb.generated)
+ 
+-  set (LIBCVMFS_LIBS ${CARES_LIBRARIES} ${CURL_LIBRARIES}
+-                     ${PACPARSER_LIBRARIES} ${SQLITE3_LIBRARY}
+-                     ${ZLIB_LIBRARIES} ${SPARSEHASH_LIBRARIES}
+-                     ${SHA3_LIBRARIES} ${VJSON_LIBRARIES}
+-                     ${PROTOBUF_LITE_LIBRARY}
+-                     ${CMAKE_CURRENT_BINARY_DIR}/libcvmfs_only.a)
++  set (LIBCVMFS_LIBS ${CMAKE_CURRENT_BINARY_DIR}/libcvmfs_only.a)
+ 
+   set_target_properties (cvmfs_only PROPERTIES COMPILE_FLAGS "${LIBCVMFS_CFLAGS}")
+   target_link_libraries(cvmfs_only ${LIBCVMFS_LIBS})
+@@ -657,6 +654,8 @@
+   add_dependencies(test_libcvmfs libcvmfs)
+   target_link_libraries(test_libcvmfs
+                         ${CMAKE_CURRENT_BINARY_DIR}/libcvmfs.a
++                        ${SPARSEHASH_LIBRARIES} ${PROTOBUF_LITE_LIBRARY}
++                        ${SHA3_LIBRARIES} ${VJSON_LIBRARIES}
+                         ${SQLITE3_LIBRARY} ${CURL_LIBRARIES} ${CARES_LIBRARIES}
+                         ${PACPARSER_LIBRARIES} ${ZLIB_LIBRARIES} ${OPENSSL_LIBRARIES}
+                         ${RT_LIBRARY} ${UUID_LIBRARIES} pthread dl )

@@ -66,7 +66,7 @@ REQUIRED_USE="test-programs? ( server )"
 S="${WORKDIR}/${PN}-${MYP}"
 
 # PATCHES=( "${FILESDIR}/fix-find-tbb.patch"
-# 		  "${FILESDIR}/fix-build.patch" )
+PATCHES=( "${FILESDIR}/fix-build.patch" )
 
 pkg_setup() {
 	if use server; then

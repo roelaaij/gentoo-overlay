@@ -1,0 +1,43 @@
+--- a/tox.ini
++++ b/tox.ini
+@@ -143,7 +143,7 @@ commands =
+ # defaults to selecting all other errors so we do not need select=E,F,W,I,D
+ # Once Flake8 3.0 is released and in a good state, we can use both and it will
+ # work well \o/
+-ignore = D203
++ignore = D203, W504
+ exclude =
+     .tox,
+     .git,
+--- a/setup.py	2018-06-18 11:12:22.747638363 +0200
++++ b/setup.py	2018-06-18 11:11:27.039671668 +0200
+@@ -22,7 +22,7 @@
+     # And in which releases we will update those ranges here:
+     # http://flake8.pycqa.org/en/latest/internal/releases.html#releasing-flake8
+     "pyflakes >= 1.5.0, < 1.7.0",
+-    "pycodestyle >= 2.0.0, < 2.4.0",
++    "pycodestyle >= 2.4.0, < 2.5.0",
+     "mccabe >= 0.6.0, < 0.7.0",
+     "setuptools >= 30",
+ ]
+@@ -108,7 +108,8 @@
+             PEP8_PLUGIN('module_imports_on_top_of_file'),
+             PEP8_PLUGIN('compound_statements'),
+             PEP8_PLUGIN('explicit_line_join'),
+-            PEP8_PLUGIN('break_around_binary_operator'),
++            PEP8_PLUGIN('break_after_binary_operator'),
++            PEP8_PLUGIN('break_before_binary_operator'),
+             PEP8_PLUGIN('comparison_to_singleton'),
+             PEP8_PLUGIN('comparison_negative'),
+             PEP8_PLUGIN('comparison_type'),
+--- flake8-3.5.0/setup.cfg.orig	2018-06-18 11:15:54.959892729 +0200
++++ flake8-3.5.0/setup.cfg	2018-06-18 11:17:00.157534925 +0200
+@@ -9,7 +9,7 @@
+ 	enum34; python_version<"3.4"
+ 	configparser; python_version<"3.2"
+ 	pyflakes >= 1.5.0, < 1.7.0
+-	pycodestyle >= 2.0.0, < 2.4.0
++	pycodestyle >= 2.4.0, < 2.5.0
+ 	mccabe >= 0.6.0, < 0.7.0
+ 
+ [egg_info]

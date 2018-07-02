@@ -1,0 +1,228 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9a869c2c..27dc1dea 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -29,6 +29,7 @@ option(ENABLE_NV_EXTENSIONS "Enables support of Nvidia-specific extensions" ON)
+ 
+ option(ENABLE_HLSL "Enables HLSL input support" ON)
+ 
++option(SHARED_SPIRV_TOOLS "Use shared SPIRV tools installation" ON)
+ option(ENABLE_OPT "Enables spirv-opt capability if present" ON)
+ 
+ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND WIN32)
+@@ -96,7 +97,7 @@ endfunction(glslang_set_link_args)
+ # We depend on these for later projects, so they should come first.
+ add_subdirectory(External)
+ 
+-if(NOT TARGET SPIRV-Tools-opt)
++if(NOT SHARED_SPIRV_TOOLS AND NOT TARGET SPIRV-Tools-opt)
+     set(ENABLE_OPT OFF)
+ endif()
+ 
+diff --git a/External/CMakeLists.txt b/External/CMakeLists.txt
+index 4d969013..118699ca 100644
+--- a/External/CMakeLists.txt
++++ b/External/CMakeLists.txt
+@@ -34,7 +34,7 @@ if(BUILD_TESTING)
+     endif()
+ endif()
+ 
+-if(ENABLE_OPT AND NOT TARGET SPIRV-Tools-opt)
++if(NOT SHARED_SPIRV_TOOLS AND ENABLE_OPT AND NOT TARGET SPIRV-Tools-opt)
+     if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/spirv-tools)
+         set(SPIRV_SKIP_TESTS ON CACHE BOOL "Skip building SPIRV-Tools tests")
+         add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/spirv-tools spirv-tools)
+diff --git a/OGLCompilersDLL/CMakeLists.txt b/OGLCompilersDLL/CMakeLists.txt
+index 5bb3f0ee..b83f8312 100644
+--- a/OGLCompilersDLL/CMakeLists.txt
++++ b/OGLCompilersDLL/CMakeLists.txt
+@@ -1,6 +1,8 @@
+ set(SOURCES InitializeDll.cpp InitializeDll.h)
+ 
+ add_library(OGLCompiler STATIC ${SOURCES})
++target_include_directories(OGLCompiler PRIVATE
++                           ${PROJECT_SOURCE_DIR}/glslang)
+ set_property(TARGET OGLCompiler PROPERTY FOLDER glslang)
+ set_property(TARGET OGLCompiler PROPERTY POSITION_INDEPENDENT_CODE ON)
+ 
+diff --git a/SPIRV/CMakeLists.txt b/SPIRV/CMakeLists.txt
+index 9d9d8033..2cc4108a 100755
+--- a/SPIRV/CMakeLists.txt
++++ b/SPIRV/CMakeLists.txt
+@@ -41,6 +41,9 @@ if(ENABLE_NV_EXTENSIONS)
+ endif(ENABLE_NV_EXTENSIONS)
+ 
+ add_library(SPIRV ${LIB_TYPE} ${SOURCES} ${HEADERS})
++target_include_directories(SPIRV PRIVATE
++                           ${PROJECT_SOURCE_DIR}/glslang
++                           ${PROJECT_SOURCE_DIR}/glslang/Public)
+ set_property(TARGET SPIRV PROPERTY FOLDER glslang)
+ set_property(TARGET SPIRV PROPERTY POSITION_INDEPENDENT_CODE ON)
+ 
+@@ -58,7 +61,7 @@ if(ENABLE_OPT)
+         PRIVATE ${spirv-tools_SOURCE_DIR}/include
+         PRIVATE ${spirv-tools_SOURCE_DIR}/source
+     )
+-    target_link_libraries(SPIRV glslang SPIRV-Tools-opt)
++    target_link_libraries(SPIRV glslang SPIRV-Tools-opt-shared SPIRV-Tools-shared)
+ else()
+     target_link_libraries(SPIRV glslang)
+ endif(ENABLE_OPT)
+diff --git a/StandAlone/CMakeLists.txt b/StandAlone/CMakeLists.txt
+index d500121d..d60e2314 100755
+--- a/StandAlone/CMakeLists.txt
++++ b/StandAlone/CMakeLists.txt
+@@ -1,11 +1,13 @@
+-add_library(glslang-default-resource-limits
++add_library(glslang-default-resource-limits ${LIB_TYPE}
+             ${CMAKE_CURRENT_SOURCE_DIR}/ResourceLimits.cpp)
+ set_property(TARGET glslang-default-resource-limits PROPERTY FOLDER glslang)
+ set_property(TARGET glslang-default-resource-limits PROPERTY POSITION_INDEPENDENT_CODE ON)
+ 
+ target_include_directories(glslang-default-resource-limits
+                            PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+-                           PUBLIC ${PROJECT_SOURCE_DIR})
++                                  ${PROJECT_SOURCE_DIR}
++                                  ${PROJECT_SOURCE_DIR}/glslang
++                                  ${PROJECT_SOURCE_DIR}/glslang/Public)
+ 
+ set(SOURCES StandAlone.cpp DirStackFileIncluder.h)
+ set(REMAPPER_SOURCES spirv-remap.cpp)
+@@ -39,6 +41,10 @@ if(WIN32)
+ endif(WIN32)
+ 
+ if(ENABLE_GLSLANG_INSTALL)
++    install(TARGETS glslang-default-resource-limits
++            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
++
+     install(TARGETS glslangValidator
+             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ 
+diff --git a/glslang/CMakeLists.txt b/glslang/CMakeLists.txt
+index d495a3cf..beab17ac 100755
+--- a/glslang/CMakeLists.txt
++++ b/glslang/CMakeLists.txt
+@@ -81,6 +81,10 @@ set(HEADERS
+ # set(BISON_GLSLParser_OUTPUT_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/MachineIndependent/glslang_tab.cpp)
+ 
+ add_library(glslang ${LIB_TYPE} ${BISON_GLSLParser_OUTPUT_SOURCE} ${SOURCES} ${HEADERS})
++target_include_directories(glslang PRIVATE
++                           ${PROJECT_SOURCE_DIR}
++                           ${CMAKE_CURRENT_SOURCE_DIR}
++                           ${CMAKE_CURRENT_SOURCE_DIR}/Public)
+ set_property(TARGET glslang PROPERTY FOLDER glslang)
+ set_property(TARGET glslang PROPERTY POSITION_INDEPENDENT_CODE ON)
+ target_link_libraries(glslang OGLCompiler OSDependent)
+@@ -115,6 +119,9 @@ endif(ENABLE_GLSLANG_INSTALL)
+ if(ENABLE_GLSLANG_INSTALL)
+     foreach(file ${HEADERS})
+         get_filename_component(dir ${file} DIRECTORY)
++        if (${dir} STREQUAL "Public")
++            set(dir "")
++        endif()
+         install(FILES ${file} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/glslang/${dir})
+     endforeach()
+ endif(ENABLE_GLSLANG_INSTALL)
+diff --git a/glslang/Include/Types.h b/glslang/Include/Types.h
+index 39d6737c..83adf2ff 100644
+--- a/glslang/Include/Types.h
++++ b/glslang/Include/Types.h
+@@ -39,9 +39,9 @@
+ #ifndef _TYPES_INCLUDED
+ #define _TYPES_INCLUDED
+ 
+-#include "../Include/Common.h"
+-#include "../Include/BaseTypes.h"
+-#include "../Public/ShaderLang.h"
++#include "Common.h"
++#include "BaseTypes.h"
++#include "glslang/ShaderLang.h"
+ #include "arrays.h"
+ 
+ #include <algorithm>
+diff --git a/glslang/Include/intermediate.h b/glslang/Include/intermediate.h
+index 19eb7aa8..a6996ffa 100755
+--- a/glslang/Include/intermediate.h
++++ b/glslang/Include/intermediate.h
+@@ -52,9 +52,9 @@
+     #pragma warning(disable : 5026) // 'glslang::TIntermUnary': move constructor was implicitly defined as deleted
+ #endif
+ 
+-#include "../Include/Common.h"
+-#include "../Include/Types.h"
+-#include "../Include/ConstantUnion.h"
++#include "Common.h"
++#include "Types.h"
++#include "ConstantUnion.h"
+ 
+ namespace glslang {
+ 
+diff --git a/glslang/Public/ShaderLang.h b/glslang/Public/ShaderLang.h
+index 911fc310..1fc6f748 100644
+--- a/glslang/Public/ShaderLang.h
++++ b/glslang/Public/ShaderLang.h
+@@ -36,8 +36,8 @@
+ #ifndef _COMPILER_INTERFACE_INCLUDED_
+ #define _COMPILER_INTERFACE_INCLUDED_
+ 
+-#include "../Include/ResourceLimits.h"
+-#include "../MachineIndependent/Versions.h"
++#include "Include/ResourceLimits.h"
++#include "MachineIndependent/Versions.h"
+ 
+ #include <cstring>
+ #include <vector>
+diff --git a/hlsl/CMakeLists.txt b/hlsl/CMakeLists.txt
+index 6d1d8e6a..5ceffbbc 100755
+--- a/hlsl/CMakeLists.txt
++++ b/hlsl/CMakeLists.txt
+@@ -18,6 +18,9 @@ set(HEADERS
+     hlslParseables.h)
+ 
+ add_library(HLSL ${LIB_TYPE} ${SOURCES} ${HEADERS})
++target_include_directories(HLSL PRIVATE
++                           ${PROJECT_SOURCE_DIR}/glslang
++                           ${PROJECT_SOURCE_DIR}/glslang/Public)
+ set_property(TARGET HLSL PROPERTY FOLDER hlsl)
+ set_property(TARGET HLSL PROPERTY POSITION_INDEPENDENT_CODE ON)
+ 
+diff --git a/glslang/Public/message.h b/glslang/Public/message.h
+new file mode 100644
+index 00000000..60f5d563
+--- /dev/null
++++ b/glslang/Public/message.h
+@@ -0,0 +1,33 @@
++// Copyright (c) 2016 Google Inc.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++#ifndef SPIRV_TOOLS_MESSAGE_H_
++#define SPIRV_TOOLS_MESSAGE_H_
++
++#include <string>
++
++#include "spirv-tools/libspirv.h"
++
++namespace spvtools {
++
++// A helper function to compose and return a string from the message in the
++// following format:
++//   "<level>: <source>:<line>:<column>:<index>: <message>"
++std::string StringifyMessage(spv_message_level_t level, const char* source,
++                             const spv_position_t& position,
++                             const char* message);
++
++}  // namespace spvtools
++
++#endif  // SPIRV_TOOLS_MESSAGE_H_

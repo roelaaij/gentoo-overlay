@@ -180,6 +180,7 @@ src_configure() {
 		-DENABLE_SDL="$(usex sdl ON OFF)"
 		-DUSE_EGL="$(usex egl ON OFF)"
 		-DUSE_UPNP="$(usex upnp ON OFF)"
+		-DUSE_DISCORD_PRESENCE=OFF
 	)
 
 	cmake-utils_src_configure
@@ -206,7 +207,13 @@ src_install() {
 
 pkg_postinst() {
 	# Add pax markings for hardened systems
-	pax-mark -m "${EPREFIX}"/usr/games/bin/"${PN}"-emu
+	pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu-nogui
+	if use qt5; then
+		pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu
+	fi
+	if use wxwidgets; then
+		pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu-wx
+	fi
 
 	if ! use portaudio; then
 		ewarn "If you want microphone capabilities in dolphin-emu, rebuild with"

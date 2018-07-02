@@ -38,7 +38,7 @@ DEPEND="
 "
 S="${WORKDIR}/node-v${PV}"
 PATCHES=(
-	"${FILESDIR}"/${PN}-10.3.0-global-npm-config.patch
+	"${FILESDIR}"/${PN}-10.4.0-global-npm-config.patch
 )
 
 pkg_pretend() {
@@ -51,7 +51,7 @@ pkg_pretend() {
 
 src_prepare() {
 	if use libressl; then
-		eapply "${FILESDIR}"/${P}-libressl.patch
+		eapply "${FILESDIR}"/${PN}-10.4.0-libressl.patch
 	fi
 
 	tc-export CC CXX PKG_CONFIG

@@ -1,9 +1,9 @@
 # Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=7
 
-inherit eutils flag-o-matic multilib
+inherit desktop flag-o-matic multilib
 
 DESCRIPTION="Terminal Emulator for X Windows"
 HOMEPAGE="https://invisible-island.net/xterm/"
@@ -12,7 +12,7 @@ SRC_URI="ftp://ftp.invisible-island.net/${PN}/${P}.tgz"
 LICENSE="MIT"
 SLOT="0"
 KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~s390 ~sh ~sparc ~x86 ~amd64-fbsd ~x86-fbsd ~amd64-linux ~arm-linux ~x86-linux ~ppc-macos ~x64-macos ~x86-macos ~sparc-solaris ~sparc64-solaris ~x64-solaris ~x86-solaris"
-IUSE="+openpty toolbar truetype unicode Xaw3d xinerama sixel"
+IUSE="+openpty sixel toolbar truetype unicode Xaw3d xinerama"
 
 COMMON_DEPEND="kernel_linux? ( sys-libs/libutempter )
 	kernel_FreeBSD? ( || ( >=sys-freebsd/freebsd-lib-9.0 sys-libs/libutempter ) )
@@ -49,40 +49,44 @@ src_configure() {
 	# Everything gets linked against ncurses anyways, so don't shout
 	append-libs $(pkg-config --libs ncurses)
 
-	econf \
-		--libdir="${EPREFIX}"/etc \
-		--disable-full-tgetent \
-		--with-app-defaults="${DEFAULTS_DIR}" \
-		--disable-setuid \
-		--disable-setgid \
-		--with-utempter \
-		--with-x \
-		$(use_with Xaw3d) \
-		$(use_with xinerama) \
-		--disable-imake \
-		--enable-256-color \
-		--enable-broken-osc \
-		--enable-broken-st \
-		--enable-exec-xterm \
-		$(use_enable sixel sixel-graphics) \
-		$(use_enable sixel dec-locator) \
-		$(use_enable truetype freetype) \
-		--enable-i18n \
-		--enable-load-vt-fonts \
-		--enable-logging \
-		$(use_enable openpty) \
-		$(use_enable toolbar) \
-		$(use_enable unicode mini-luit) \
-		$(use_enable unicode luit) \
-		--enable-wide-chars \
-		--enable-dabbrev \
+	local myeconfargs=(
+		--disable-full-tgetent
+		--disable-imake
+		--disable-setgid
+		--disable-setuid
+		--enable-256-color
+		--enable-broken-osc
+		--enable-broken-st
+		--enable-dabbrev
+		--enable-exec-xterm
+		--enable-i18n
+		--enable-load-vt-fonts
+		--enable-logging
+		--enable-screen-dumps
 		--enable-warnings
+		--enable-wide-chars
+		--libdir="${EPREFIX}"/etc
+		--with-app-defaults="${DEFAULTS_DIR}"
+		--with-utempter
+		--with-x
+		$(use_enable sixel sixel-graphics)
+		$(use_enable sixel dec-locator)
+		$(use_enable openpty)
+		$(use_enable toolbar)
+		$(use_enable truetype freetype)
+		$(use_enable unicode luit)
+		$(use_enable unicode mini-luit)
+		$(use_with Xaw3d)
+		$(use_with xinerama)
+	)
+	econf "${myeconfargs[@]}"
 }
 
 src_install() {
 	default
 
-	dohtml xterm.log.html
+	docinto html
+	dodoc xterm.log.html
 	domenu *.desktop
 
 	# Fix permissions -- it grabs them from live system, and they can

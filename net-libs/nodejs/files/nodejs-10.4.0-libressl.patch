@@ -384,17 +384,17 @@
      owner._handle.loadSession(session);
 -    owner._handle.endParser();
 +    var servername = session && session.servername || hello.servername;
-+    loadSNI(hello, servername);
++    loadSNI(hello, servername, owner);
    }
  
    if (hello.sessionId.length <= 0 ||
-@@ -129,9 +130,8 @@
+@@ -129,9 +130,7 @@
  }
  
  
 -function loadSNI(info) {
-+function loadSNI(info, servername) {
-   const owner = this.owner;
++function loadSNI(info, servername, owner) {
+-  const owner = this.owner;
 -  const servername = info.servername;
    if (!servername || !owner._SNICallback)
      return requestOCSP(owner, info);

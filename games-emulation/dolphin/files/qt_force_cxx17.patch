@@ -1,0 +1,15 @@
+diff --git a/Source/Core/DolphinQt2/CMakeLists.txt b/Source/Core/DolphinQt2/CMakeLists.txt
+index b2375c740d..c1b0ba83dc 100644
+--- a/Source/Core/DolphinQt/CMakeLists.txt
++++ b/Source/Core/DolphinQt/CMakeLists.txt
+@@ -5,6 +5,10 @@ message(STATUS "Found Qt version ${Qt5Core_VERSION}")
+ 
+ set(CMAKE_AUTOMOC ON)
+ 
++set(CMAKE_CXX_STANDARD 17)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++set(CMAKE_CXX_EXTENSIONS OFF)
++
+ add_executable(dolphin-emu
+   AboutDialog.cpp
+   CheatsManager.cpp

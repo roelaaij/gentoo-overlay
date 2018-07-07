@@ -1,0 +1,52 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 213629f67b..dbfe5e0850 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -25,6 +25,8 @@ option(ENABLE_WX "Enable wxWidgets (Legacy)" ON)
+ option(ENABLE_LTO "Enables Link Time Optimization" OFF)
+ option(ENABLE_GENERIC "Enables generic build that should run on any little-endian host" OFF)
+ option(ENABLE_HEADLESS "Enables running Dolphin as a headless variant" OFF)
++option(USE_SHARED_GLSLANG "Use system glslang if found instead of bundled version.")
++option(USE_SHARED_XXHASH "Use system xxhash if found instead of bundled version.")
+ option(ENABLE_ALSA "Enables ALSA sound backend" ON)
+ option(ENABLE_PULSEAUDIO "Enables PulseAudio sound backend" ON)
+ option(ENABLE_LLVM "Enables LLVM support, for disassembly" ON)
+@@ -527,7 +529,16 @@ endif()
+ #
+ add_subdirectory(Externals/Bochs_disasm)
+ add_subdirectory(Externals/cpp-optparse)
+-add_subdirectory(Externals/glslang)
++
++if(USE_SHARED_GLSLANG)
++  set(GLSLANG_FOUND TRUE)
++endif()
++if (GLSLANG_FOUND)
++	message(STATUS "Using system glslang")
++else()
++	message(STATUS "Using bundled glslang")
++	add_subdirectory(Externals/glslang)
++endif()
+ 
+ find_package(pugixml)
+ if(NOT pugixml_FOUND)
+@@ -562,7 +573,19 @@ else()
+   add_subdirectory(Externals/enet)
+ endif()
+ 
+-if(NOT XXHASH_FOUND)
++if(USE_SHARED_XXHASH)
++  check_lib(XXHASH libxxhash xxhash xxhash.h QUIET)
++  if (XXHASH_FOUND)
++    set(CMAKE_REQUIRED_INCLUDES ${XXHASH_INCLUDE_DIRS})
++    # hack: LDFLAGS already contains -lxxhash but all flags but the first are
++    # dropped; ugh, cmake
++    set(CMAKE_REQUIRED_FLAGS ${XXHASH_LDFLAGS})
++    set(CMAKE_REQUIRED_LIBRARIES ${XXHASH_LIBRARIES})
++  endif()
++endif()
++if(XXHASH_FOUND)
++  message(STATUS "Using shared xxhash")
++else()
+   message(STATUS "Using static xxhash from Externals")
+   add_subdirectory(Externals/xxhash)
+ endif()

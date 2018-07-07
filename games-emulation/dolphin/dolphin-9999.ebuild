@@ -5,9 +5,8 @@ EAPI=6
 
 PLOCALES="ar ca cs da de el en es fa fr hr hu it ja ko ms nb nl pl pt pt_BR ro ru sr sv tr zh_CN zh_TW"
 PLOCALE_BACKUP="en"
-WX_GTK_VER="3.1-gtk3"
 
-inherit cmake-utils l10n pax-utils toolchain-funcs versionator wxwidgets
+inherit cmake-utils l10n pax-utils toolchain-funcs versionator
 
 if [[ ${PV} == 9999* ]]
 then
@@ -24,7 +23,7 @@ HOMEPAGE="https://www.dolphin-emu.org/"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="alsa ao bluetooth doc egl +evdev ffmpeg llvm log lto openal +pch portaudio profile pulseaudio qt5 sdl upnp +wxwidgets"
+IUSE="alsa ao bluetooth doc egl +evdev ffmpeg llvm log lto openal +pch portaudio profile pulseaudio +qt5 sdl upnp"
 
 RDEPEND=">=media-libs/libsfml-2.1
 	>net-libs/enet-1.3.7
@@ -65,11 +64,6 @@ RDEPEND=">=media-libs/libsfml-2.1
 	)
 	sdl? ( media-libs/libsdl2[haptic,joystick] )
 	upnp? ( >=net-libs/miniupnpc-1.7 )
-	wxwidgets? (
-				dev-libs/glib:2
-				x11-libs/gtk+:3
-				x11-libs/wxGTK:${WX_GTK_VER}[opengl,X]
-	)
 	media-libs/vulkan-loader
 	dev-libs/hidapi
 	"
@@ -84,6 +78,13 @@ DEPEND="${RDEPEND}
 	sys-devel/gettext
 	virtual/pkgconfig
 	"
+
+PATCHES=( "${FILESDIR}/exceptions.patch"
+		  "${FILESDIR}/force_cxx17.patch"
+		  "${FILESDIR}/gentoo-vulkan.patch"
+		  "${FILESDIR}/picojson.patch"
+		  "${FILESDIR}/qt_force_cxx17.patch"
+		  "${FILESDIR}/system-libs.patch" )
 
 pkg_pretend() {
 
@@ -160,10 +161,6 @@ src_prepare() {
 
 src_configure() {
 
-	if use wxwidgets; then
-		need-wxwidgets unicode
-	fi
-
 	local mycmakeargs=(
 		-DUSE_SHARED_ENET=ON
 		-DUSE_SHARED_XXHASH=ON
@@ -172,7 +169,6 @@ src_configure() {
 		-DENCODE_FRAMEDUMPS="$(usex ffmpeg ON OFF)"
 		-DFASTLOG="$(usex log ON OFF)"
 		-DOPROFILING="$(usex profile ON OFF)"
-		-DDISABLE_WX="$(usex wxwidgets OFF ON)"
 		-DENABLE_EVDEV="$(usex evdev ON OFF)"
 		-DENABLE_LTO="$(usex lto ON OFF)"
 		-DENABLE_PCH="$(usex pch ON OFF)"
@@ -210,9 +206,6 @@ pkg_postinst() {
 	pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu-nogui
 	if use qt5; then
 		pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu
-	fi
-	if use wxwidgets; then
-		pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu-wx
 	fi
 
 	if ! use portaudio; then

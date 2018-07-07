@@ -1,0 +1,13 @@
+diff --git a/Source/Core/UICommon/AutoUpdate.cpp b/Source/Core/UICommon/AutoUpdate.cpp
+index 003135683a..339bac64a6 100644
+--- a/Source/Core/UICommon/AutoUpdate.cpp
++++ b/Source/Core/UICommon/AutoUpdate.cpp
+@@ -4,7 +4,7 @@
+ 
+ #include "UICommon/AutoUpdate.h"
+ 
+-#include <picojson/picojson.h>
++#include <picojson.h>
+ #include <string>
+ 
+ #include "Common/CommonPaths.h"

@@ -1,0 +1,15 @@
+diff --git a/Source/CMakeLists.txt b/Source/CMakeLists.txt
+index 71ed5876c5..56a7725ee2 100644
+--- a/Source/CMakeLists.txt
++++ b/Source/CMakeLists.txt
+@@ -23,6 +23,10 @@ else()
+     set(CMAKE_CXX_STANDARD 14)
+     set(CMAKE_CXX_STANDARD_REQUIRED ON)
+     set(CMAKE_CXX_EXTENSIONS OFF)
++  else()
++    set(CMAKE_CXX_STANDARD 17)
++    set(CMAKE_CXX_STANDARD_REQUIRED ON)
++    set(CMAKE_CXX_EXTENSIONS OFF)
+   endif()
+ 
+   # These compat headers must not be in the include path when building with MSVC,

@@ -22,6 +22,8 @@ src_configure() {
 		)
 
 	cmake-multilib_src_configure
+	mkdir "${S}"/glslang/Public/glslang
+	ln -s "${S}"/glslang/Public/ShaderLang.h "${S}"/glslang/Public/glslang/ShaderLang.h || die
 }
 
 src_install() {

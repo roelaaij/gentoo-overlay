@@ -59,11 +59,12 @@ index 9d9d8033..2cc4108a 100755
  set_property(TARGET SPIRV PROPERTY FOLDER glslang)
  set_property(TARGET SPIRV PROPERTY POSITION_INDEPENDENT_CODE ON)
  
-@@ -58,7 +61,7 @@ if(ENABLE_OPT)
+@@ -59,8 +62,7 @@ if(ENABLE_OPT)
          PRIVATE ${spirv-tools_SOURCE_DIR}/include
          PRIVATE ${spirv-tools_SOURCE_DIR}/source
      )
 -    target_link_libraries(SPIRV glslang SPIRV-Tools-opt)
+-    target_include_directories(SPIRV PUBLIC ../External)
 +    target_link_libraries(SPIRV glslang SPIRV-Tools-opt-shared SPIRV-Tools-shared)
  else()
      target_link_libraries(SPIRV glslang)

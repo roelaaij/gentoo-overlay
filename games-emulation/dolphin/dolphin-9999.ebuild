@@ -23,7 +23,7 @@ HOMEPAGE="https://www.dolphin-emu.org/"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="alsa ao bluetooth doc egl +evdev ffmpeg llvm log lto openal +pch portaudio profile pulseaudio +qt5 sdl upnp"
+IUSE="alsa bluetooth doc egl +evdev ffmpeg llvm log lto profile pulseaudio +qt5 sdl upnp"
 
 RDEPEND=">=media-libs/libsfml-2.1
 	>net-libs/enet-1.3.7
@@ -41,7 +41,6 @@ RDEPEND=">=media-libs/libsfml-2.1
 	media-libs/mesa[vulkan]
 	dev-util/glslang
 	alsa? ( media-libs/alsa-lib )
-	ao? ( media-libs/libao )
 	bluetooth? ( net-wireless/bluez )
 	egl? ( media-libs/mesa[egl] )
 	evdev? (
@@ -50,11 +49,6 @@ RDEPEND=">=media-libs/libsfml-2.1
 	)
 	ffmpeg? ( virtual/ffmpeg )
 	llvm? ( sys-devel/llvm )
-	openal? (
-			media-libs/openal
-			media-libs/libsoundtouch
-	)
-	portaudio? ( media-libs/portaudio )
 	profile? ( dev-util/oprofile )
 	pulseaudio? ( media-sound/pulseaudio )
 	qt5? (
@@ -101,30 +95,6 @@ pkg_pretend() {
 }
 
 src_prepare() {
-
-	# Remove automatic dependencies to prevent building without flags enabled.
-	if use !alsa; then
-		sed -i -e '/include(FindALSA/d' CMakeLists.txt || die
-	fi
-	if use !ao; then
-		sed -i -e '/check_lib(AO/d' CMakeLists.txt || die
-	fi
-	if use !bluetooth; then
-		sed -i -e '/check_lib(BLUEZ/d' CMakeLists.txt || die
-	fi
-	if use !llvm; then
-		sed -i -e '/include(FindLLVM/d' CMakeLists.txt || die
-	fi
-	if use !openal; then
-		sed -i -e '/include(FindOpenAL/d' CMakeLists.txt || die
-	fi
-	if use !portaudio; then
-		sed -i -e '/CMAKE_REQUIRED_LIBRARIES portaudio/d' CMakeLists.txt || die
-	fi
-	if use !pulseaudio; then
-		sed -i -e '/check_lib(PULSEAUDIO/d' CMakeLists.txt || die
-	fi
-
 	pushd `pwd`
 	cd "$S"
 	# Remove ALL the bundled libraries, aside from:
@@ -162,21 +132,23 @@ src_prepare() {
 src_configure() {
 
 	local mycmakeargs=(
+		-DENABLE_ANALYTICS=OFF
 		-DUSE_SHARED_ENET=ON
 		-DUSE_SHARED_XXHASH=ON
 		-DUSE_SHARED_GLSLANG=ON
-		-DUSE_SHARED_GTEST=ON
+		-DUSE_DISCORD_PRESENCE=OFF
 		-DENCODE_FRAMEDUMPS="$(usex ffmpeg ON OFF)"
 		-DFASTLOG="$(usex log ON OFF)"
 		-DOPROFILING="$(usex profile ON OFF)"
 		-DENABLE_EVDEV="$(usex evdev ON OFF)"
 		-DENABLE_LTO="$(usex lto ON OFF)"
-		-DENABLE_PCH="$(usex pch ON OFF)"
-		-DENABLE_QT2="$(usex qt5 ON OFF)"
+		-DENABLE_LLVM="$(usex llvm ON OFF)"
+		-DENABLE_QT="$(usex qt5 ON OFF)"
 		-DENABLE_SDL="$(usex sdl ON OFF)"
+		-DENABLE_ALSA="$(usex alsa ON OFF)"
+		-DENABLE_PULSEAUDIO="$(usex pulseaudio ON OFF)"
 		-DUSE_EGL="$(usex egl ON OFF)"
 		-DUSE_UPNP="$(usex upnp ON OFF)"
-		-DUSE_DISCORD_PRESENCE=OFF
 	)
 
 	cmake-utils_src_configure
@@ -206,10 +178,5 @@ pkg_postinst() {
 	pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu-nogui
 	if use qt5; then
 		pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu
-	fi
-
-	if ! use portaudio; then
-		ewarn "If you want microphone capabilities in dolphin-emu, rebuild with"
-		ewarn "USE=\"portaudio\""
 	fi
 }

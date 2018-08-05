@@ -1,0 +1,128 @@
+--- a/src/sthreads.c.orig	2018-07-31 16:38:24.556285283 +0200
++++ b/src/sthreads.c	2018-07-31 16:37:16.606285543 +0200
+@@ -115,7 +115,7 @@
+ /**************************************** locking */
+
+ /* we only need to initialize locking with OpenSSL older than 1.1.0 */
+-#if OPENSSL_VERSION_NUMBER<0x10100004L
++#if OPENSSL_VERSION_NUMBER<0x10100004L || defined(LIBRESSL_VERSION_NUMBER)
+
+ #ifdef USE_PTHREAD
+
+@@ -224,7 +224,7 @@
+
+ CRYPTO_RWLOCK *stunnel_locks[STUNNEL_LOCKS];
+
+-#if OPENSSL_VERSION_NUMBER<0x10100004L
++#if OPENSSL_VERSION_NUMBER<0x10100004L || defined(LIBRESSL_VERSION_NUMBER)
+
+ #ifdef USE_OS_THREADS
+
+--- a/src/ctx.c.orig	2018-07-31 16:56:44.346281088 +0200
++++ b/src/ctx.c	2018-07-31 16:32:16.656286687 +0200
+@@ -95,7 +95,7 @@
+ NOEXPORT void new_chain(CLI *);
+ NOEXPORT void session_cache_save(CLI *, SSL_SESSION *);
+ NOEXPORT SSL_SESSION *sess_get_cb(SSL *,
+-#if OPENSSL_VERSION_NUMBER>=0x10100000L
++#if OPENSSL_VERSION_NUMBER>=0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+     const
+ #endif
+     unsigned char *, int, int *);
+@@ -311,7 +311,7 @@
+
+ #ifndef OPENSSL_NO_DH
+
+-#if OPENSSL_VERSION_NUMBER<0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
++#if OPENSSL_VERSION_NUMBER<0x10100000L || (defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x2070000fL)
+ NOEXPORT STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx) {
+     return ctx->cipher_list;
+ }
+@@ -1003,7 +1003,7 @@
+ }
+
+ NOEXPORT SSL_SESSION *sess_get_cb(SSL *ssl,
+-#if OPENSSL_VERSION_NUMBER>=0x10100000L
++#if OPENSSL_VERSION_NUMBER>=0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+         const
+ #endif
+         unsigned char *key, int key_len, int *do_copy) {
+@@ -1227,7 +1227,7 @@
+
+     c=SSL_get_ex_data((SSL *)ssl, index_ssl_cli);
+     if(c) {
+-#if OPENSSL_VERSION_NUMBER>=0x10100000L
++#if OPENSSL_VERSION_NUMBER>=0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+         OSSL_HANDSHAKE_STATE state=SSL_get_state(ssl);
+ #else
+         int state=SSL_get_state((SSL *)ssl);
+--- a/src/prototypes.h.orig	2018-07-31 16:38:46.096285201 +0200
++++ b/src/prototypes.h	2018-07-31 16:36:43.766285668 +0200
+@@ -652,7 +652,7 @@
+ #define USE_OS_THREADS
+ #endif
+
+-#if OPENSSL_VERSION_NUMBER<0x10100004L
++#if OPENSSL_VERSION_NUMBER<0x10100004L || defined(LIBRESSL_VERSION_NUMBER)
+
+ #ifdef USE_OS_THREADS
+
+@@ -670,8 +670,7 @@
+
+ typedef struct CRYPTO_dynlock_value CRYPTO_RWLOCK;
+
+-#else /* USE_OS_THREADS */
+-
++#else
+ typedef void CRYPTO_RWLOCK;
+
+ #endif /* USE_OS_THREADS */
+@@ -696,7 +695,7 @@
+
+ extern CRYPTO_RWLOCK *stunnel_locks[STUNNEL_LOCKS];
+
+-#if OPENSSL_VERSION_NUMBER<0x10100004L
++#if OPENSSL_VERSION_NUMBER<0x10100004L || defined(LIBRESSL_VERSION_NUMBER)
+ /* Emulate the OpenSSL 1.1 locking API for older OpenSSL versions */
+ CRYPTO_RWLOCK *CRYPTO_THREAD_lock_new(void);
+ int CRYPTO_THREAD_read_lock(CRYPTO_RWLOCK *);
+--- a/src/tls.c.orig	2018-07-31 17:27:30.786274044 +0200
++++ b/src/tls.c	2018-07-31 17:27:13.706274109 +0200
+@@ -41,7 +41,7 @@
+ volatile int tls_initialized=0;
+ 
+ NOEXPORT void tls_platform_init();
+-#if OPENSSL_VERSION_NUMBER<0x10100000L
++#if OPENSSL_VERSION_NUMBER<0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+ NOEXPORT void free_function(void *);
+ #endif
+ 
+@@ -52,7 +52,7 @@
+     tls_platform_init();
+     tls_initialized=1;
+     ui_tls=tls_alloc(NULL, NULL, "ui");
+-#if OPENSSL_VERSION_NUMBER>=0x10100000L
++#if OPENSSL_VERSION_NUMBER>=0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+     CRYPTO_set_mem_functions(str_alloc_detached_debug,
+         str_realloc_detached_debug, str_free_debug);
+ #else
+@@ -184,7 +184,7 @@
+ 
+ /**************************************** OpenSSL allocator hook */
+ 
+-#if OPENSSL_VERSION_NUMBER<0x10100000L
++#if OPENSSL_VERSION_NUMBER<0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+ NOEXPORT void free_function(void *ptr) {
+     /* CRYPTO_set_mem_ex_functions() needs a function rather than a macro */
+     /* unfortunately, OpenSSL provides no file:line information here */
+--- a/src/sthreads.c.orig	2018-07-31 17:31:31.846273125 +0200
++++ b/src/sthreads.c	2018-07-31 17:30:39.416273325 +0200
+@@ -334,7 +334,7 @@
+ 
+ void locking_init(void) {
+     size_t i;
+-#if defined(USE_OS_THREADS) && OPENSSL_VERSION_NUMBER<0x10100004L
++#if defined(USE_OS_THREADS) && (OPENSSL_VERSION_NUMBER<0x10100004L || defined(LIBRESSL_VERSION_NUMBER))
+     size_t num;
+ 
+     /* initialize the OpenSSL static locking */

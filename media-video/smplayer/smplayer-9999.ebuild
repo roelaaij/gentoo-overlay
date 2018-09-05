@@ -15,26 +15,23 @@ ESVN_REPO_URI="https://subversion.assembla.com/svn/smplayer/smplayer/trunk"
 LICENSE="GPL-2+ BSD-2"
 SLOT="0"
 KEYWORDS=""
-IUSE="autoshutdown bidi debug mpris qt5 streaming"
+IUSE="autoshutdown bidi debug mpris streaming"
 
-COMMON_DEPEND="
+DEPEND="
 	sys-libs/zlib
 	dev-qt/qtcore:5
 	dev-qt/qtgui:5=
 	dev-qt/qtnetwork:5[ssl]
-	dev-qt/qtsingleapplication[X,qt5(+)]
+	dev-qt/qtsingleapplication[X]
 	dev-qt/qtwidgets:5
 	dev-qt/qtxml:5
+	dev-qt/linguist-tools:5
 	autoshutdown? ( dev-qt/qtdbus:5 )
 	mpris? ( dev-qt/qtdbus:5 )
 	streaming? (
 		dev-qt/qtscript:5
 	)
 "
-DEPEND="${COMMON_DEPEND}
-	qt5? ( dev-qt/linguist-tools:5 )
-"
-
 RDEPEND="${DEPEND}
 	|| ( media-video/mplayer[bidi?,libass,png,X]
 		( >=media-video/mpv-0.10.0[libass,X]
@@ -104,14 +101,11 @@ src_prepare() {
 
 src_configure() {
 	cd src || die
-	use qt5 && eqmake5 || eqmake4
+	eqmake5
 }
 
 gen_translation() {
-	local mydir="$(qt4_get_bindir)"
-	if use qt5; then
-		mydir="$(qt5_get_bindir)"
-	fi
+	mydir="$(qt5_get_bindir)"
 
 	ebegin "Generating $1 translation"
 	"${mydir}"/lrelease ${PN}_${1}.ts

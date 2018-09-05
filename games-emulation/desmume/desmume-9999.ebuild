@@ -1,10 +1,10 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
 EGIT_REPO_URI="https://github.com/TASVideos/desmume"
 
-inherit autotools git-r3
+inherit xdg-utils autotools git-r3
 
 DESCRIPTION="Nintendo DS emulator"
 HOMEPAGE="http://desmume.org/"
@@ -28,6 +28,7 @@ DEPEND="${RDEPEND}
 
 PATCHES=(
 	   "${FILESDIR}/${PN}-cspace-includes.patch"
+	   "${FILESDIR}/${PN}-no-pcap-remote.patch"
 )
 
 src_prepare() {
@@ -40,4 +41,12 @@ src_prepare() {
 src_install() {
 	DOCS="../../../AUTHORS ../../../ChangeLog ../../../README ../../../README.LIN" \
 		default
+}
+
+pkg_postinst() {
+	xdg_desktop_database_update
+}
+
+pkg_postrm() {
+	xdg_desktop_database_update
 }

@@ -6,7 +6,7 @@ EAPI=6
 PLOCALES="ar ca cs da de el en es fa fr hr hu it ja ko ms nb nl pl pt pt_BR ro ru sr sv tr zh_CN zh_TW"
 PLOCALE_BACKUP="en"
 
-inherit cmake-utils l10n pax-utils toolchain-funcs versionator
+inherit cmake-utils desktop gnome2-utils l10n pax-utils
 
 if [[ ${PV} == 9999* ]]
 then
@@ -80,39 +80,29 @@ PATCHES=( "${FILESDIR}/exceptions.patch"
 		  "${FILESDIR}/qt_force_cxx17.patch"
 		  "${FILESDIR}/system-libs.patch" )
 
-pkg_pretend() {
-
-	local ver=4.9.0
-	local msg="${PN} needs at least GCC ${ver} set to compile."
-
-	if [[ ${MERGE_TYPE} != binary ]]; then
-		if ! version_is_at_least ${ver} $(gcc-fullversion); then
-			eerror ${msg}
-			die ${msg}
-		fi
-	fi
-
-}
-
 src_prepare() {
-	pushd `pwd`
-	cd "$S"
-	# Remove ALL the bundled libraries, aside from:
-	# - cpp-optparse: not in tree
-	# - Bochs-disasm: Don't know what it is.
-	# - cubeb: Not in tree.
-	mv Externals/Bochs_disasm . || die
-	mv Externals/gtest . || die
-	mv Externals/cpp-optparse . || die
-	mv Externals/soundtouch . || die
-	mv Externals/cubeb . || die
+	cmake-utils_src_prepare
+
+	# Remove all the bundled libraries that support system-installed
+	# preference. See CMakeLists.txt for conditional 'add_subdirectory' calls.
+	local KEEP_SOURCES=(
+		Bochs_disasm
+		cpp-optparse
+		# soundtouch uses shorts, not floats
+		soundtouch
+		cubeb
+		# Their build set up solely relies on the build in gtest.
+		gtest
+	)
+	local s
+	for s in "${KEEP_SOURCES[@]}"; do
+		mv -v "Externals/${s}" . || die
+	done
+	einfo "removing sources: $(echo Externals/*)"
 	rm -r Externals/* || die "Failed to delete Externals dir."
-	mv Bochs_disasm Externals || die
-	mv gtest Externals || die
-	mv cpp-optparse Externals || die
-	mv soundtouch Externals || die
-	mv cubeb Externals || die
-	popd
+	for s in "${KEEP_SOURCES[@]}"; do
+		mv -v "${s}" "Externals/" || die
+	done
 
 	remove_locale() {
 		# Ensure preservation of the backup locale when no valid LINGUA is set
@@ -125,8 +115,6 @@ src_prepare() {
 
 	l10n_find_plocales_changes "Languages/po/" "" '.po'
 	l10n_for_each_disabled_locale_do remove_locale
-
-	cmake-utils_src_prepare
 }
 
 src_configure() {
@@ -154,11 +142,6 @@ src_configure() {
 	cmake-utils_src_configure
 }
 
-src_compile() {
-
-	cmake-utils_src_compile
-}
-
 src_install() {
 
 	cmake-utils_src_install
@@ -179,4 +162,10 @@ pkg_postinst() {
 	if use qt5; then
 		pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu
 	fi
+
+	gnome2_icon_cache_update
+}
+
+pkg_postrm() {
+	gnome2_icon_cache_update
 }

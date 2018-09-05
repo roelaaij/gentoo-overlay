@@ -1,0 +1,12 @@
+diff --git a/desmume/src/wifi.cpp b/desmume/src/wifi.cpp
+index cee889b1..5a35247a 100755
+--- a/desmume/src/wifi.cpp
++++ b/desmume/src/wifi.cpp
+@@ -55,7 +55,7 @@
+
+ // Some platforms need HAVE_REMOTE to work with libpcap, but
+ // Apple platforms are not among them.
+-#ifndef __APPLE__
++#ifdef __WIN32__
+ 	#define HAVE_REMOTE
+ #endif

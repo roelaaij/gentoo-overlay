@@ -4,7 +4,7 @@ index ded63ce..12e83aa 100644
 +++ b/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
 @@ -11,9 +11,9 @@
  #include <string>
- 
+
  // glslang includes
 -#include "GlslangToSpv.h"
 -#include "ShaderLang.h"
@@ -12,15 +12,31 @@ index ded63ce..12e83aa 100644
 +#include "SPIRV/GlslangToSpv.h"
 +#include "SPIRV/disassemble.h"
 +#include "glslang/ShaderLang.h"
- 
+
  #include "Common/FileUtil.h"
  #include "Common/Logging/Log.h"
+@@ -324,6 +324,15 @@ const TBuiltInResource* GetCompilerResourceLimits()
+                                           /* .MaxCullDistances = */ 8,
+                                           /* .MaxCombinedClipAndCullDistances = */ 8,
+                                           /* .MaxSamples = */ 4,
++                                          /* maxMeshOutputVerticesNV = */ 256,
++                                          /* maxMeshOutputPrimitivesNV = */ 512,
++                                          /* maxMeshWorkGroupSizeX_NV = */ 32,
++                                          /* maxMeshWorkGroupSizeY_NV = */ 1,
++                                          /* maxMeshWorkGroupSizeZ_NV = */ 1,
++                                          /* maxTaskWorkGroupSizeX_NV = */ 32,
++                                          /* maxTaskWorkGroupSizeY_NV = */ 1,
++                                          /* maxTaskWorkGroupSizeZ_NV = */ 1,
++                                          /* maxMeshViewCountNV = */ 4,
+                                           /* .limits = */
+                                           {
+                                               /* .nonInductiveForLoops = */ 1,
 diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 index 889da03f6f..4211be4aec 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 +++ b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 @@ -29,24 +29,10 @@ add_library(videovulkan
- 
+
  target_link_libraries(videovulkan
  PUBLIC
 -  common

@@ -1,0 +1,308 @@
+From 0638d245f8288deaac11769909d09cc47b9c2e24 Mon Sep 17 00:00:00 2001
+From: Gerhard Rieger <gerhard@dest-unreach.org>
+Date: Mon, 5 Dec 2016 12:05:02 +0100
+Subject: [PATCH] tmp - Debian OpenSSL1.1 patch
+
+---
+ CHANGES       |  5 +++
+ config.h.in   |  9 ++++++
+ configure.in  |  3 ++
+ sslcls.c      |  2 ++
+ xio-openssl.c | 85 ++++++++++++++++++++++++++++++++++-----------------
+ 5 files changed, 76 insertions(+), 28 deletions(-)
+
+diff --git a/CHANGES b/CHANGES
+index ab611ff..6293ca8 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -1,3 +1,8 @@
++porting:
++	Changes to make socat compile with OpenSSL 1.1.
++	Thanks to Sebastian Andrzej Siewior e.a. from the Debian team for
++	providing the base patch.
++	Debian Bug#828550
+
+ ####################### V 1.7.3.1:
+
+diff --git a/config.h.in b/config.h.in
+index 3f28702..ed821c0 100644
+--- a/config.h.in
++++ b/config.h.in
+@@ -447,6 +447,15 @@
+ #undef HAVE_DTLSv1_client_method
+ #undef HAVE_DTLSv1_server_method
+
++/* Define if you have the OpenSSL RAND_egd function */
++#undef HAVE_RAND_egd
++
++/* Define if you have the OpenSSL DH_set0_pqg function */
++#undef HAVE_DH_set0_pqg
++
++/* Define if you have the OpenSSL ASN1_STRING_get0_data function */
++#undef HAVE_ASN1_STRING_get0_data
++
+ /* Define if you have the flock function */
+ #undef HAVE_FLOCK
+
+diff --git a/configure.in b/configure.in
+index e1b7f4c..84939f3 100644
+--- a/configure.in
++++ b/configure.in
+@@ -1450,5 +1450,8 @@ AC_CHECK_FUNC(TLSv1_2_client_method, AC_DEFINE(HAVE_TLSv1_2_client_method), AC_C
+ AC_CHECK_FUNC(TLSv1_2_server_method, AC_DEFINE(HAVE_TLSv1_2_server_method), AC_CHECK_LIB(crypt, TLSv1_2_server_method, [LIBS=-lcrypt $LIBS]))
+ AC_CHECK_FUNC(DTLSv1_client_method, AC_DEFINE(HAVE_DTLSv1_client_method), AC_CHECK_LIB(crypt, DTLSv1_client_method, [LIBS=-lcrypt $LIBS]))
+ AC_CHECK_FUNC(DTLSv1_server_method, AC_DEFINE(HAVE_DTLSv1_server_method), AC_CHECK_LIB(crypt, DTLSv1_server_method, [LIBS=-lcrypt $LIBS]))
++AC_CHECK_FUNC(RAND_egd, AC_DEFINE(HAVE_RAND_egd), AC_CHECK_LIB(crypt, RAND_egd, [LIBS=-lcrypt $LIBS]))
++AC_CHECK_FUNC(DH_set0_pqg, AC_DEFINE(HAVE_DH_set0_pqg), AC_CHECK_LIB(crypt, DH_set0_pqg, [LIBS=-lcrypt $LIBS]))
++AC_CHECK_FUNC(ASN1_STRING_get0_data, AC_DEFINE(HAVE_ASN1_STRING_get0_data), AC_CHECK_LIB(crypt, ASN1_STRING_get0_data, [LIBS=-lcrypt $LIBS]))
+
+ dnl Run time checks
+
+--- old/sslcls.h	2015-04-06 11:52:38.000000000 +0200
++++ new/sslcls.h	2018-11-02 20:05:35.409622022 +0100
+@@ -12,8 +12,10 @@
+ int sycSSL_library_init(void);
+ const SSL_METHOD *sycSSLv2_client_method(void);
+ const SSL_METHOD *sycSSLv2_server_method(void);
++#ifndef OPENSSL_NO_SSL3_METHOD
+ const SSL_METHOD *sycSSLv3_client_method(void);
+ const SSL_METHOD *sycSSLv3_server_method(void);
++#endif
+ const SSL_METHOD *sycSSLv23_client_method(void);
+ const SSL_METHOD *sycSSLv23_server_method(void);
+ const SSL_METHOD *sycTLSv1_client_method(void);
+--- old/sslcls.c	2015-04-06 11:52:38.000000000 +0200
++++ new/sslcls.c	2018-11-02 20:05:48.749621972 +0100
+@@ -55,6 +55,7 @@
+ }
+ #endif
+ 
++# ifndef OPENSSL_NO_SSL3_METHOD
+ const SSL_METHOD *sycSSLv3_client_method(void) {
+    const SSL_METHOD *result;
+    Debug("SSLv3_client_method()");
+@@ -70,6 +71,7 @@
+    Debug1("SSLv3_server_method() -> %p", result);
+    return result;
+ }
++#endif
+ 
+ const SSL_METHOD *sycSSLv23_client_method(void) {
+    const SSL_METHOD *result;
+@@ -347,6 +349,7 @@
+    return;
+ }
+ 
++#if !defined(OPENSSL_NO_EGD) && HAVE_RAND_egd
+ int sycRAND_egd(const char *path) {
+    int result;
+    Debug1("RAND_egd(\"%s\")", path);
+@@ -354,6 +357,7 @@
+    Debug1("RAND_egd() -> %d", result);
+    return result;
+ }
++#endif
+ 
+ DH *sycPEM_read_bio_DHparams(BIO *bp, DH **x, pem_password_cb *cb, void *u) {
+    DH *result;
+--- old/xio-openssl.c	2016-01-29 11:31:22.000000000 +0100
++++ new/xio-openssl.c	2018-11-02 20:04:18.689622315 +0100
+@@ -18,7 +18,7 @@
+ #include "xio-openssl.h"
+ 
+ /* the openssl library requires a file descriptor for external communications.
+-   so our best effort is to provide any possible kind of un*x file descriptor 
++   so our best effort is to provide any possible kind of un*x file descriptor
+    (not only tcp, but also pipes, stdin, files...)
+    for tcp we want to provide support for socks and proxy.
+    read and write functions must use the openssl crypt versions.
+@@ -55,7 +55,7 @@
+ static int xioSSL_set_fd(struct single *xfd, int level);
+ static int xioSSL_connect(struct single *xfd, const char *opt_commonname, bool opt_ver, int level);
+ static int openssl_delete_cert_info(void);
+- 
++
+ 
+ /* description record for inter-address ssl connect with 0 parameters */
+ static const struct xioaddr_inter_desc xiointer_openssl_connect0 = {
+@@ -303,7 +303,7 @@
+ 
+       retropt_string(opts, OPT_OPENSSL_CERTIFICATE, &opt_cert);
+       retropt_string(opts, OPT_OPENSSL_COMMONNAME, (char **)&opt_commonname);
+-   
++
+       if (opt_commonname == NULL) {
+ 	 opt_commonname = hostname;
+       }
+@@ -327,7 +327,7 @@
+ 	 Error("openssl-connect without hostname and port must be an embedded address");
+ 	 return STAT_NORETRY;
+       }
+-   
++
+       if (applyopts_single(xfd, opts, PH_INIT) < 0)  return -1;
+       applyopts(-1, opts, PH_INIT);
+ 
+@@ -901,7 +901,7 @@
+ 
+    /* OpenSSL preparation */
+    sycSSL_library_init();
+-   
++
+    /*! actions_to_seed_PRNG();*/
+ 
+    if (!server) {
+@@ -1011,7 +1011,11 @@
+    }
+ 
+    if (opt_egd) {
++#if !defined(OPENSSL_NO_EGD) && HAVE_RAND_egd
+       sycRAND_egd(opt_egd);
++#else
++      Debug("RAND_egd() is not available by OpenSSL");
++#endif
+    }
+ 
+    if (opt_pseudo) {
+@@ -1043,7 +1047,7 @@
+       /*ERR_clear_error;*/
+       return STAT_RETRYLATER;
+    }
+- 
++
+    {
+       static unsigned char dh2048_p[] = {
+ 	 0x00,0xdc,0x21,0x64,0x56,0xbd,0x9c,0xb2,0xac,0xbe,0xc9,0x98,0xef,0x95,0x3e,
+@@ -1069,35 +1073,48 @@
+ 	 0x02,
+       };
+       DH *dh;
++      BIGNUM *p = NULL, *g = NULL;
+       unsigned long err;
+ 
+-      if ((dh = DH_new()) == NULL) {
+-	 while (err = ERR_get_error()) {
+-	    Warn1("DH_new(): %s",
+-		  ERR_error_string(err, NULL));
+-	 }
+-	 Error("DH_new() failed");
+-      } else {
+-	 dh->p = BN_bin2bn(dh2048_p, sizeof(dh2048_p), NULL);
+-	 dh->g = BN_bin2bn(dh2048_g, sizeof(dh2048_g), NULL);
+-	 if ((dh->p == NULL) || (dh->g == NULL)) {
+-	    while (err = ERR_get_error()) {
+-	       Warn1("BN_bin2bn(): %s",
+-		     ERR_error_string(err, NULL));
+-	    }
+-	    Error("BN_bin2bn() failed");
+-	 } else {
+-	    if (sycSSL_CTX_set_tmp_dh(*ctx, dh) <= 0) {
+-	       while (err = ERR_get_error()) {
+-		  Warn3("SSL_CTX_set_tmp_dh(%p, %p): %s", *ctx, dh,
+-			ERR_error_string(err, NULL));
+-	       }
+-	       Error2("SSL_CTX_set_tmp_dh(%p, %p) failed", *ctx, dh);
+-	    }
+-	    /*! OPENSSL_free(dh->p,g)? doc does not tell so */
+-	 }
+-	 DH_free(dh);
++      dh = DH_new();
++      p = BN_bin2bn(dh2048_p, sizeof(dh2048_p), NULL);
++      g = BN_bin2bn(dh2048_g, sizeof(dh2048_g), NULL);
++      if (!dh || !p || !g) {
++         if (dh)
++            DH_free(dh);
++         if (p)
++            BN_free(p);
++         if (g)
++            BN_free(g);
++         while (err = ERR_get_error()) {
++            Warn1("dh2048 setup(): %s",
++                  ERR_error_string(err, NULL));
++         }
++         Error("dh2048 setup failed");
++         goto cont_out;
++      }
++#if HAVE_DH_set0_pqg
++      if (!DH_set0_pqg(dh, p, NULL, g)) {
++	      DH_free(dh);
++	      BN_free(p);
++	      BN_free(g);
++	      goto cont_out;
+       }
++#else
++      dh->p = p;
++      dh->g = g;
++#endif /* HAVE_DH_set0_pqg */
++      if (sycSSL_CTX_set_tmp_dh(*ctx, dh) <= 0) {
++         while (err = ERR_get_error()) {
++            Warn3("SSL_CTX_set_tmp_dh(%p, %p): %s", *ctx, dh,
++                  ERR_error_string(err, NULL));
++         }
++         Error2("SSL_CTX_set_tmp_dh(%p, %p) failed", *ctx, dh);
++      }
++      /* p & g are freed by DH_free() once attached */
++      DH_free(dh);
++cont_out:
++      ;
+    }
+ 
+ #if defined(EC_KEY)  /* not on Openindiana 5.11 */
+@@ -1236,7 +1253,11 @@
+    while (e = ERR_get_error()) {
+       Debug1("ERR_get_error(): %lx", e);
+       if (e == ((ERR_LIB_RAND<<24)|
++#if defined(RAND_F_RAND_BYTES)
++		(RAND_F_RAND_BYTES<<12)|
++#else
+ 		(RAND_F_SSLEAY_RAND_BYTES<<12)|
++#endif
+ 		(RAND_R_PRNG_NOT_SEEDED)) /*0x24064064*/) {
+ 	 Error("too few entropy; use options \"egd\" or \"pseudo\"");
+ 	 stat = STAT_NORETRY;
+@@ -1391,7 +1412,7 @@
+    unsigned char *text;
+    ind = X509_NAME_get_index_by_NID(name, NID_commonName, -1);
+    if (ind < 0) {
+-      Info("no COMMONNAME field in peer certificate"); 
++      Info("no COMMONNAME field in peer certificate");
+       return false;
+    }
+    entry = X509_NAME_get_entry(name, ind);
+@@ -1442,13 +1463,17 @@
+       X509_NAME_ENTRY *entry;
+       ASN1_OBJECT *obj;
+       ASN1_STRING *data;
+-      unsigned char *text;
++      const unsigned char *text;
+       int nid;
+       entry = X509_NAME_get_entry(name, i);
+       obj  = X509_NAME_ENTRY_get_object(entry);
+       data = X509_NAME_ENTRY_get_data(entry);
+       nid  = OBJ_obj2nid(obj);
++#if HAVE_ASN1_STRING_get0_data
++      text = ASN1_STRING_get0_data(data);
++#else
+       text = ASN1_STRING_data(data);
++#endif
+       Debug3("SSL peer cert %s entry: %s=\"%s\"", (field[0]?field:"subject"), OBJ_nid2ln(nid), text);
+       if (field != NULL && field[0] != '\0') {
+ 	 xiosetenv3("OPENSSL_X509", field, OBJ_nid2ln(nid), (const char *)text, 2, " // ");
+@@ -1525,7 +1550,7 @@
+ 	 extstr = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ext)));
+ 	 if (!strcasecmp(extstr, "subjectAltName")) {
+ 	    void *names;
+-	    if (!(meth = X509V3_EXT_get(ext))) break;   
++	    if (!(meth = X509V3_EXT_get(ext))) break;
+ 	    names = X509_get_ext_d2i(peer_cert, NID_subject_alt_name, NULL, NULL);
+ 	    if (names) {
+ 	       int numalts;
+@@ -1620,7 +1645,7 @@
+ 	    return STAT_RETRYLATER;
+ 	 }
+       }
+-   }  
++   }
+    return STAT_OK;
+ }
+ 

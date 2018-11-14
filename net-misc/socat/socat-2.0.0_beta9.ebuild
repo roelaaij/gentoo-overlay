@@ -1,6 +1,5 @@
-# Copyright 1999-2015 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Id$
 
 EAPI=5
 
@@ -33,7 +32,7 @@ DOCS=(
 src_prepare() {
 	epatch "${FILESDIR}"/${PN}-1.7.3.0-filan-build.patch
 	epatch "${FILESDIR}"/${PN}-1.7.3.1-stddef_h.patch
-	epatch "${FILESDIR}"/${P}-libressl.patch
+	epatch "${FILESDIR}"/${P}-openssl-1.1.patch
 	touch doc/${PN}.1 || die
 
 	eautoreconf

@@ -1,4 +1,4 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI="6"
@@ -28,6 +28,7 @@ S=${WORKDIR}/${PN}-${SERF_SHA}
 PATCHES="
 	${FILESDIR}/${PN}-1.4.0-static-lib.patch
 	${FILESDIR}/${PN}-1.4.0-rpath.patch
+	${FILESDIR}/${PN}-1.4.0-openssl-1.1.patch
 "
 
 src_prepare() {

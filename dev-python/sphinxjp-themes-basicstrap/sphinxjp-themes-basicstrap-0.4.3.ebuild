@@ -29,7 +29,6 @@ python_compile_all() {
 }
 
 python_install() {
-	rm "${BUILD_DIR}"/lib/sphinxjp/__init__.py || die
 	distutils-r1_python_install --skip-build
 }
 

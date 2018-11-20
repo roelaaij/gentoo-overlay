@@ -1,6 +1,8 @@
---- a/CMakeLists.txt	2018-07-03 12:58:31.074064845 +0200
-+++ b/CMakeLists.txt	2018-07-03 12:58:12.174064917 +0200
-@@ -52,9 +52,4 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 167a3e7..4c9d90c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -52,11 +52,6 @@ foreach(HEADER_FILE ${HEADER_FILES})
      install(FILES ${HEADER_FILE} DESTINATION ${HEADER_INSTALL_DIR})
  endforeach()
  
@@ -9,4 +11,6 @@
 -    COMMAND cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/include/spirv
 -        $ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/include/spirv)
 -
- add_subdirectory(example)
+ option(SPIRV_HEADERS_SKIP_EXAMPLES "Skip building examples"
+       ${SPIRV_HEADERS_SKIP_EXAMPLES})
+ if(NOT ${SPIRV_HEADERS_SKIP_EXAMPLES})

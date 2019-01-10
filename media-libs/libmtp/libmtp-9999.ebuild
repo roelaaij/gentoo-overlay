@@ -1,18 +1,17 @@
-# Copyright 1999-2014 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/media-libs/libmtp/libmtp-9999.ebuild,v 1.15 2014/09/27 21:50:58 ssuominen Exp $
 
-EAPI=5
+EAPI=6
 
 if [[ ${PV} == 9999* ]]; then
-	EGIT_REPO_URI="git://git.code.sf.net/p/${PN}/code"
+	EGIT_REPO_URI="https://git.code.sf.net/p/${PN}/code"
 	inherit autotools git-r3
 else
 	SRC_URI="mirror://sourceforge/${PN}/${P}.tar.gz"
 	KEYWORDS="~amd64 ~arm ~hppa ~ia64 ~ppc ~ppc64 ~x86 ~amd64-fbsd ~x86-fbsd"
 fi
 
-inherit eutils udev user
+inherit udev user
 
 DESCRIPTION="An implementation of Microsoft's Media Transfer Protocol (MTP)"
 HOMEPAGE="http://libmtp.sourceforge.net/"
@@ -27,6 +26,8 @@ DEPEND="${RDEPEND}
 	virtual/pkgconfig
 	doc? ( app-doc/doxygen )"
 
+PATCHES=( "${FILESDIR}/archos_50_diamond.patch" )
+
 pkg_setup() {
 	DOCS="AUTHORS README TODO"
 	enewgroup plugdev
@@ -34,14 +35,13 @@ pkg_setup() {
 
 src_unpack() {
 	[[ ${PV} == 9999* ]] && git-r3_src_unpack
-	default_src_unpack
+	default
 }
 
 src_prepare() {
+	default
 	# ChangeLog says "RETIRING THIS FILE ..pause..  GIT" (Last entry from start of 2011)
 	rm -f ChangeLog
-
-	epatch_user
 
 	if [[ ${PV} == 9999* ]]; then
 		local crpthf=config.rpath

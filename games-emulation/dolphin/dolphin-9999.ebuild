@@ -1,4 +1,4 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2018 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -88,11 +88,15 @@ src_prepare() {
 	local KEEP_SOURCES=(
 		Bochs_disasm
 		cpp-optparse
+		# imgui is not in tree and not intended to be shared
+		imgui
 		# soundtouch uses shorts, not floats
 		soundtouch
 		cubeb
 		# Their build set up solely relies on the build in gtest.
 		gtest
+		# minizip is stripped-down
+		minizip
 	)
 	local s
 	for s in "${KEEP_SOURCES[@]}"; do
@@ -125,18 +129,18 @@ src_configure() {
 		-DUSE_SHARED_XXHASH=ON
 		-DUSE_SHARED_GLSLANG=ON
 		-DUSE_DISCORD_PRESENCE=OFF
-		-DENCODE_FRAMEDUMPS="$(usex ffmpeg ON OFF)"
-		-DFASTLOG="$(usex log ON OFF)"
-		-DOPROFILING="$(usex profile ON OFF)"
-		-DENABLE_EVDEV="$(usex evdev ON OFF)"
-		-DENABLE_LTO="$(usex lto ON OFF)"
-		-DENABLE_LLVM="$(usex llvm ON OFF)"
-		-DENABLE_QT="$(usex qt5 ON OFF)"
-		-DENABLE_SDL="$(usex sdl ON OFF)"
-		-DENABLE_ALSA="$(usex alsa ON OFF)"
-		-DENABLE_PULSEAUDIO="$(usex pulseaudio ON OFF)"
-		-DUSE_EGL="$(usex egl ON OFF)"
-		-DUSE_UPNP="$(usex upnp ON OFF)"
+		-DENCODE_FRAMEDUMPS=$(usex ffmpeg)
+		-DFASTLOG=$(usex log)
+		-DOPROFILING=$(usex profile)
+		-DENABLE_EVDEV=$(usex evdev)
+		-DENABLE_LTO=$(usex lto)
+		-DENABLE_LLVM=$(usex llvm)
+		-DENABLE_QT=$(usex qt5)
+		-DENABLE_SDL=$(usex sdl ON OFF)
+		-DENABLE_ALSA=$(usex alsa ON OFF)
+		-DENABLE_PULSEAUDIO=$(usex pulseaudio)
+		-DUSE_EGL=$(usex egl)
+		-DUSE_UPNP=$(usex upnp)
 	)
 
 	cmake-utils_src_configure

@@ -1,4 +1,4 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -29,7 +29,7 @@ CDEPEND="
 	sys-fs/fuse:0=
 	sys-libs/libcap:0=
 	sys-libs/zlib:0=
-	dev-cpp/vjson
+	dev-cpp/nlohman_json
 	dev-libs/libsha2
 	dev-libs/libsha3
 	preload? ( >=dev-cpp/tbb-4.4:0=[debug?] )

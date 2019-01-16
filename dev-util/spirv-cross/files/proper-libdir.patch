@@ -1,0 +1,26 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e00f8c7..e1e4153 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -41,6 +41,8 @@ if (NOT "${MSVC}")
+   if(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS)
+     set(spirv-compiler-options ${spirv-compiler-options} -fno-exceptions)
+   endif()
++
++  include(GNUInstallDirs)
+ endif()
+
+ macro(extract_headers out_abs file_list)
+@@ -66,9 +68,9 @@ macro(spirv_cross_add_library name config_name)
+   target_compile_definitions(${name} PRIVATE ${spirv-compiler-defines})
+   install(TARGETS ${name}
+       EXPORT ${config_name}Config
+-      RUNTIME DESTINATION bin
+-      LIBRARY DESTINATION lib
+-      ARCHIVE DESTINATION lib
++      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+       PUBLIC_HEADER DESTINATION include/spirv_cross)
+   install(FILES ${hdrs} DESTINATION include/spirv_cross)
+   install(EXPORT ${config_name}Config DESTINATION share/${config_name}/cmake)

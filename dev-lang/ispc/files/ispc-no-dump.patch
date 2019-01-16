@@ -1,0 +1,77 @@
+--- a/src/llvmutil.cpp.orig	2018-12-05 10:28:28.528043421 +0100
++++ b/src/llvmutil.cpp	2018-12-05 10:21:46.602196074 +0100
+@@ -1515,8 +1515,10 @@
+     if (done.size() > 0 && inst == NULL)
+         return;
+
++#ifdef DEBUG
+     fprintf(stderr, "  ");
+     v->dump();
++#endif
+     done.insert(v);
+
+     if (inst == NULL)
+--- a/src/opt.cpp	2018-12-05 10:28:11.918627050 +0100
++++ b/src/opt.cpp	2018-12-05 10:27:26.580220191 +0100
+@@ -166,8 +166,9 @@
+ static llvm::Pass *CreatePromoteLocalToPrivatePass();
+ #endif /* ISPC_NVPTX_ENABLED */
+
++#ifdef DEBUG
+ #define DEBUG_START_PASS(NAME)                                 \
+-    if (g->debugPrint &&                                       \
++    if (g->debugPrint &&                                           \
+         (getenv("FUNC") == NULL ||                             \
+          !strncmp(bb.getParent()->getName().str().c_str(), getenv("FUNC"), \
+                   strlen(getenv("FUNC"))))) {                           \
+@@ -187,8 +188,10 @@
+         bb.dump();                                             \
+         fprintf(stderr, "---------------\n\n");                \
+     } else /* eat semicolon */
+-
+-
++#else
++#define DEBUG_START_PASS(NAME) /* NAME */
++#define DEBUG_END_PASS(NAME) /* NAME */
++#endif
+
+ ///////////////////////////////////////////////////////////////////////////
+
+@@ -535,10 +538,12 @@
+
+ void
+ Optimize(llvm::Module *module, int optLevel) {
++#ifdef DEBUG
+     if (g->debugPrint) {
+         printf("*** Code going into optimization ***\n");
+         module->dump();
+     }
++#endif
+     DebugPassManager optPM;
+     optPM.add(llvm::createVerifierPass(),0);
+
+@@ -930,11 +935,12 @@
+     optPM.add(llvm::createVerifierPass(), LAST_OPT_NUMBER);
+     optPM.run(*module);
+
++#ifdef DEBUG
+     if (g->debugPrint) {
+         printf("\n*****\nFINAL OUTPUT\n*****\n");
+         module->dump();
+     }
+-
++#endif
+ }
+
+
+@@ -4861,9 +4867,11 @@
+
+ bool
+ DebugPass::runOnModule(llvm::Module &module) {
++#ifdef DEBUG
+     fprintf(stderr, "%s", str_output);
+     fflush(stderr);
+     module.dump();
++#endif
+     return true;
+ }

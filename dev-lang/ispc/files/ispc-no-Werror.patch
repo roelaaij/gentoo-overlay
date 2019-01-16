@@ -1,0 +1,12 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4d726afd..07d34a15 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -242,7 +242,6 @@ else()
+     if (APPLE)
+         target_link_libraries(${PROJECT_NAME} curses)
+     else()
+-        target_link_libraries(${PROJECT_NAME} tinfo)
+         if (${LLVM_VERSION_NUMBER} VERSION_GREATER "3.3.0")
+             target_link_libraries(${PROJECT_NAME} curses)
+         endif()

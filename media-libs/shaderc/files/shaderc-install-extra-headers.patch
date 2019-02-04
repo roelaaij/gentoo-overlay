@@ -1,24 +1,9 @@
-diff --git a/libshaderc/include/shaderc/shaderc.h b/libshaderc/include/shaderc/shaderc.h
-index c9f8f18..0029ca2 100644
---- a/libshaderc/include/shaderc/shaderc.h
-+++ b/libshaderc/include/shaderc/shaderc.h
-@@ -23,8 +23,8 @@ extern "C" {
- #include <stddef.h>
- #include <stdint.h>
- 
--#include "libshaderc_util/common.h"
--#include "libshaderc_util/visibility.h"
-+#include "common.h"
-+#include "visibility.h"
- 
- // Source language kind.
- typedef enum {
 diff --git a/libshaderc_spvc/CMakeLists.txt b/libshaderc_spvc/CMakeLists.txt
 index 7d3b421..9b0937d 100644
 --- a/libshaderc_spvc/CMakeLists.txt
 +++ b/libshaderc_spvc/CMakeLists.txt
 @@ -11,11 +11,21 @@ set(SPVC_SOURCES
- 
+
  add_library(shaderc_spvc STATIC ${SPVC_SOURCES})
  shaderc_default_compile_options(shaderc_spvc)
 -target_include_directories(shaderc_spvc PUBLIC include PRIVATE ${shaderc_SOURCE_DIR}/libshaderc_util/include ${spirv-tools_SOURCE_DIR}/include ${SPIRV-Cross_SOURCE_DIR}/..)
@@ -28,7 +13,7 @@ index 7d3b421..9b0937d 100644
 +          ${shaderc_SOURCE_DIR}/libshaderc_util/include/libshaderc_util
 +          ${spirv-tools_SOURCE_DIR}/include
 +          ${SPIRV-Cross_SOURCE_DIR}/..)
- 
+
  add_library(shaderc_spvc_shared SHARED ${SPVC_SOURCES})
  shaderc_default_compile_options(shaderc_spvc_shared)
 -target_include_directories(shaderc_spvc_shared PUBLIC include PRIVATE ${shaderc_SOURCE_DIR}/libshaderc_util/include ${spirv-tools_SOURCE_DIR}/include ${SPIRV-Cross_SOURCE_DIR}/..)
@@ -38,65 +23,65 @@ index 7d3b421..9b0937d 100644
 +          ${shaderc_SOURCE_DIR}/libshaderc_util/include/libshaderc_util
 +          ${spirv-tools_SOURCE_DIR}/include
 +          ${SPIRV-Cross_SOURCE_DIR}/..)
- 
+
  target_compile_definitions(shaderc_spvc_shared
      PRIVATE SHADERC_IMPLEMENTATION
-diff --git a/libshaderc_spvc/include/shaderc/spvc.h b/libshaderc_spvc/include/shaderc/spvc.h
-index 27cc912..04b364d 100644
---- a/libshaderc_spvc/include/shaderc/spvc.h
-+++ b/libshaderc_spvc/include/shaderc/spvc.h
-@@ -23,8 +23,8 @@ extern "C" {
- #include <stddef.h>
- #include <stdint.h>
- 
--#include "libshaderc_util/common.h"
--#include "libshaderc_util/visibility.h"
-+#include "common.h"
-+#include "visibility.h"
- 
- // An opaque handle to an object that manages all compiler state.
- typedef struct shaderc_spvc_compiler* shaderc_spvc_compiler_t;
-diff --git a/libshaderc_util/CMakeLists.txt b/libshaderc_util/CMakeLists.txt
-index 873540a..de055db 100644
---- a/libshaderc_util/CMakeLists.txt
-+++ b/libshaderc_util/CMakeLists.txt
-@@ -25,11 +25,13 @@ add_library(shaderc_util STATIC
- shaderc_default_compile_options(shaderc_util)
- target_include_directories(shaderc_util
-   PUBLIC include PRIVATE ${glslang_SOURCE_DIR})
-+set_target_properties(shaderc_util PROPERTIES PUBLIC_HEADER "${shaderc_SOURCE_DIR}/libshaderc_util/include/libshaderc_util/common.h;${shaderc_SOURCE_DIR}/libshaderc_util/include/libshaderc_util/visibility.h")
- 
- if(SHADERC_ENABLE_INSTALL)
-   install(TARGETS shaderc_util
-     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
--    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/shaderc)
- endif(SHADERC_ENABLE_INSTALL)
- 
- find_package(Threads)
 diff --git a/libshaderc/CMakeLists.txt b/libshaderc/CMakeLists.txt
 index 0e5745b..da79b39 100644
 --- a/libshaderc/CMakeLists.txt
 +++ b/libshaderc/CMakeLists.txt
 @@ -12,11 +12,18 @@ set(SHADERC_SOURCES
- 
+
  add_library(shaderc STATIC ${SHADERC_SOURCES})
  shaderc_default_compile_options(shaderc)
 -target_include_directories(shaderc PUBLIC include PRIVATE ${glslang_SOURCE_DIR})
 +target_include_directories(shaderc
 +                           PUBLIC include
-+                                  ${shaderc_SOURCE_DIR}/libshaderc_util/include/libshaderc_util
++                                  ${shaderc_SOURCE_DIR}/libshaderc_util/include/shaderc
 +                           PRIVATE ${glslang_SOURCE_DIR})
 +
- 
+
  add_library(shaderc_shared SHARED ${SHADERC_SOURCES})
  shaderc_default_compile_options(shaderc_shared)
 -target_include_directories(shaderc_shared PUBLIC include PRIVATE ${glslang_SOURCE_DIR})
 +target_include_directories(shaderc_shared
 +                           PUBLIC include
-+                                  ${shaderc_SOURCE_DIR}/libshaderc_util/include/libshaderc_util
++                                  ${shaderc_SOURCE_DIR}/libshaderc_util/include/shaderc
 +                           PRIVATE ${glslang_SOURCE_DIR})
  target_compile_definitions(shaderc_shared
      PRIVATE SHADERC_IMPLEMENTATION
      PUBLIC SHADERC_SHAREDLIB
+diff --git a/libshaderc/include/shaderc/shaderc.h b/libshaderc/include/shaderc/shaderc.h
+index c62dd3b..78fc920 100644
+--- a/libshaderc/include/shaderc/shaderc.h
++++ b/libshaderc/include/shaderc/shaderc.h
+@@ -23,9 +23,9 @@ extern "C" {
+ #include <stddef.h>
+ #include <stdint.h>
+
+-#include "shaderc/env.h"
+-#include "shaderc/status.h"
+-#include "shaderc/visibility.h"
++#include "env.h"
++#include "status.h"
++#include "visibility.h"
+
+ // Source language kind.
+ typedef enum {
+diff --git a/libshaderc_spvc/include/shaderc/spvc.h b/libshaderc_spvc/include/shaderc/spvc.h
+index 59e56fc..91758fe 100644
+--- a/libshaderc_spvc/include/shaderc/spvc.h
++++ b/libshaderc_spvc/include/shaderc/spvc.h
+@@ -23,9 +23,9 @@ extern "C" {
+ #include <stddef.h>
+ #include <stdint.h>
+
+-#include "shaderc/env.h"
+-#include "shaderc/status.h"
+-#include "shaderc/visibility.h"
++#include "env.h"
++#include "status.h"
++#include "visibility.h"
+
+ // An opaque handle to an object that manages all compiler state.
+ typedef struct shaderc_spvc_compiler* shaderc_spvc_compiler_t;

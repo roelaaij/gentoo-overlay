@@ -1,4 +1,4 @@
-# Copyright 1999-2018 Gentoo Authors
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -34,8 +34,7 @@ DEPEND="
 	sys-devel/flex
 	"
 
-PATCHES=( "${FILESDIR}/${PN}-no-Werror.patch"
-		  "${FILESDIR}/${PN}-no-dump.patch" )
+PATCHES=( "${FILESDIR}/${PN}-no-Werror.patch" )
 
 src_prepare() {
 	sed -e 's/-Werror//' -i CMakeLists.txt || die

@@ -36,7 +36,6 @@ RESTRICT=test
 
 PATCHES=( "${FILESDIR}/${PN}-2017.2-fix-glslang-link-order.patch"
 		  "${FILESDIR}/glslang-shared.patch"
-		  "${FILESDIR}/${PN}-install-extra-headers.patch"
 		  "${FILESDIR}/${PN}-spriv-cross-paths.patch" )
 
 python_check_deps() {

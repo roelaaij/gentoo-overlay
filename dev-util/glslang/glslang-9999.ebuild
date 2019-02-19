@@ -1,4 +1,4 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -13,6 +13,9 @@ HOMEPAGE="https://www.khronos.org/opengles/sdk/tools/Reference-Compiler/"
 
 LICENSE="BSD"
 SLOT="0"
+
+DEPEND="dev-util/spirv-tools"
+RDEPEND="${DEPEND}"
 
 PATCHES=( "${FILESDIR}/${PN}-shared-libs.patch" )
 

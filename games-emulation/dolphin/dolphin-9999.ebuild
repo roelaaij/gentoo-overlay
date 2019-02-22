@@ -1,4 +1,4 @@
-# Copyright 1999-2018 Gentoo Authors
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -60,6 +60,7 @@ RDEPEND=">=media-libs/libsfml-2.1
 	upnp? ( >=net-libs/miniupnpc-1.7 )
 	media-libs/vulkan-loader
 	dev-libs/hidapi
+	dev-libs/pugixml
 	"
 DEPEND="${RDEPEND}
 	>=dev-util/cmake-2.8.8
@@ -97,6 +98,8 @@ src_prepare() {
 		gtest
 		# minizip is stripped-down
 		minizip
+		# FreeSurround is not in tree
+		FreeSurround
 	)
 	local s
 	for s in "${KEEP_SOURCES[@]}"; do

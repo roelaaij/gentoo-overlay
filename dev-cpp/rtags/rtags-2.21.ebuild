@@ -1,9 +1,9 @@
 # Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=7
 
-inherit elisp cmake-utils
+inherit cmake-utils bash-completion-r1
 
 RCT_COMMIT="d77562b511ad7e5c4877abb41154c80668c86e4b"
 
@@ -14,52 +14,32 @@ SRC_URI="https://github.com/Andersbakken/rtags/archive/v${PV}.tar.gz -> ${P}.tar
 
 RESTRICT="primaryuri"
 
-LICENSE="Apache-2.0"
+LICENSE="GPL-3"
 SLOT="0"
 KEYWORDS="~amd64"
-RDEPENDS="!app-emacs/rtags
-		  sys-devel/llvm:7
+RDEPENDS="sys-devel/llvm:7
 		  sys-devel/clang:7"
 DEPENDS="${RDEPENDS}"
 
-SITEFILE="50${PN}-gentoo.el"
-
-pkg_setup() {
-	elisp_pkg_setup
-}
+IUSE="test"
 
 src_unpack() {
-	elisp_src_unpack
+	default
 	mv "${WORKDIR}/rct-${RCT_COMMIT}"/* "${S}/src/rct" || die
 }
 
-src_prepare() {
-	elisp_src_prepare
-	cmake-utils_src_prepare
-}
-
 src_configure() {
+	local mycmakeargs=(
+		-DEMACS=garbage
+		-DBUILD_TESTING=$(usex test)
+		-DBASH_COMPLETION_COMPLETIONSDIR=$(get_bashcompdir)
+	)
 	cmake-utils_src_configure
-}
-
-src_compile() {
-	cmake-utils_src_compile
-	cd "${S}/src" || die
-	elisp_src_compile
-	cd "${S}" || die
 }
 
 src_install() {
 	cmake-utils_src_install
-	cd "${S}/src" || die
-	elisp_src_install
-	cd "${S}" || die
-}
-
-pkg_postinst() {
-	elisp_pkg_postinst
-}
-
-pkg_postrm() {
-	elisp_pkg_postrm
+	rm ${D}/$(get_bashcompdir)/{rc,rdm} || die
+	mv ${D}/$(get_bashcompdir)/rtags ${D}/$(get_bashcompdir)/rc || die
+	bashcomp_alias rc rdm
 }

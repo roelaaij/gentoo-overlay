@@ -21,11 +21,11 @@ fi
 
 LICENSE="BSD BSD-2 UoI-NCSA"
 SLOT="0"
-IUSE="examples"
+IUSE="examples -debug"
 
 RDEPEND="
-	>=sys-devel/clang-3.0:*
-	>=sys-devel/llvm-3.0:*
+	>=sys-devel/clang-3.0:*[debug?]
+	>=sys-devel/llvm-3.0:*[debug?]
 	"
 DEPEND="
 	${RDEPEND}
@@ -38,6 +38,9 @@ PATCHES=( "${FILESDIR}/${PN}-no-Werror.patch" )
 
 src_prepare() {
 	sed -e 's/-Werror//' -i CMakeLists.txt || die
+	if ! use debug; then
+		eapply "${FILESDIR}/${PN}-no-dump.patch"
+	fi
 	cmake-utils_src_prepare
 }
 

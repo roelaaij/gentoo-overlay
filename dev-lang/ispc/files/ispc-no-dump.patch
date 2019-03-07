@@ -1,0 +1,76 @@
+diff --git a/src/opt.cpp b/src/opt.cpp
+index 995b381b..fb844459 100644
+--- a/src/opt.cpp
++++ b/src/opt.cpp
+@@ -166,6 +166,7 @@ static llvm::Pass *CreateFixBooleanSelectPass();
+ static llvm::Pass *CreatePromoteLocalToPrivatePass();
+ #endif /* ISPC_NVPTX_ENABLED */
+ 
++#ifdef DEBUG
+ #define DEBUG_START_PASS(NAME)                                                                                         \
+     if (g->debugPrint && (getenv("FUNC") == NULL || !strncmp(bb.getParent()->getName().str().c_str(), getenv("FUNC"),  \
+                                                              strlen(getenv("FUNC"))))) {                               \
+@@ -183,6 +184,10 @@ static llvm::Pass *CreatePromoteLocalToPrivatePass();
+         bb.dump();                                                                                                     \
+         fprintf(stderr, "---------------\n\n");                                                                        \
+     } else /* eat semicolon */
++#else
++#define DEBUG_START_PASS(NAME) /* NAME */
++#define DEBUG_END_PASS(NAME) /* NAME */
++#endif
+ 
+ ///////////////////////////////////////////////////////////////////////////
+ 
+@@ -491,10 +496,12 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
+ ///////////////////////////////////////////////////////////////////////////
+ 
+ void Optimize(llvm::Module *module, int optLevel) {
++#ifdef DEBUG
+     if (g->debugPrint) {
+         printf("*** Code going into optimization ***\n");
+         module->dump();
+     }
++#endif
+     DebugPassManager optPM;
+     optPM.add(llvm::createVerifierPass(), 0);
+ 
+@@ -876,10 +883,12 @@ void Optimize(llvm::Module *module, int optLevel) {
+     optPM.add(llvm::createVerifierPass(), LAST_OPT_NUMBER);
+     optPM.run(*module);
+ 
++#ifdef DEBUG
+     if (g->debugPrint) {
+         printf("\n*****\nFINAL OUTPUT\n*****\n");
+         module->dump();
+     }
++#endif
+ }
+ 
+ ///////////////////////////////////////////////////////////////////////////
+@@ -4362,9 +4371,11 @@ class DebugPass : public llvm::ModulePass {
+ char DebugPass::ID = 0;
+ 
+ bool DebugPass::runOnModule(llvm::Module &module) {
++#ifdef DEBUG
+     fprintf(stderr, "%s", str_output);
+     fflush(stderr);
+     module.dump();
++#endif
+     return true;
+ }
+ 
+diff --git a/src/llvmutil.cpp b/src/llvmutil.cpp
+index cbc414fc..db883128 100644
+--- a/src/llvmutil.cpp
++++ b/src/llvmutil.cpp
+@@ -1343,8 +1343,10 @@ static void lDumpValue(llvm::Value *v, std::set<llvm::Value *> &done) {
+     if (done.size() > 0 && inst == NULL)
+         return;
+ 
++#ifdef DEBUG
+     fprintf(stderr, "  ");
+     v->dump();
++#endif
+     done.insert(v);
+ 
+     if (inst == NULL)

@@ -1,26 +1,26 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e00f8c7..e1e4153 100644
+index d2398bd..569dea8 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -41,6 +41,8 @@ if (NOT "${MSVC}")
-   if(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS)
-     set(spirv-compiler-options ${spirv-compiler-options} -fno-exceptions)
-   endif()
+@@ -27,6 +27,8 @@ option(SPIRV_CROSS_SANITIZE_MEMORY "Sanitize memory" OFF)
+ option(SPIRV_CROSS_SANITIZE_THREADS "Sanitize threads" OFF)
+ option(SPIRV_CROSS_SANITIZE_UNDEFINED "Sanitize undefined" OFF)
+ 
++include(GNUInstallDirs)
 +
-+  include(GNUInstallDirs)
- endif()
-
- macro(extract_headers out_abs file_list)
-@@ -66,9 +68,9 @@ macro(spirv_cross_add_library name config_name)
-   target_compile_definitions(${name} PRIVATE ${spirv-compiler-defines})
-   install(TARGETS ${name}
-       EXPORT ${config_name}Config
--      RUNTIME DESTINATION bin
--      LIBRARY DESTINATION lib
--      ARCHIVE DESTINATION lib
-+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-       PUBLIC_HEADER DESTINATION include/spirv_cross)
-   install(FILES ${hdrs} DESTINATION include/spirv_cross)
-   install(EXPORT ${config_name}Config DESTINATION share/${config_name}/cmake)
+ if(${CMAKE_GENERATOR} MATCHES "Makefile")
+ 	if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
+ 		message(FATAL_ERROR "Build out of tree to avoid overwriting Makefile")
+@@ -102,9 +104,9 @@ macro(spirv_cross_add_library name config_name)
+ 	target_compile_definitions(${name} PRIVATE ${spirv-compiler-defines})
+ 	install(TARGETS ${name}
+ 		EXPORT ${config_name}Config
+-		RUNTIME DESTINATION bin
+-		LIBRARY DESTINATION lib
+-		ARCHIVE DESTINATION lib
++        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+ 		PUBLIC_HEADER DESTINATION include/spirv_cross)
+ 	install(FILES ${hdrs} DESTINATION include/spirv_cross)
+ 	install(EXPORT ${config_name}Config DESTINATION share/${config_name}/cmake)

@@ -1,4 +1,4 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -14,12 +14,13 @@ EGIT_REPO_URI="https://github.com/Kaffeine/telegram-qt.git"
 LICENSE="LGPL-2.1"
 SLOT="0"
 KEYWORDS=""
-IUSE=""
+IUSE="client doc server"
 
 RDEPEND="
-		dev-qt/qtcore:5
-		dev-qt/qtdbus:5
-		dev-qt/qtnetwork:5
+		dev-qt/qtcore
+		dev-qt/qtdbus
+		dev-qt/qtnetwork
+		doc? ( dev-qt/qdoc )
 "
 DEPEND="${RDEPEND}
 	>=dev-util/cmake-2.8.12
@@ -30,9 +31,10 @@ DOCS=( LICENSE.LGPL README.md )
 src_configure() {
 	local mycmakeargs=(
 		-DENABLE_TESTS=OFF
-		-DENABLE_TESTAPP=OFF
-		-DENABLE_EXAMPLES=OFF
-		-DDESIRED_QT_VERSION=5
+		-DBUILD_CLIENT="$(usex client)"
+		-DENABLE_QCH_BUILD="$(usex doc)"
+		-DBUILD_SERVER="$(usex server)"
+		-DBUILD_GENERATOR=ON
 	)
 	cmake-utils_src_configure
 }

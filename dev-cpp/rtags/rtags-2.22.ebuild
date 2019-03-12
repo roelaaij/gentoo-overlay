@@ -5,12 +5,12 @@ EAPI=7
 
 inherit cmake-utils bash-completion-r1
 
-RCT_COMMIT="d77562b511ad7e5c4877abb41154c80668c86e4b"
+RCT_COMMIT="0acf42e6a446f20170df7971829f711da67642f3"
 
 DESCRIPTION="A c/c++ client/server indexer for c/c++/objc[++] with integration for Emacs based on clang. "
 HOMEPAGE="https://github.com/Andersbakken/rtags"
 SRC_URI="https://github.com/Andersbakken/rtags/archive/v${PV}.tar.gz -> ${P}.tar.gz
-		 https://github.com/Andersbakken/rct/archive/${RCT_COMMIT}.zip -> rct-latest.zip"
+		 https://github.com/Andersbakken/rct/archive/${RCT_COMMIT}.zip -> rct-${RCT_COMMIT}.zip"
 
 RESTRICT="primaryuri"
 

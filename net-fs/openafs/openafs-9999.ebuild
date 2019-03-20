@@ -18,7 +18,7 @@ SRC_URI="
 	https://openafs.org/dl/openafs/${MY_PRE}${MY_PV}/${MY_P}-doc.tar.bz2
 	https://dev.gentoo.org/~bircoph/afs/${PN}-patches-${PVER}.tar.xz
 "
-EGIT_REPO_URI="https://git.openafs.org/git/openafs.git"
+EGIT_REPO_URI="git://git.openafs.org/openafs.git"
 
 LICENSE="IBM BSD openafs-krb5-a APSL-2"
 SLOT="0"

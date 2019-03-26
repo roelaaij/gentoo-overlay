@@ -1,0 +1,12 @@
+--- a/CMakeLists.txt	2019-03-22 11:01:43.461597819 -0400
++++ b/CMakeLists.txt	2019-03-22 11:01:21.152385148 -0400
+@@ -162,8 +162,7 @@
+ ##
+ #  This must come before FINDs for tiff, jpeg, png, zlib to enable
+ #  finding the wxWidgets distributions of those packages (Win32 only).
+-SET(wxWidgets_USE_LIBS base core aui xrc html xml adv gl net qa)
+-FIND_PACKAGE(wxWidgets REQUIRED)
++FIND_PACKAGE(wxWidgets REQUIRED COMPONENTS base core aui xrc html xml adv gl net qa)
+
+ # hugin requires wxwidgets 3.0 or above
+ IF (UNIX)

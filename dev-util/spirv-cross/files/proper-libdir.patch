@@ -1,26 +1,31 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index d2398bd..569dea8 100644
+index 057ed17..f2dce07 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -27,6 +27,8 @@ option(SPIRV_CROSS_SANITIZE_MEMORY "Sanitize memory" OFF)
- option(SPIRV_CROSS_SANITIZE_THREADS "Sanitize threads" OFF)
- option(SPIRV_CROSS_SANITIZE_UNDEFINED "Sanitize undefined" OFF)
- 
+@@ -38,6 +38,8 @@ option(SPIRV_CROSS_SANITIZE_UNDEFINED "Sanitize undefined" OFF)
+
+ option(SPIRV_CROSS_NAMESPACE_OVERRIDE "" "Override the namespace used in the C++ API.")
+
 +include(GNUInstallDirs)
 +
  if(${CMAKE_GENERATOR} MATCHES "Makefile")
  	if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
  		message(FATAL_ERROR "Build out of tree to avoid overwriting Makefile")
-@@ -102,9 +104,9 @@ macro(spirv_cross_add_library name config_name)
- 	target_compile_definitions(${name} PRIVATE ${spirv-compiler-defines})
+@@ -120,12 +122,12 @@ macro(spirv_cross_add_library name config_name library_type)
+ 	endif()
  	install(TARGETS ${name}
- 		EXPORT ${config_name}Config
--		RUNTIME DESTINATION bin
--		LIBRARY DESTINATION lib
--		ARCHIVE DESTINATION lib
-+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
- 		PUBLIC_HEADER DESTINATION include/spirv_cross)
- 	install(FILES ${hdrs} DESTINATION include/spirv_cross)
- 	install(EXPORT ${config_name}Config DESTINATION share/${config_name}/cmake)
+ 			EXPORT ${config_name}Config
+-			RUNTIME DESTINATION bin
+-			LIBRARY DESTINATION lib
+-			ARCHIVE DESTINATION lib
+-			PUBLIC_HEADER DESTINATION include/spirv_cross)
+-	install(FILES ${hdrs} DESTINATION include/spirv_cross)
+-	install(EXPORT ${config_name}Config DESTINATION share/${config_name}/cmake)
++			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++			PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/spirv_cross)
++	install(FILES ${hdrs} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/spirv_cross)
++	install(EXPORT ${config_name}Config DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${config_name}/cmake)
+ 	export(TARGETS ${name} FILE ${config_name}Config.cmake)
+ endmacro()

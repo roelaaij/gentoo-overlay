@@ -34,7 +34,9 @@ DEPEND="
 	sys-devel/flex
 	"
 
-PATCHES=( "${FILESDIR}/${PN}-no-Werror.patch" )
+PATCHES=( "${FILESDIR}/${PN}-no-Werror.patch"
+		  "${FILESDIR}/${PN}-literal-compare.patch"
+		  "${FILESDIR}/${PN}-no-timestamp.patch" )
 
 src_prepare() {
 	sed -e 's/-Werror//' -i CMakeLists.txt || die

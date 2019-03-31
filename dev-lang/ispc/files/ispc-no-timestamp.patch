@@ -1,0 +1,16 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 11f019e0..c2779965 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -190,9 +190,8 @@ endif()
+ # Build definitions
+ target_compile_definitions(${PROJECT_NAME} PRIVATE ${LLVM_VERSION})
+ if (UNIX)
+-    string(TIMESTAMP BUILD_DATE "%Y%m%d")
+-    target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_DATE=\"${BUILD_DATE}\"
+-                            BUILD_VERSION=\"${GIT_COMMIT_HASH}\")
++    target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_DATE=\"today\"
++                            BUILD_VERSION=\"dev\")
+ else()
+     target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX)
+     if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )

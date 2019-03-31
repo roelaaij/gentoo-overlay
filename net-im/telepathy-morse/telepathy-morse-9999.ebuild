@@ -9,7 +9,6 @@ DESCRIPTION="Telegram connection manager for Telepathy."
 HOMEPAGE="https://projects.kde.org/projects/playground/network/telepathy/telepathy-morse"
 #EGIT_REPO_URI="git://anongit.kde.org/telepathy-morse"
 EGIT_REPO_URI="https://github.com/TelepathyQt/telepathy-morse"
-EGIT_BRANCH="next"
 
 LICENSE="LGPL-2.1"
 SLOT="0"

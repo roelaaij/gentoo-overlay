@@ -35,7 +35,6 @@ DEPEND="
 	"
 
 PATCHES=( "${FILESDIR}/${PN}-no-Werror.patch"
-		  "${FILESDIR}/${PN}-literal-compare.patch"
 		  "${FILESDIR}/${PN}-no-timestamp.patch" )
 
 src_prepare() {

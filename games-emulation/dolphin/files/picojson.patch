@@ -24,3 +24,16 @@ index 37101b2639..529911ab2c 100644
  
  namespace ResourcePack
  {
+diff --git a/Source/Core/UICommon/NetPlayIndex.cpp b/Source/Core/UICommon/NetPlayIndex.cpp
+index b41920c647..5d8d6d8d70 100644
+--- a/Source/Core/UICommon/NetPlayIndex.cpp
++++ b/Source/Core/UICommon/NetPlayIndex.cpp
+@@ -7,7 +7,7 @@
+ #include <numeric>
+ #include <string>
+ 
+-#include <picojson/picojson.h>
++#include <picojson.h>
+ 
+ #include "Common/Common.h"
+ #include "Common/HttpRequest.h"

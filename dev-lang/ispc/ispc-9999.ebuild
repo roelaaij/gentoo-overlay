@@ -39,9 +39,6 @@ PATCHES=( "${FILESDIR}/${PN}-no-Werror.patch"
 
 src_prepare() {
 	sed -e 's/-Werror//' -i CMakeLists.txt || die
-	if ! use debug; then
-		eapply "${FILESDIR}/${PN}-no-dump.patch"
-	fi
 	cmake-utils_src_prepare
 }
 
@@ -49,6 +46,7 @@ src_configure() {
 	# Disable building the examples and install their source manually later
 	local mycmakeargs=(
 		-DISPC_INCLUDE_EXAMPLES=OFF
+		-DISPC_NO_DUMPS=$(usex debug OFF ON)
 	)
 	cmake-utils_src_configure
 }

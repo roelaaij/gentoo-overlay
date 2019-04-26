@@ -1,15 +1,13 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
 inherit cmake-utils linux-info bash-completion-r1 flag-o-matic
 
-MYP=${PN}-${PV/_p/-fix}
-
 DESCRIPTION="HTTP read-only file system for distributing software"
 HOMEPAGE="http://cernvm.cern.ch/portal/filesystem"
-SRC_URI="https://github.com/cvmfs/${PN}/archive/${MYP}.tar.gz"
+SRC_URI="https://ecsft.cern.ch/dist/${PN}/${P}/source.tar.gz -> ${P}.tar.gz"
 
 LICENSE="BSD"
 SLOT="0"
@@ -29,9 +27,10 @@ CDEPEND="
 	sys-fs/fuse:0=
 	sys-libs/libcap:0=
 	sys-libs/zlib:0=
-	dev-cpp/vjson
-	dev-libs/libsha2
+	dev-cpp/nlohmann_json
+	app-crypt/libmd
 	dev-libs/libsha3
+	>=net-libs/libwebsockets-2.4.0
 	preload? ( >=dev-cpp/tbb-4.4:0=[debug?] )
 	server? (
 		>=dev-cpp/tbb-4.4:0=[debug?]
@@ -63,10 +62,8 @@ DEPEND="${CDEPEND}
 
 REQUIRED_USE="test-programs? ( server )"
 
-S="${WORKDIR}/${PN}-${MYP}"
-
-# PATCHES=( "${FILESDIR}/fix-find-tbb.patch"
-PATCHES=( "${FILESDIR}/fix-build.patch" )
+PATCHES=( "${FILESDIR}/${PN}-libmd.patch"
+		  "${FILESDIR}/${PN}-2.6-fix-build.patch")
 
 pkg_setup() {
 	if use server; then

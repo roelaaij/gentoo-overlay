@@ -1,15 +1,13 @@
 # Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
 inherit cmake-utils linux-info bash-completion-r1 flag-o-matic
 
-MYP=${PN}-${PV/_p/-fix}
-
 DESCRIPTION="HTTP read-only file system for distributing software"
 HOMEPAGE="http://cernvm.cern.ch/portal/filesystem"
-SRC_URI="https://github.com/cvmfs/${PN}/archive/${MYP}.tar.gz"
+SRC_URI="https://ecsft.cern.ch/dist/${PN}/${P}/source.tar.gz -> ${P}.tar.gz"
 
 LICENSE="BSD"
 SLOT="0"
@@ -62,8 +60,6 @@ DEPEND="${CDEPEND}
 "
 
 REQUIRED_USE="test-programs? ( server )"
-
-S="${WORKDIR}/${PN}-${MYP}"
 
 PATCHES=( "${FILESDIR}/${PN}-2.5-fix-build.patch"
 		  "${FILESDIR}/${PN}-latest-curl.patch"

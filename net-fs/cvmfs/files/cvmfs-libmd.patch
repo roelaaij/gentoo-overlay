@@ -1,0 +1,10 @@
+--- a/cmake/Modules/FindSHA2.cmake	2019-04-22 22:42:38.788789858 +0200
++++ b/cmake/Modules/FindSHA2.cmake	2019-04-22 22:41:17.901671019 +0200
+@@ -15,6 +15,6 @@
+
+ find_library(
+     SHA2_LIBRARIES
+-    NAMES sha2
++    NAMES md
+     HINTS ${SHA2_LIBRARY_DIRS}
+ )

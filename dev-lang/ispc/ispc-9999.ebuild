@@ -45,6 +45,7 @@ src_prepare() {
 src_configure() {
 	# Disable building the examples and install their source manually later
 	local mycmakeargs=(
+		-DARM_ENABLED=OFF
 		-DISPC_INCLUDE_EXAMPLES=OFF
 		-DISPC_NO_DUMPS=$(usex debug OFF ON)
 	)

@@ -35,8 +35,7 @@ DEPEND="${RDEPEND}
 RESTRICT=test
 
 PATCHES=( "${FILESDIR}/${PN}-2017.2-fix-glslang-link-order.patch"
-		  "${FILESDIR}/glslang-shared.patch"
-		  "${FILESDIR}/${PN}-spriv-cross-paths.patch" )
+		  "${FILESDIR}/glslang-shared.patch" )
 
 python_check_deps() {
 	if use test; then

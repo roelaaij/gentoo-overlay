@@ -23,26 +23,28 @@ HOMEPAGE="https://www.dolphin-emu.org/"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="alsa bluetooth doc egl +evdev ffmpeg llvm log lto profile pulseaudio +qt5 sdl upnp"
+IUSE="alsa bluetooth doc +evdev ffmpeg llvm log lto profile pulseaudio +qt5 sdl upnp"
 
-RDEPEND=">=media-libs/libsfml-2.1
-	>net-libs/enet-1.3.7
-	>=net-libs/mbedtls-2.1.1
-	dev-libs/lzo
-	media-libs/libpng:=
-	sys-libs/glibc
-	sys-libs/readline:=
-	sys-libs/zlib
+RDEPEND="
+	dev-libs/hidapi:0=
+	dev-libs/lzo:2=
+	dev-libs/pugixml:0=
+	media-libs/libpng:0=
+	media-libs/libsfml
+	media-libs/mesa[egl,vulkan]
+	net-libs/enet:1.3
+	net-libs/mbedtls
+	net-misc/curl:0=
+	sys-libs/readline:0=
+	sys-libs/zlib:0=
 	x11-libs/libXext
 	x11-libs/libXi
 	x11-libs/libXrandr
 	virtual/libusb:1
 	virtual/opengl
-	media-libs/mesa[vulkan]
 	dev-util/glslang
 	alsa? ( media-libs/alsa-lib )
 	bluetooth? ( net-wireless/bluez )
-	egl? ( media-libs/mesa[egl] )
 	evdev? (
 			dev-libs/libevdev
 			virtual/udev
@@ -57,28 +59,23 @@ RDEPEND=">=media-libs/libsfml-2.1
 		dev-qt/qtwidgets:5
 	)
 	sdl? ( media-libs/libsdl2[haptic,joystick] )
-	upnp? ( >=net-libs/miniupnpc-1.7 )
+	upnp? ( net-libs/miniupnpc )
 	media-libs/vulkan-loader
-	dev-libs/hidapi
-	dev-libs/pugixml
 	"
 DEPEND="${RDEPEND}
-	>=dev-util/cmake-2.8.8
-	>=sys-devel/gcc-4.9.0
 	>=dev-libs/xxhash-0.6.2
 	dev-cpp/picojson
 	dev-cpp/gtest
 	app-arch/zip
+	media-libs/vulkan-headers
 	media-libs/freetype
 	sys-devel/gettext
 	virtual/pkgconfig
 	"
 
 PATCHES=( "${FILESDIR}/exceptions.patch"
-		  "${FILESDIR}/force_cxx17.patch"
 		  "${FILESDIR}/gentoo-vulkan.patch"
 		  "${FILESDIR}/picojson.patch"
-		  "${FILESDIR}/qt_force_cxx17.patch"
 		  "${FILESDIR}/system-libs.patch" )
 
 src_prepare() {
@@ -128,6 +125,7 @@ src_configure() {
 
 	local mycmakeargs=(
 		-DENABLE_ANALYTICS=OFF
+		-DCCACHE_BIN=CCACHE_BIN-NOTFOUND
 		-DUSE_SHARED_ENET=ON
 		-DUSE_SHARED_XXHASH=ON
 		-DUSE_SHARED_GLSLANG=ON
@@ -142,6 +140,7 @@ src_configure() {
 		-DENABLE_SDL=$(usex sdl ON OFF)
 		-DENABLE_ALSA=$(usex alsa ON OFF)
 		-DENABLE_PULSEAUDIO=$(usex pulseaudio)
+		-DENABLE_BLUEZ=$(usex bluetooth)
 		-DUSE_EGL=$(usex egl)
 		-DUSE_UPNP=$(usex upnp)
 	)
@@ -165,11 +164,7 @@ src_install() {
 
 pkg_postinst() {
 	# Add pax markings for hardened systems
-	pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu-nogui
-	if use qt5; then
-		pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu
-	fi
-
+	pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu
 	gnome2_icon_cache_update
 }
 

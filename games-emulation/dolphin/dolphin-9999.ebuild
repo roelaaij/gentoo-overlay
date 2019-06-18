@@ -23,7 +23,7 @@ HOMEPAGE="https://www.dolphin-emu.org/"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="alsa bluetooth doc +evdev ffmpeg llvm log lto profile pulseaudio +qt5 sdl upnp"
+IUSE="alsa bluetooth doc egl +evdev ffmpeg llvm log lto profile pulseaudio +qt5 sdl upnp"
 
 RDEPEND="
 	dev-libs/hidapi:0=
@@ -31,6 +31,7 @@ RDEPEND="
 	dev-libs/pugixml:0=
 	media-libs/libpng:0=
 	media-libs/libsfml
+	dev-libs/libfmt
 	media-libs/mesa[egl,vulkan]
 	net-libs/enet:1.3
 	net-libs/mbedtls
@@ -67,7 +68,7 @@ DEPEND="${RDEPEND}
 	dev-cpp/picojson
 	dev-cpp/gtest
 	app-arch/zip
-	media-libs/vulkan-headers
+	dev-util/vulkan-headers
 	media-libs/freetype
 	sys-devel/gettext
 	virtual/pkgconfig
@@ -85,6 +86,7 @@ src_prepare() {
 	# preference. See CMakeLists.txt for conditional 'add_subdirectory' calls.
 	local KEEP_SOURCES=(
 		Bochs_disasm
+		FreeSurround
 		cpp-optparse
 		# imgui is not in tree and not intended to be shared
 		imgui
@@ -95,8 +97,6 @@ src_prepare() {
 		gtest
 		# minizip is stripped-down
 		minizip
-		# FreeSurround is not in tree
-		FreeSurround
 	)
 	local s
 	for s in "${KEEP_SOURCES[@]}"; do
@@ -127,6 +127,7 @@ src_configure() {
 		-DENABLE_ANALYTICS=OFF
 		-DCCACHE_BIN=CCACHE_BIN-NOTFOUND
 		-DUSE_SHARED_ENET=ON
+		-DUSE_SHARED_FMT=ON
 		-DUSE_SHARED_XXHASH=ON
 		-DUSE_SHARED_GLSLANG=ON
 		-DUSE_DISCORD_PRESENCE=OFF
@@ -141,7 +142,7 @@ src_configure() {
 		-DENABLE_ALSA=$(usex alsa ON OFF)
 		-DENABLE_PULSEAUDIO=$(usex pulseaudio)
 		-DENABLE_BLUEZ=$(usex bluetooth)
-		-DUSE_EGL=$(usex egl)
+		-DENABLE_EGL=$(usex egl)
 		-DUSE_UPNP=$(usex upnp)
 	)
 

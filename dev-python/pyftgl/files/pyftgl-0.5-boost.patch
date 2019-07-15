@@ -4,10 +4,10 @@ index f38a127..c979d1d 100644
 +++ b/setup.py
 @@ -1,6 +1,7 @@
  #!/usr/bin/env python
- 
+
  from distutils.core import setup, Extension
 +import sys
- 
+
  __version__ = "0.5b"
  __author__ = "Anders Dahnielson"
 @@ -33,7 +34,7 @@ module_ftgl_libs = [
@@ -15,7 +15,7 @@ index f38a127..c979d1d 100644
      'z',
      'ftgl',
 -    'boost_python',
-+    'boost_python-{}.{}'.format(sys.version_info[0], sys.version_info[1]),
++    'boost_python{}{}'.format(sys.version_info[0], sys.version_info[1]),
      ]
- 
+
  module_ftgl = Extension(

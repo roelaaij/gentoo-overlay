@@ -240,19 +240,6 @@ index df07bd8e..5f217488 100644
  #include "../MachineIndependent/Versions.h"
  #include "InfoSink.h"
 
-diff --git a/glslang/MachineIndependent/iomapper.h b/glslang/MachineIndependent/iomapper.h
-index 5e0d4391..4a114f78 100644
---- a/glslang/MachineIndependent/iomapper.h
-+++ b/glslang/MachineIndependent/iomapper.h
-@@ -36,7 +36,7 @@
- #ifndef _IOMAPPER_INCLUDED
- #define _IOMAPPER_INCLUDED
-
--#include "../Public/ShaderLang.h"
-+#include "glslang/ShaderLang.h"
-
- //
- // A reflection database and its interface, consistent with the OpenGL API reflection queries.
 diff --git a/glslang/MachineIndependent/localintermediate.h b/glslang/MachineIndependent/localintermediate.h
 index e9fe0e41..067db504 100644
 --- a/glslang/MachineIndependent/localintermediate.h

@@ -1,0 +1,11 @@
+--- a/setup.py	2019-07-25 22:35:30.384858623 +0200
++++ b/setup.py	2019-07-25 22:35:39.614523929 +0200
+@@ -61,7 +61,7 @@
+ setup(
+     name="eduvpn_client",
+     version=__version__,
+-    packages=find_packages(),
++    packages=find_packages(exclude=["tests*"]),
+     data_files=data_files,
+     install_requires=install_requires,
+     extras_require=extras_require,

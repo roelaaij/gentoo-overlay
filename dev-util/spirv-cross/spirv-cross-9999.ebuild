@@ -18,3 +18,11 @@ DEPEND="dev-util/spirv-headers
 		dev-util/glslang"
 
 PATCHES=( "${FILESDIR}/proper-libdir.patch" )
+
+src_configure() {
+	# Disable building the examples and install their source manually later
+	local mycmakeargs=(
+		-DSPIRV_CROSS_SHARED=ON
+	)
+	cmake-multilib_src_configure
+}

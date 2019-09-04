@@ -63,7 +63,7 @@ DEPEND="${CDEPEND}
 REQUIRED_USE="test-programs? ( server )"
 
 PATCHES=( "${FILESDIR}/${PN}-libmd.patch"
-		  "${FILESDIR}/${PN}-2.6-fix-build.patch")
+		  "${FILESDIR}/${PN}-2.6.1-fix-build.patch")
 
 pkg_setup() {
 	if use server; then

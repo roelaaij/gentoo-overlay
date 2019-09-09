@@ -1,0 +1,13 @@
+diff --git a/Source/Core/Common/SettingsHandler.cpp b/Source/Core/Common/SettingsHandler.cpp
+index e7b3d5d066..23c64f1e2a 100644
+--- a/Source/Core/Common/SettingsHandler.cpp
++++ b/Source/Core/Common/SettingsHandler.cpp
+@@ -11,7 +11,7 @@
+ #include <iomanip>
+ #include <string>
+ 
+-#include <fmt/time.h>
++#include <fmt/chrono.h>
+ 
+ #include "Common/CommonTypes.h"
+ 

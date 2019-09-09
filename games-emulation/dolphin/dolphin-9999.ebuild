@@ -77,6 +77,7 @@ DEPEND="${RDEPEND}
 PATCHES=( "${FILESDIR}/exceptions.patch"
 		  "${FILESDIR}/gentoo-vulkan.patch"
 		  "${FILESDIR}/picojson.patch"
+		  "${FILESDIR}/libfmt-6.patch"
 		  "${FILESDIR}/system-libs.patch" )
 
 src_prepare() {

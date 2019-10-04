@@ -1,31 +1,32 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 057ed17..f2dce07 100644
+index b2b9b042..6639357e 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -38,6 +38,8 @@ option(SPIRV_CROSS_SANITIZE_UNDEFINED "Sanitize undefined" OFF)
-
- option(SPIRV_CROSS_NAMESPACE_OVERRIDE "" "Override the namespace used in the C++ API.")
-
+@@ -46,6 +46,8 @@ option(SPIRV_CROSS_MISC_WARNINGS "Misc warnings useful for Travis runs." OFF)
+ 
+ option(SPIRV_CROSS_FORCE_PIC "Force position-independent code for all targets." OFF)
+ 
 +include(GNUInstallDirs)
 +
  if(${CMAKE_GENERATOR} MATCHES "Makefile")
  	if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
  		message(FATAL_ERROR "Build out of tree to avoid overwriting Makefile")
-@@ -120,12 +122,12 @@ macro(spirv_cross_add_library name config_name library_type)
- 	endif()
- 	install(TARGETS ${name}
+@@ -164,12 +166,12 @@ macro(spirv_cross_add_library name config_name library_type)
+ 	if (NOT SPIRV_CROSS_SKIP_INSTALL)
+ 		install(TARGETS ${name}
  			EXPORT ${config_name}Config
 -			RUNTIME DESTINATION bin
 -			LIBRARY DESTINATION lib
 -			ARCHIVE DESTINATION lib
 -			PUBLIC_HEADER DESTINATION include/spirv_cross)
--	install(FILES ${hdrs} DESTINATION include/spirv_cross)
--	install(EXPORT ${config_name}Config DESTINATION share/${config_name}/cmake)
+-		install(FILES ${hdrs} DESTINATION include/spirv_cross)
+-		install(EXPORT ${config_name}Config DESTINATION share/${config_name}/cmake)
 +			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 +			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 +			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 +			PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/spirv_cross)
-+	install(FILES ${hdrs} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/spirv_cross)
-+	install(EXPORT ${config_name}Config DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${config_name}/cmake)
- 	export(TARGETS ${name} FILE ${config_name}Config.cmake)
++		install(FILES ${hdrs} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/spirv_cross)
++		install(EXPORT ${config_name}Config DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${config_name}/cmake)
+ 		export(TARGETS ${name} FILE ${config_name}Config.cmake)
+ 	endif()
  endmacro()

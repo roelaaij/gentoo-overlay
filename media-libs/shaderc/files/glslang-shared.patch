@@ -50,3 +50,16 @@ index a939cb2..d81b964 100644
 
  shaderc_add_tests(
    TEST_PREFIX shaderc_util
+diff --git a/libshaderc_spvc/CMakeLists.txt b/libshaderc_spvc/CMakeLists.txt
+index fbc4cf2..810754e 100644
+--- a/libshaderc_spvc/CMakeLists.txt
++++ b/libshaderc_spvc/CMakeLists.txt
+@@ -22,7 +22,7 @@ target_include_directories(shaderc_spvc
+   ${shaderc_SOURCE_DIR}/libshaderc_util/include
+   ${spirv-tools_SOURCE_DIR}/include
+   ${spirv-tools_SOURCE_DIR}/
+-  ${SPIRV-Cross_SOURCE_DIR}/..
++  ${SPIRV-Cross_SOURCE_DIR}
+   ${CMAKE_CURRENT_BINARY_DIR}/../third_party/spirv-tools/)
+ 
+ if(SHADERC_ENABLE_SPVC_PARSER)

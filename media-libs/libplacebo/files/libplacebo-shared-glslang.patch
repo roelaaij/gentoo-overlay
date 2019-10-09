@@ -11,3 +11,16 @@ index 11f70ca..9803148 100644
  #include <SPIRV/GlslangToSpv.h>
  
  #include "glslang.h"
+diff --git a/src/meson.build b/src/meson.build
+index ad22999..e0ed68d 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -210,7 +210,7 @@ configure_file(
+ 
+ # work around meson bugs
+ build_deps += dependency('threads')
+-inc = [ include_directories('./include') ]
++inc = [ include_directories('./include'), include_directories('/usr/include/glslang', is_system : true) ]
+ obj = []
+ foreach s : subprojects
+   inc += s.get_variable('inc')

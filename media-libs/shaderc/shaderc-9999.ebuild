@@ -1,7 +1,7 @@
 # Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
 PYTHON_COMPAT=( python{2_7,3_4,3_5,3_6} )
 
@@ -67,6 +67,7 @@ src_prepare() {
 
 multilib_src_configure() {
 	local mycmakeargs=(
+		-Dglslang_SOURCE_DIR="${EROOT}/usr/include/glslang"
 		-DSHADERC_SKIP_TESTS="$(usex !test)"
 	)
 	cmake-utils_src_configure

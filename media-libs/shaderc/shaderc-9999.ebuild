@@ -14,7 +14,7 @@ EGIT_REPO_URI="https://github.com/google/shaderc.git"
 LICENSE="Apache-2.0"
 SLOT="0"
 KEYWORDS=""
-IUSE="doc test"
+IUSE="doc spvc test"
 
 RDEPEND="
 	~dev-util/glslang-9999[${MULTILIB_USEDEP}]
@@ -68,6 +68,8 @@ src_prepare() {
 multilib_src_configure() {
 	local mycmakeargs=(
 		-Dglslang_SOURCE_DIR="${EROOT}/usr/include/glslang"
+		-DSHADERC_ENABLE_SPVC="$(usex spvc)"
+		-DSHADERC_ENABLE_SPVC_PARSER="$(usex spvc)"
 		-DSHADERC_SKIP_TESTS="$(usex !test)"
 	)
 	cmake-utils_src_configure

@@ -1,13 +1,13 @@
-# Copyright 1999-2017 Gentoo Foundation
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
-inherit flag-o-matic kde5
+inherit flag-o-matic kde5 desktop
 
 DESCRIPTION="KWallet CLI"
 HOMEPAGE="https://www.mirbsd.org/kwalletcli.htm"
-SRC_URI="https://www.mirbsd.org/MirOS/dist/hosted/kwalletcli/kwalletcli-3.00.tar.gz -> ${P}.tar.gz"
+SRC_URI="https://www.mirbsd.org/MirOS/dist/hosted/kwalletcli/${PN}-3.02.tar.gz -> ${P}.tar.gz"
 
 LICENSE="MirOS"
 SLOT="0"

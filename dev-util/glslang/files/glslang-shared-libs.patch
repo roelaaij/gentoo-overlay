@@ -288,7 +288,7 @@ index 86e1c23b..c170f7d5 100755
  
  #include "SpvTools.h"
 -#include "../glslang/Include/intermediate.h"
-+#include "Include/intermediate.h"
++#include "glslang/Include/intermediate.h"
  
  #include <string>
  #include <vector>
@@ -301,7 +301,7 @@ index 7422d012..01d0834a 100644
  #endif
  
 -#include "../glslang/MachineIndependent/localintermediate.h"
-+#include "MachineIndependent/localintermediate.h"
++#include "glslang/MachineIndependent/localintermediate.h"
  #include "Logger.h"
  
  namespace glslang {

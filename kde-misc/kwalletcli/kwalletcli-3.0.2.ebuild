@@ -38,11 +38,11 @@ src_compile() {
 }
 
 src_install() {
-	mkdir -p "${D}${EPREFIX}"usr/bin
-	mkdir -p "${D}${EPREFIX}"usr/share/man/man1
+	mkdir -p "${D}${EPREFIX}"/usr/bin
+	mkdir -p "${D}${EPREFIX}"/usr/share/man/man1
 	emake DESTDIR="${D}" \
-		  BINDIR="${EPREFIX}"usr/bin \
-		  MANDIR="${EPREFIX}"usr/share/man/man \
+		  BINDIR="${EPREFIX}"/usr/bin \
+		  MANDIR="${EPREFIX}"/usr/share/man/man \
 		  install
 	for size in 32 64 128; do
 		doicon -s ${size} "${PN}${size}.png"

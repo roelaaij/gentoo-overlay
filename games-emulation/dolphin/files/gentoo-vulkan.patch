@@ -1,36 +1,3 @@
-diff --git a/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp b/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
-index ded63ce..12e83aa 100644
---- a/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
-+++ b/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
-@@ -11,9 +11,9 @@
- #include <string>
-
- // glslang includes
--#include "GlslangToSpv.h"
--#include "ShaderLang.h"
--#include "disassemble.h"
-+#include "SPIRV/GlslangToSpv.h"
-+#include "SPIRV/disassemble.h"
-+#include "glslang/ShaderLang.h"
-
- #include "Common/FileUtil.h"
- #include "Common/Logging/Log.h"
-@@ -324,6 +324,15 @@ const TBuiltInResource* GetCompilerResourceLimits()
-                                           /* .MaxCullDistances = */ 8,
-                                           /* .MaxCombinedClipAndCullDistances = */ 8,
-                                           /* .MaxSamples = */ 4,
-+                                          /* maxMeshOutputVerticesNV = */ 256,
-+                                          /* maxMeshOutputPrimitivesNV = */ 512,
-+                                          /* maxMeshWorkGroupSizeX_NV = */ 32,
-+                                          /* maxMeshWorkGroupSizeY_NV = */ 1,
-+                                          /* maxMeshWorkGroupSizeZ_NV = */ 1,
-+                                          /* maxTaskWorkGroupSizeX_NV = */ 32,
-+                                          /* maxTaskWorkGroupSizeY_NV = */ 1,
-+                                          /* maxTaskWorkGroupSizeZ_NV = */ 1,
-+                                          /* maxMeshViewCountNV = */ 4,
-                                           /* .limits = */
-                                           {
-                                               /* .nonInductiveForLoops = */ 1,
 diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 index 889da03f6f..4211be4aec 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
@@ -67,3 +34,36 @@ index 889da03f6f..4211be4aec 100644
 +    HLSL
 +    OGLCompiler
 +    OSDependent)
+diff --git a/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp b/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
+index a245935995..fb87f0bcfc 100644
+--- a/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
++++ b/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
+@@ -13,9 +13,9 @@
+ #include <string>
+ 
+ // glslang includes
+-#include "GlslangToSpv.h"
+-#include "ShaderLang.h"
+-#include "disassemble.h"
++#include "glslang/SPIRV/GlslangToSpv.h"
++#include "glslang/SPIRV/disassemble.h"
++#include "glslang/ShaderLang.h"
+ 
+ #include "Common/FileUtil.h"
+ #include "Common/Logging/Log.h"
+@@ -338,6 +338,15 @@ const TBuiltInResource* GetCompilerResourceLimits()
+                                           /* .MaxCullDistances = */ 8,
+                                           /* .MaxCombinedClipAndCullDistances = */ 8,
+                                           /* .MaxSamples = */ 4,
++                                          /* maxMeshOutputVerticesNV = */ 256,
++                                          /* maxMeshOutputPrimitivesNV = */ 512,
++                                          /* maxMeshWorkGroupSizeX_NV = */ 32,
++                                          /* maxMeshWorkGroupSizeY_NV = */ 1,
++                                          /* maxMeshWorkGroupSizeZ_NV = */ 1,
++                                          /* maxTaskWorkGroupSizeX_NV = */ 32,
++                                          /* maxTaskWorkGroupSizeY_NV = */ 1,
++                                          /* maxTaskWorkGroupSizeZ_NV = */ 1,
++                                          /* maxMeshViewCountNV = */ 4,
+                                           /* .limits = */
+                                           {
+                                               /* .nonInductiveForLoops = */ 1,

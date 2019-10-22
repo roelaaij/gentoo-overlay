@@ -45,61 +45,6 @@ index 5bb3f0ee..b83f8312 100644
  set_property(TARGET OGLCompiler PROPERTY FOLDER glslang)
  set_property(TARGET OGLCompiler PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-diff --git a/SPIRV/CMakeLists.txt b/SPIRV/CMakeLists.txt
-index 9d9d8033..2cc4108a 100755
---- a/SPIRV/CMakeLists.txt
-+++ b/SPIRV/CMakeLists.txt
-@@ -41,6 +41,9 @@ if(ENABLE_NV_EXTENSIONS)
- endif(ENABLE_NV_EXTENSIONS)
-
- add_library(SPIRV ${LIB_TYPE} ${SOURCES} ${HEADERS})
-+target_include_directories(SPIRV PRIVATE
-+                           ${PROJECT_SOURCE_DIR}/glslang
-+                           ${PROJECT_SOURCE_DIR}/glslang/Public)
- set_property(TARGET SPIRV PROPERTY FOLDER glslang)
- set_property(TARGET SPIRV PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-@@ -59,8 +62,7 @@ if(ENABLE_OPT)
-         PRIVATE ${spirv-tools_SOURCE_DIR}/include
-         PRIVATE ${spirv-tools_SOURCE_DIR}/source
-     )
--    target_link_libraries(SPIRV glslang SPIRV-Tools-opt)
--    target_include_directories(SPIRV PUBLIC ../External)
-+    target_link_libraries(SPIRV glslang SPIRV-Tools-opt-shared SPIRV-Tools-shared)
- else()
-     target_link_libraries(SPIRV glslang)
- endif(ENABLE_OPT)
-diff --git a/StandAlone/CMakeLists.txt b/StandAlone/CMakeLists.txt
-index d500121d..d60e2314 100755
---- a/StandAlone/CMakeLists.txt
-+++ b/StandAlone/CMakeLists.txt
-@@ -1,11 +1,13 @@
--add_library(glslang-default-resource-limits
-+add_library(glslang-default-resource-limits ${LIB_TYPE}
-             ${CMAKE_CURRENT_SOURCE_DIR}/ResourceLimits.cpp)
- set_property(TARGET glslang-default-resource-limits PROPERTY FOLDER glslang)
- set_property(TARGET glslang-default-resource-limits PROPERTY POSITION_INDEPENDENT_CODE ON)
-
- target_include_directories(glslang-default-resource-limits
-                            PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
--                           PUBLIC ${PROJECT_SOURCE_DIR})
-+                                  ${PROJECT_SOURCE_DIR}
-+                                  ${PROJECT_SOURCE_DIR}/glslang
-+                                  ${PROJECT_SOURCE_DIR}/glslang/Public)
-
- set(SOURCES StandAlone.cpp DirStackFileIncluder.h)
- set(REMAPPER_SOURCES spirv-remap.cpp)
-@@ -39,6 +41,10 @@ if(WIN32)
- endif(WIN32)
-
- if(ENABLE_GLSLANG_INSTALL)
-+    install(TARGETS glslang-default-resource-limits
-+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-+
-     install(TARGETS glslangValidator
-             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-
 diff --git a/glslang/CMakeLists.txt b/glslang/CMakeLists.txt
 index d495a3cf..beab17ac 100755
 --- a/glslang/CMakeLists.txt
@@ -305,3 +250,59 @@ index 7422d012..01d0834a 100644
  #include "Logger.h"
  
  namespace glslang {
+diff --git a/SPIRV/CMakeLists.txt b/SPIRV/CMakeLists.txt
+index e25ec0a1..b75c620a 100644
+--- a/SPIRV/CMakeLists.txt
++++ b/SPIRV/CMakeLists.txt
+@@ -34,6 +34,9 @@ set(SPVREMAP_HEADERS
+     doc.h)
+ 
+ add_library(SPIRV ${LIB_TYPE} ${SOURCES} ${HEADERS})
++target_include_directories(SPIRV PRIVATE
++                           ${PROJECT_SOURCE_DIR}/glslang
++                           ${PROJECT_SOURCE_DIR}/glslang/Public)
+ set_property(TARGET SPIRV PROPERTY FOLDER glslang)
+ set_property(TARGET SPIRV PROPERTY POSITION_INDEPENDENT_CODE ON)
+ target_include_directories(SPIRV PUBLIC 
+@@ -58,7 +61,7 @@ if(ENABLE_OPT)
+         PRIVATE ${spirv-tools_SOURCE_DIR}/include
+         PRIVATE ${spirv-tools_SOURCE_DIR}/source
+     )
+-    target_link_libraries(SPIRV glslang SPIRV-Tools-opt)
++    target_link_libraries(SPIRV glslang SPIRV-Tools-opt-shared SPIRV-Tools-shared)
+     target_include_directories(SPIRV PUBLIC
+ 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../External>
+ 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/External>)
+diff --git a/StandAlone/CMakeLists.txt b/StandAlone/CMakeLists.txt
+index 89e91c01..6740e330 100644
+--- a/StandAlone/CMakeLists.txt
++++ b/StandAlone/CMakeLists.txt
+@@ -1,12 +1,12 @@
+-add_library(glslang-default-resource-limits
++add_library(glslang-default-resource-limits ${LIB_TYPE}
+             ${CMAKE_CURRENT_SOURCE_DIR}/ResourceLimits.cpp)
+ set_property(TARGET glslang-default-resource-limits PROPERTY FOLDER glslang)
+ set_property(TARGET glslang-default-resource-limits PROPERTY POSITION_INDEPENDENT_CODE ON)
+ 
+-target_include_directories(glslang-default-resource-limits
+-                           PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+-                           PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
+-
++target_include_directories(glslang-default-resource-limits PUBLIC
++                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
++                           $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/glslang>
++                           $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/glslang>)
+ 
+ set(SOURCES StandAlone.cpp DirStackFileIncluder.h)
+ set(REMAPPER_SOURCES spirv-remap.cpp)
+@@ -42,6 +43,10 @@ if(WIN32)
+ endif(WIN32)
+ 
+ if(ENABLE_GLSLANG_INSTALL)
++    install(TARGETS glslang-default-resource-limits
++            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
++
+     install(TARGETS glslangValidator EXPORT glslangValidatorTargets
+             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+ 

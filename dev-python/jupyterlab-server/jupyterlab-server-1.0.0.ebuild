@@ -1,12 +1,12 @@
-# Copyright 1999-2018 Gentoo Authors
+# Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
-PYTHON_COMPAT=( python3_{4,5,6} )
+PYTHON_COMPAT=( python3_{5,6,7} )
 PYTHON_REQ_USE="threads(+)"
 
-inherit flag-o-matic distutils-r1 toolchain-funcs
+inherit distutils-r1 toolchain-funcs
 
 DESCRIPTION="JupyterLab"
 HOMEPAGE="jupyter.org"

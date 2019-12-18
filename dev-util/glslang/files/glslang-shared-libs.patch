@@ -224,32 +224,6 @@ index 49282c30..852f5e8f 100644
  #include "../Include/Types.h"
 
  #include <list>
-diff --git a/SPIRV/GlslangToSpv.h b/SPIRV/GlslangToSpv.h
-index 86e1c23b..c170f7d5 100755
---- a/SPIRV/GlslangToSpv.h
-+++ b/SPIRV/GlslangToSpv.h
-@@ -40,7 +40,7 @@
- #endif
- 
- #include "SpvTools.h"
--#include "../glslang/Include/intermediate.h"
-+#include "glslang/Include/intermediate.h"
- 
- #include <string>
- #include <vector>
-diff --git a/SPIRV/SpvTools.h b/SPIRV/SpvTools.h
-index 7422d012..01d0834a 100644
---- a/SPIRV/SpvTools.h
-+++ b/SPIRV/SpvTools.h
-@@ -46,7 +46,7 @@
- #include <ostream>
- #endif
- 
--#include "../glslang/MachineIndependent/localintermediate.h"
-+#include "glslang/MachineIndependent/localintermediate.h"
- #include "Logger.h"
- 
- namespace glslang {
 diff --git a/SPIRV/CMakeLists.txt b/SPIRV/CMakeLists.txt
 index e25ec0a1..b75c620a 100644
 --- a/SPIRV/CMakeLists.txt

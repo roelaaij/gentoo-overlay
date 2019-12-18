@@ -31,6 +31,7 @@ COMMON_DEPEND="media-libs/vulkan-loader:=[${MULTILIB_USEDEP},wayland?,X?]
 	)"
 
 BDEPEND="${PYTHON_DEPS}
+	=media-libs/vulkan-loader-9999
 	cube? ( dev-util/glslang:=[${MULTILIB_USEDEP}] )"
 DEPEND="${COMMON_DEPEND}"
 RDEPEND="${COMMON_DEPEND}"

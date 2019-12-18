@@ -1,7 +1,6 @@
 # Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
-
-EAPI=6
+EAPI=7
 
 PYTHON_COMPAT=( python2_7 )
 
@@ -34,8 +33,9 @@ DEPEND="
 	sys-devel/flex
 	"
 
-PATCHES=( "${FILESDIR}/${PN}-no-Werror.patch"
-		  "${FILESDIR}/${PN}-no-timestamp.patch" )
+PATCHES=( "${FILESDIR}/${PN}-no-timestamp.patch"
+		  "${FILESDIR}/${PN}-no-build-type-check.patch"
+		  "${FILESDIR}/${PN}-fix-main.patch" )
 
 src_prepare() {
 	sed -e 's/-Werror//' -i CMakeLists.txt || die

@@ -1,8 +1,8 @@
 # Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
-PYTHON_COMPAT=( python3_{5,6} )
+EAPI=7
+PYTHON_COMPAT=( python3_{5,6,7} )
 
 if [[ "${PV}" == "9999" ]]; then
 	EGIT_REPO_URI="https://github.com/KhronosGroup/Vulkan-ValidationLayers.git"
@@ -24,7 +24,10 @@ LICENSE="Apache-2.0"
 SLOT="0"
 IUSE="X wayland"
 
-DEPEND="${PYTHON_DEPS}
+BDEPEND="${PYTHON_DEPS}
+		=media-libs/vulkan-loader-9999"
+DEPEND="${BDEPEND}
+		=media-libs/vulkan-loader-9999
 		>=dev-util/glslang-7.11.3114_pre20190415:=[${MULTILIB_USEDEP}]
 		>=dev-util/spirv-tools-2019.1-r1:=[${MULTILIB_USEDEP}]
 		>=dev-util/vulkan-headers-1.1.106
@@ -34,9 +37,12 @@ DEPEND="${PYTHON_DEPS}
 		   x11-libs/libXrandr:=[${MULTILIB_USEDEP}]
 		   )"
 
+PATCHES="${FILESDIR}/fix-find-registry.patch"
+
 multilib_src_configure() {
 	local mycmakeargs=(
 		-DCMAKE_SKIP_RPATH=True
+		-DBUILD_LAYER_SUPPORT_FILES=True
 		-DBUILD_WSI_WAYLAND_SUPPORT=$(usex wayland)
 		-DBUILD_WSI_XCB_SUPPORT=$(usex X)
 		-DBUILD_WSI_XLIB_SUPPORT=$(usex X)

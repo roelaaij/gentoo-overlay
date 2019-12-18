@@ -1,12 +1,12 @@
 # Copyright 1999-2019 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
 PLOCALES="ar ca cs da de el en es fa fr hr hu it ja ko ms nb nl pl pt pt_BR ro ru sr sv tr zh_CN zh_TW"
 PLOCALE_BACKUP="en"
 
-inherit cmake-utils desktop gnome2-utils l10n pax-utils
+inherit cmake-utils desktop xdg-utils l10n pax-utils
 
 if [[ ${PV} == 9999* ]]
 then
@@ -75,6 +75,7 @@ DEPEND="${RDEPEND}
 	"
 
 PATCHES=( "${FILESDIR}/exceptions.patch"
+		  "${FILESDIR}/fix-build.patch"
 		  "${FILESDIR}/gentoo-vulkan.patch"
 		  "${FILESDIR}/picojson.patch"
 		  "${FILESDIR}/libfmt-6.patch"
@@ -167,9 +168,9 @@ src_install() {
 pkg_postinst() {
 	# Add pax markings for hardened systems
 	pax-mark -m "${EPREFIX}"/usr/bin/"${PN}"-emu
-	gnome2_icon_cache_update
+	xdg_icon_cache_update
 }
 
 pkg_postrm() {
-	gnome2_icon_cache_update
+	xdg_icon_cache_update
 }

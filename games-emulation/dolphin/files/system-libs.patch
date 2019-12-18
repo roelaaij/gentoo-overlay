@@ -2,7 +2,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 09f43fe6d2..4e9dc9835e 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -28,6 +28,9 @@ option(ENABLE_QT "Enable Qt (Default)" ON)
+@@ -28,12 +28,17 @@ option(ENABLE_QT "Enable Qt (Default)" ON)
  option(ENABLE_LTO "Enables Link Time Optimization" OFF)
  option(ENABLE_GENERIC "Enables generic build that should run on any little-endian host" OFF)
  option(ENABLE_HEADLESS "Enables running Dolphin as a headless variant" OFF)
@@ -12,6 +12,14 @@ index 09f43fe6d2..4e9dc9835e 100644
  option(ENABLE_ALSA "Enables ALSA sound backend" ON)
  option(ENABLE_PULSEAUDIO "Enables PulseAudio sound backend" ON)
  option(ENABLE_LLVM "Enables LLVM support, for disassembly" ON)
+ option(ENABLE_TESTS "Enables building the unit tests" ON)
+ option(USE_DISCORD_PRESENCE "Enables Discord Rich Presence, show the current game on Discord" ON)
+ 
++set(BUILD_SHARED_LIBS OFF)
++
+ # Maintainers: if you consider blanket disabling this for your users, please
+ # consider the following points:
+ #  * No data is being sent without explicit user approval (pop up box at first
 @@ -530,10 +533,28 @@ if (_M_X86)
    add_subdirectory(Externals/Bochs_disasm)
  endif()

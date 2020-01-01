@@ -79,7 +79,8 @@ PATCHES=( "${FILESDIR}/exceptions.patch"
 		  "${FILESDIR}/gentoo-vulkan.patch"
 		  "${FILESDIR}/picojson.patch"
 		  "${FILESDIR}/libfmt-6.patch"
-		  "${FILESDIR}/system-libs.patch" )
+		  "${FILESDIR}/system-libs.patch"
+		  "${FILESDIR}/latest-mbedtls.patch" )
 
 src_prepare() {
 	cmake-utils_src_prepare

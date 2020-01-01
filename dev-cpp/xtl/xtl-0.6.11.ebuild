@@ -5,9 +5,9 @@ EAPI=7
 
 inherit cmake-utils
 
-DESCRIPTION="XSIMD Library"
-HOMEPAGE="https://github.com/QuantStack/${PN}"
-SRC_URI="https://github.com/QuantStack/${PN}/archive/${PV}.tar.gz -> ${P}.tar.gz"
+DESCRIPTION="X Template Library"
+HOMEPAGE="https://github.com/xtensor-stack/${PN}"
+SRC_URI="https://github.com/xtensor-stack/${PN}/archive/${PV}.tar.gz -> ${P}.tar.gz"
 LICENSE="BSD"
 SLOT="0"
 KEYWORDS="~amd64 ~x86"

@@ -1,9 +1,7 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
-
-CMAKE_MIN_VERSION=3.14.3
 inherit kde5 toolchain-funcs
 
 if [[ ${KDE_BUILD_TYPE} != live ]]; then

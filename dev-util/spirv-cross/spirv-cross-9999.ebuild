@@ -1,4 +1,4 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -16,8 +16,6 @@ SLOT="0"
 RDEPEND=""
 DEPEND="dev-util/spirv-headers
 		dev-util/glslang"
-
-PATCHES=( "${FILESDIR}/proper-libdir.patch" )
 
 src_configure() {
 	# Disable building the examples and install their source manually later

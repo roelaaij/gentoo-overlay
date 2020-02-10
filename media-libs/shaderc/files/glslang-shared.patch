@@ -50,3 +50,30 @@ index a939cb2..d81b964 100644
 
  shaderc_add_tests(
    TEST_PREFIX shaderc_util
+diff --git a/libshaderc/CMakeLists.txt b/libshaderc/CMakeLists.txt
+index 0ffa06f..f94d391 100644
+--- a/libshaderc/CMakeLists.txt
++++ b/libshaderc/CMakeLists.txt
+@@ -42,7 +42,8 @@ endif(SHADERC_ENABLE_INSTALL)
+ 
+ find_package(Threads)
+ set(SHADERC_LIBS
+-  glslang OSDependent OGLCompiler glslang ${CMAKE_THREAD_LIBS_INIT}
++  glslang OSDependent OGLCompiler ${CMAKE_THREAD_LIBS_INIT}
++  glslang-default-resource-limits
+   shaderc_util
+   SPIRV # from glslang
+   SPIRV-Tools
+diff --git a/glslc/CMakeLists.txt b/glslc/CMakeLists.txt
+index 0f5d888..80e5031 100644
+--- a/glslc/CMakeLists.txt
++++ b/glslc/CMakeLists.txt
+@@ -18,7 +18,7 @@ add_library(glslc STATIC
+ shaderc_default_compile_options(glslc)
+ target_include_directories(glslc PUBLIC ${glslang_SOURCE_DIR})
+ target_link_libraries(glslc PRIVATE glslang OSDependent OGLCompiler
+-  glslang SPIRV HLSL ${CMAKE_THREAD_LIBS_INIT})
++  glslang-default-resource-limits SPIRV HLSL ${CMAKE_THREAD_LIBS_INIT})
+ target_link_libraries(glslc PRIVATE shaderc_util shaderc)
+ 
+ add_executable(glslc_exe src/main.cc)

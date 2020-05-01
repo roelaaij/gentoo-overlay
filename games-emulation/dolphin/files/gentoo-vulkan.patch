@@ -2,7 +2,7 @@ diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/Video
 index 889da03f6f..4211be4aec 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 +++ b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-@@ -29,24 +29,10 @@ add_library(videovulkan
+@@ -29,24 +29,11 @@ add_library(videovulkan
 
  target_link_libraries(videovulkan
  PUBLIC
@@ -30,6 +30,7 @@ index 889da03f6f..4211be4aec 100644
 +    videocommon
 +    common
 +    glslang
++    glslang-default-resource-limits
 +    SPIRV
 +    HLSL
 +    OGLCompiler

@@ -20,32 +20,21 @@ index 09f43fe6d2..4e9dc9835e 100644
  # Maintainers: if you consider blanket disabling this for your users, please
  # consider the following points:
  #  * No data is being sent without explicit user approval (pop up box at first
-@@ -530,10 +533,28 @@ if (_M_X86)
-   add_subdirectory(Externals/Bochs_disasm)
+@@ -539,9 +544,18 @@ else()
+   message(STATUS "Using static fmt from Externals")
+   add_subdirectory(Externals/fmt EXCLUDE_FROM_ALL)
  endif()
- add_subdirectory(Externals/cpp-optparse)
--add_subdirectory(Externals/fmt EXCLUDE_FROM_ALL)
 -add_subdirectory(Externals/glslang)
  add_subdirectory(Externals/imgui)
-
+ 
 +if(USE_SHARED_GLSLANG)
 +  set(GLSLANG_FOUND TRUE)
 +endif()
 +if (GLSLANG_FOUND)
-+  message(STATUS "Using system glslang")
++  message(STATUS "Using shared glslang")
 +else()
-+  message(STATUS "Using bundled glslang")
++  message(STATUS "Using static glslang from Externals")
 +  add_subdirectory(Externals/glslang)
-+endif()
-+
-+if(USE_SHARED_FMT)
-+  find_package(fmt)
-+endif()
-+if (fmt_FOUND)
-+  message(STATUS "Using system fmt")
-+else()
-+  message(STATUS "Using bundled fmt")
-+  add_subdirectory(Externals/fmt EXCLUDE_FROM_ALL)
 +endif()
 +
  find_package(pugixml)

@@ -1,4 +1,4 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -232,9 +232,6 @@ src_configure() {
 
 		# TV features:
 		$(use_enable dvb dvbin)
-
-		# Miscellaneous features:
-		--disable-apple-remote # Needs testing first. See Gentoo bug 577332.
 	)
 
 	if use vaapi && use X; then

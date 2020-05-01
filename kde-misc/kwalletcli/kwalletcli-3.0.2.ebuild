@@ -1,9 +1,12 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-inherit flag-o-matic kde5 desktop
+KFMIN=5.67.0
+QTMIN=5.12.3
+
+inherit flag-o-matic kde.org desktop
 
 DESCRIPTION="KWallet CLI"
 HOMEPAGE="https://www.mirbsd.org/kwalletcli.htm"
@@ -14,9 +17,9 @@ SLOT="0"
 KEYWORDS="~x86 ~amd64"
 
 DEPEND="
-	$(add_frameworks_dep kwallet)
-	$(add_frameworks_dep ki18n)
-	$(add_frameworks_dep kcoreaddons)
+	>=kde-frameworks/kwallet-${KFMIN}:5
+	>=kde-frameworks/ki18n-${KFMIN}:5
+	>=kde-frameworks/kcoreaddons-${KFMIN}:5
 "
 RDEPEND="
 	${DEPEND}

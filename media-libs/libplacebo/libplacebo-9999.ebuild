@@ -1,4 +1,4 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -28,7 +28,8 @@ RDEPEND="glslang? ( dev-util/glslang[${MULTILIB_USEDEP}] )
 	vulkan? ( media-libs/vulkan-loader[${MULTILIB_USEDEP}] )"
 DEPEND="${RDEPEND}"
 
-PATCHES=( "${FILESDIR}/${PN}-shared-glslang.patch" )
+PATCHES=( "${FILESDIR}/${PN}-shared-glslang.patch"
+		  "${FILESDIR}/${PN}-latest-glslang.patch" )
 
 multilib_src_configure() {
 	local emesonargs=(

@@ -1,9 +1,9 @@
 diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-index 889da03f6f..4211be4aec 100644
+index 87628030e9..eef5c3c450 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 +++ b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-@@ -29,24 +29,11 @@ add_library(videovulkan
-
+@@ -39,24 +39,11 @@ add_library(videovulkan
+ 
  target_link_libraries(videovulkan
  PUBLIC
 -  common
@@ -36,7 +36,7 @@ index 889da03f6f..4211be4aec 100644
 +    OGLCompiler
 +    OSDependent)
 diff --git a/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp b/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
-index a245935995..fb87f0bcfc 100644
+index fb267b9319..cea085e637 100644
 --- a/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
 +++ b/Source/Core/VideoBackends/Vulkan/ShaderCompiler.cpp
 @@ -13,9 +13,9 @@
@@ -47,12 +47,12 @@ index a245935995..fb87f0bcfc 100644
 -#include "ShaderLang.h"
 -#include "disassemble.h"
 +#include "glslang/SPIRV/GlslangToSpv.h"
++#include "glslang/Public/ShaderLang.h"
 +#include "glslang/SPIRV/disassemble.h"
-+#include "glslang/ShaderLang.h"
  
  #include "Common/FileUtil.h"
  #include "Common/Logging/Log.h"
-@@ -338,6 +338,15 @@ const TBuiltInResource* GetCompilerResourceLimits()
+@@ -344,6 +344,16 @@ const TBuiltInResource* GetCompilerResourceLimits()
                                            /* .MaxCullDistances = */ 8,
                                            /* .MaxCombinedClipAndCullDistances = */ 8,
                                            /* .MaxSamples = */ 4,
@@ -65,6 +65,7 @@ index a245935995..fb87f0bcfc 100644
 +                                          /* maxTaskWorkGroupSizeY_NV = */ 1,
 +                                          /* maxTaskWorkGroupSizeZ_NV = */ 1,
 +                                          /* maxMeshViewCountNV = */ 4,
++                                          /* .maxDualSourceDrawBuffersEXT = */ 1,
                                            /* .limits = */
                                            {
                                                /* .nonInductiveForLoops = */ 1,

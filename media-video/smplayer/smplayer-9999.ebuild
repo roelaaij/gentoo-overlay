@@ -1,44 +1,49 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 2007-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
-PLOCALES="am ar ar_SY bg ca cs da de el en en_GB en_US es et eu fa fi fr
-		  gl he_IL hr hu id it ja ka ko ku lt mk ms_MY nl nn_NO pl pt pt_BR
-		  ro_RO ru_RU sk sl_SI sq_AL sr sv th tr uk_UA uz vi_VN zh_CN zh_TW"
+EAPI=7
+
+PLOCALES="am ar_SY ar bg ca cs da de el en_GB en en_US es et eu fa fi fr gl
+he_IL hr hu id it ja ka ko ku lt mk ms_MY nl nn_NO pl pt_BR pt ro_RO ru_RU
+sk sl_SI sq_AL sr sv th tr uk_UA uz vi_VN zh_CN zh_TW"
 PLOCALE_BACKUP="en_US"
-inherit gnome2-utils eutils l10n qmake-utils subversion
+
+inherit l10n qmake-utils toolchain-funcs xdg subversion
 
 DESCRIPTION="Great Qt GUI front-end for mplayer/mpv"
-HOMEPAGE="http://www.smplayer.eu"
+HOMEPAGE="https://www.smplayer.eu/"
 ESVN_REPO_URI="https://subversion.assembla.com/svn/smplayer/smplayer/trunk"
 
 LICENSE="GPL-2+ BSD-2"
 SLOT="0"
 KEYWORDS=""
-IUSE="autoshutdown bidi debug mpris streaming"
+IUSE="autoshutdown bidi debug mpris"
 
+BDEPEND="dev-qt/linguist-tools:5"
 DEPEND="
-	sys-libs/zlib
 	dev-qt/qtcore:5
 	dev-qt/qtgui:5=
 	dev-qt/qtnetwork:5[ssl]
-	dev-qt/qtsingleapplication[X]
+	dev-qt/qtscript:5
+	dev-qt/qtsingleapplication[X,qt5(+)]
 	dev-qt/qtwidgets:5
 	dev-qt/qtxml:5
-	dev-qt/linguist-tools:5
+	sys-libs/zlib
 	autoshutdown? ( dev-qt/qtdbus:5 )
 	mpris? ( dev-qt/qtdbus:5 )
-	streaming? (
-		dev-qt/qtscript:5
-	)
 "
 RDEPEND="${DEPEND}
-	|| ( media-video/mplayer[bidi?,libass,png,X]
-		( >=media-video/mpv-0.10.0[libass,X]
-			streaming? ( >=net-misc/youtube-dl-2014.11.26 ) ) )"
+	|| (
+		media-video/mpv
+		media-video/mplayer[bidi?,libass,png,X]
+	)
+"
 
 PATCHES=(
 	"${FILESDIR}/${PN}-14.9.0.6966-unbundle-qtsingleapplication.patch" # bug 487544
+	"${FILESDIR}/${PN}-17.1.0-advertisement_crap.patch"
+	"${FILESDIR}/${PN}-18.2.0-jobserver.patch"
+	"${FILESDIR}/${PN}-18.3.0-disable-werror.patch"
 )
 
 src_prepare() {
@@ -46,18 +51,9 @@ src_prepare() {
 
 	default
 
-	# For Version Branding
-	cd "${ESVN_STORE_DIR}/${ESVN_CO_DIR}/${ESVN_PROJECT}/${ESVN_REPO_URI##*/}"
-	./get_svn_revision.sh
-	mv src/svn_revision.h "${S}"/src/
-	mv svn_revision "${S}"/
-	cd "${S}"
-
 	# Upstream Makefile sucks
 	sed -i -e "/^PREFIX=/ s:/usr/local:${EPREFIX}/usr:" \
 		-e "/^DOC_PATH=/ s:packages/smplayer:${PF}:" \
-		-e '/\.\/get_svn_revision\.sh/,+2c\
-	cd src && $(DEFS) $(MAKE)' \
 		Makefile || die
 
 	# Turn off online update checker, bug #479902
@@ -87,16 +83,12 @@ src_prepare() {
 			-i src/smplayer.pro || die
 	fi
 
-	# Turn off youtube support (which pulls in extra dependencies) if unwanted
-	if ! use streaming ; then
-		sed -e 's:DEFINES += YOUTUBE_SUPPORT:#&:' \
-			-i src/smplayer.pro || die
-		sed -e 's:^#define PLAYLIST_DOWNLOAD://&:' \
-			-i src/playlist.h || die
-	fi
-
 	# Commented out because it gives false positives
-	# l10n_find_plocales_changes "${S}/src/translations" "${PN}_" '.ts'
+	#l10n_find_plocales_changes "${S}"/src/translations ${PN}_ .ts
+
+	# Do not default compress man page
+	sed '/gzip -9.*\.1$/d' -i Makefile || die
+	sed 's@\.gz$@@' -i smplayer.spec || die
 }
 
 src_configure() {
@@ -105,7 +97,7 @@ src_configure() {
 }
 
 gen_translation() {
-	mydir="$(qt5_get_bindir)"
+	local mydir="$(qt5_get_bindir)"
 
 	ebegin "Generating $1 translation"
 	"${mydir}"/lrelease ${PN}_${1}.ts
@@ -113,7 +105,7 @@ gen_translation() {
 }
 
 src_compile() {
-	default
+	emake CC="$(tc-getCC)"
 
 	cd src/translations || die
 	l10n_for_each_locale_do gen_translation
@@ -128,12 +120,17 @@ src_install() {
 	default
 }
 
+pkg_preinst() {
+	xdg_pkg_preinst
+}
+
 pkg_postinst() {
-	gnome2_icon_cache_update
-	xdg_desktop_database_update
+	xdg_pkg_postinst
+
+	elog "If you want URL support with media-video/mpv, please install"
+	elog "net-misc/youtube-dl."
 }
 
 pkg_postrm() {
-	gnome2_icon_cache_update
-	xdg_desktop_database_update
+	xdg_pkg_postrm
 }

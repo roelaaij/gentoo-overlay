@@ -1,9 +1,9 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-PYTHON_COMPAT=( python{2_7,3_4,3_5,3_6} )
+PYTHON_COMPAT=( python{3_6,3_7,3_8,3_9} )
 
 inherit cmake-multilib python-any-r1 git-r3
 
@@ -34,8 +34,7 @@ DEPEND="${RDEPEND}
 # https://github.com/google/shaderc/issues/470
 RESTRICT=test
 
-PATCHES=( "${FILESDIR}/${PN}-2017.2-fix-glslang-link-order.patch"
-		  "${FILESDIR}/glslang-shared.patch" )
+PATCHES=( "${FILESDIR}/${PN}-2017.2-fix-glslang-link-order.patch" )
 
 python_check_deps() {
 	if use test; then

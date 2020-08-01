@@ -1,0 +1,27 @@
+From 31c1d9f903feeb3564c5742ce22bf2d3cd9c06b3 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Tue, 21 Jul 2020 09:22:01 +0200
+Subject: [PATCH] Don't detect CUDA if FORCE_CUDA is present
+
+---
+ setup.py | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/setup.py b/setup.py
+index 13c7a98..3385b2b 100644
+--- a/setup.py
++++ b/setup.py
+@@ -183,8 +183,8 @@ def get_extensions():
+     define_macros = []
+ 
+     extra_compile_args = {}
+-    if (torch.cuda.is_available() and ((CUDA_HOME is not None) or is_rocm_pytorch)) \
+-            or os.getenv('FORCE_CUDA', '0') == '1':
++    if ((os.getenv('FORCE_CUDA', '0') == '1') or
++        (torch.cuda.is_available() and ((CUDA_HOME is not None) or is_rocm_pytorch))):
+         extension = CUDAExtension
+         sources += source_cuda
+         if not is_rocm_pytorch:
+-- 
+2.27.0
+

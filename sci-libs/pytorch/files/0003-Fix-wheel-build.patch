@@ -1,0 +1,33 @@
+From e188ce77031ea7b57898ddec1325da36c7872e94 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Sun, 19 Jul 2020 21:05:47 +0200
+Subject: [PATCH] Fix wheel build.
+
+---
+ setup.py | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/setup.py b/setup.py
+index 5b50074f14..23a38b9172 100644
+--- a/setup.py
++++ b/setup.py
+@@ -295,7 +295,6 @@ def build_deps():
+             sys.exit(1)
+ 
+     check_file(os.path.join(third_party_path, "gloo", "CMakeLists.txt"))
+-    check_file(os.path.join(third_party_path, "pybind11", "CMakeLists.txt"))
+     check_file(os.path.join(third_party_path, 'cpuinfo', 'CMakeLists.txt'))
+     check_file(os.path.join(third_party_path, 'tbb', 'Makefile'))
+     check_file(os.path.join(third_party_path, 'onnx', 'CMakeLists.txt'))
+@@ -850,8 +849,6 @@ if __name__ == '__main__':
+                 'include/torch/csrc/jit/testing/*.h',
+                 'include/torch/csrc/onnx/*.h',
+                 'include/torch/csrc/utils/*.h',
+-                'include/pybind11/*.h',
+-                'include/pybind11/detail/*.h',
+                 'include/TH/*.h*',
+                 'include/TH/generic/*.h*',
+                 'include/THC/*.cuh',
+-- 
+2.27.0
+

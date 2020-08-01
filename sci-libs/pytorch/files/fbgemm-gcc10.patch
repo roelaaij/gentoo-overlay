@@ -1,0 +1,9 @@
+--- a/third_party/fbgemm/include/fbgemm/ConvUtils.h	2020-07-17 17:48:24.367798781 +0200
++++ b/third_party/fbgemm/include/fbgemm/ConvUtils.h	2020-07-17 17:48:08.977777285 +0200
+@@ -9,5 +9,6 @@
+ #include <array>
+ #include <string>
+ #include <type_traits>
++#include <stdexcept>
+
+ namespace fbgemm {

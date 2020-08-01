@@ -1,0 +1,25 @@
+From b453d5ed9393a7e71f70fe0cdc632b9ae5c1b0ec Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Sun, 19 Jul 2020 17:35:11 +0200
+Subject: [PATCH 4/6] Fix roctracer include path
+
+---
+ cmake/public/LoadHIP.cmake | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cmake/public/LoadHIP.cmake b/cmake/public/LoadHIP.cmake
+index a25616193e..b29f690afa 100644
+--- a/cmake/public/LoadHIP.cmake
++++ b/cmake/public/LoadHIP.cmake
+@@ -190,7 +190,7 @@ if(HIP_FOUND)
+   find_library(ROCM_HIPRTC_LIB hiprtc HINTS ${HIP_PATH}/lib)
+   # roctx is part of roctracer
+   find_library(ROCM_ROCTX_LIB roctx64 HINTS ${ROCTRACER_PATH}/lib64)
+-  set(roctracer_INCLUDE_DIRS ${ROCTRACER_PATH}/include)
++  set(roctracer_INCLUDE_DIRS ${ROCTRACER_PATH}/include/roctracer)
+ 
+   # Necessary includes for building PyTorch since we include HIP headers that depend on hcc/hsa headers.
+   set(hcc_INCLUDE_DIRS ${HCC_PATH}/include)
+-- 
+2.27.0
+

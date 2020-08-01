@@ -1,0 +1,25 @@
+From 195e90a14c34f080f93b256959195221e2d44f8b Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Mon, 20 Jul 2020 11:53:28 +0200
+Subject: [PATCH 2/2] Don't build caffe2 again
+
+---
+ setup.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/setup.py b/setup.py
+index af5c375d91..7e7ab385c2 100644
+--- a/setup.py
++++ b/setup.py
+@@ -195,7 +195,7 @@ from tools.setup_helpers.cmake import CMake
+ ################################################################################
+ 
+ VERBOSE_SCRIPT = True
+-RUN_BUILD_DEPS = True
++RUN_BUILD_DEPS = False
+ # see if the user passed a quiet flag to setup.py arguments and respect
+ # that in our parts of the build
+ EMIT_BUILD_WARNING = False
+-- 
+2.27.0
+

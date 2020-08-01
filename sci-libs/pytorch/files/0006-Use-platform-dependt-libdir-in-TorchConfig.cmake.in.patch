@@ -1,0 +1,94 @@
+From 982e92714c3b29ab5d17eb2e6d5322862b298c22 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Sun, 19 Jul 2020 17:43:42 +0200
+Subject: [PATCH 6/6] Use platform dependt libdir in TorchConfig.cmake.in
+
+---
+ cmake/TorchConfig.cmake.in | 22 +++++++++++-----------
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/cmake/TorchConfig.cmake.in b/cmake/TorchConfig.cmake.in
+index d9060e456d..4817317b68 100644
+--- a/cmake/TorchConfig.cmake.in
++++ b/cmake/TorchConfig.cmake.in
+@@ -46,28 +46,28 @@ else()
+   set(TORCH_LIBRARIES torch)
+ endif()
+ 
+-find_library(C10_LIBRARY c10 PATHS "${TORCH_INSTALL_PREFIX}/lib")
++find_library(C10_LIBRARY c10 PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+ list(APPEND TORCH_LIBRARIES ${C10_LIBRARY})
+ 
+ # We need manually add dependent libraries when they are not linked into the
+ # shared library.
+ # TODO: this list might be incomplete.
+ if(NOT @BUILD_SHARED_LIBS@)
+-  find_library(TORCH_CPU_LIBRARY torch_cpu PATHS "${TORCH_INSTALL_PREFIX}/lib")
++  find_library(TORCH_CPU_LIBRARY torch_cpu PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+   list(APPEND TORCH_LIBRARIES ${TORCH_CPU_LIBRARY})
+ 
+   if(@USE_NNPACK@)
+-    find_library(NNPACK_LIBRARY nnpack PATHS "${TORCH_INSTALL_PREFIX}/lib")
++    find_library(NNPACK_LIBRARY nnpack PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+     list(APPEND TORCH_LIBRARIES ${NNPACK_LIBRARY})
+   endif()
+ 
+   if(@USE_PYTORCH_QNNPACK@)
+-    find_library(PYTORCH_QNNPACK_LIBRARY pytorch_qnnpack PATHS "${TORCH_INSTALL_PREFIX}/lib")
++    find_library(PYTORCH_QNNPACK_LIBRARY pytorch_qnnpack PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+     list(APPEND TORCH_LIBRARIES ${PYTORCH_QNNPACK_LIBRARY})
+   endif()
+ 
+   if(@USE_XNNPACK@)
+-    find_library(XNNPACK_LIBRARY XNNPACK PATHS "${TORCH_INSTALL_PREFIX}/lib")
++    find_library(XNNPACK_LIBRARY XNNPACK PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+     list(APPEND TORCH_LIBRARIES ${XNNPACK_LIBRARY})
+   endif()
+ 
+@@ -77,14 +77,14 @@ if(NOT @BUILD_SHARED_LIBS@)
+   endif()
+ 
+   if(@INTERN_USE_EIGEN_BLAS@)
+-    find_library(EIGEN_BLAS_LIBRARY eigen_blas PATHS "${TORCH_INSTALL_PREFIX}/lib")
++    find_library(EIGEN_BLAS_LIBRARY eigen_blas PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+     list(APPEND TORCH_LIBRARIES ${EIGEN_BLAS_LIBRARY})
+   endif()
+ 
+-  find_library(CPUINFO_LIBRARY cpuinfo PATHS "${TORCH_INSTALL_PREFIX}/lib")
++  find_library(CPUINFO_LIBRARY cpuinfo PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+   list(APPEND TORCH_LIBRARIES ${CPUINFO_LIBRARY})
+ 
+-  find_library(CLOG_LIBRARY clog PATHS "${TORCH_INSTALL_PREFIX}/lib")
++  find_library(CLOG_LIBRARY clog PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+   list(APPEND TORCH_LIBRARIES ${CLOG_LIBRARY})
+ endif()
+ 
+@@ -107,14 +107,14 @@ if(@USE_CUDA@)
+       ${CUDA_TOOLKIT_ROOT_DIR}/lib/libnvToolsExt.dylib
+       ${CUDA_LIBRARIES})
+   else()
+-    find_library(LIBNVTOOLSEXT libnvToolsExt.so PATHS ${CUDA_TOOLKIT_ROOT_DIR}/lib64/)
++    find_library(LIBNVTOOLSEXT libnvToolsExt.so PATHS ${CUDA_TOOLKIT_ROOT_DIR}/@CMAKE_INSTALL_LIBDIR@/)
+     set(TORCH_CUDA_LIBRARIES
+       ${CUDA_CUDA_LIB}
+       ${CUDA_NVRTC_LIB}
+       ${LIBNVTOOLSEXT}
+       ${CUDA_LIBRARIES})
+   endif()
+-  find_library(C10_CUDA_LIBRARY c10_cuda PATHS "${TORCH_INSTALL_PREFIX}/lib")
++  find_library(C10_CUDA_LIBRARY c10_cuda PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+   list(APPEND TORCH_CUDA_LIBRARIES ${C10_CUDA_LIBRARY})
+   list(APPEND TORCH_LIBRARIES ${TORCH_CUDA_LIBRARIES})
+ endif()
+@@ -124,7 +124,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+   set(TORCH_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=@GLIBCXX_USE_CXX11_ABI@")
+ endif()
+ 
+-find_library(TORCH_LIBRARY torch PATHS "${TORCH_INSTALL_PREFIX}/lib")
++find_library(TORCH_LIBRARY torch PATHS "${TORCH_INSTALL_PREFIX}/@CMAKE_INSTALL_LIBDIR@")
+ set_target_properties(torch PROPERTIES
+     IMPORTED_LOCATION "${TORCH_LIBRARY}"
+     INTERFACE_INCLUDE_DIRECTORIES "${TORCH_INCLUDE_DIRS}"
+-- 
+2.27.0
+

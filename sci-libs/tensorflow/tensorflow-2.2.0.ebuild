@@ -232,16 +232,18 @@ src_configure() {
 				ewarn "dependencies using the same compiler version."
 			fi
 
-			if [[ -z "$TF_CUDA_COMPUTE_CAPABILITIES" ]]; then
+			if [[ -z "$CUDA_COMPUTE_CAPABILITIES" ]]; then
 				ewarn "WARNING: Tensorflow is being built with its default CUDA compute capabilities: 3.5 and 7.0."
 				ewarn "These may not be optimal for your GPU."
 				ewarn ""
 				ewarn "To configure Tensorflow with the CUDA compute capability that is optimal for your GPU,"
-				ewarn "set TF_CUDA_COMPUTE_CAPABILITIES in your make.conf, and re-emerge tensorflow."
-				ewarn "For example, to use CUDA capability 7.5 & 3.5, add: TF_CUDA_COMPUTE_CAPABILITIES=7.5,3.5"
+				ewarn "set CUDA_COMPUTE_CAPABILITIES in your make.conf, and re-emerge tensorflow."
+				ewarn "For example, to use CUDA capability 7.5 & 3.5, add: CUDA_COMPUTE_CAPABILITIES=7.5,3.5"
 				ewarn ""
 				ewarn "You can look up your GPU's CUDA compute capability at https://developer.nvidia.com/cuda-gpus"
 				ewarn "or by running /opt/cuda/extras/demo_suite/deviceQuery | grep 'CUDA Capability'"
+			else
+				export TF_CUDA_COMPUTE_CAPABILITIES=$CUDA_COMPUTE_CAPABILITIES
 			fi
 		fi
 

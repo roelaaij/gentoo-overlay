@@ -34,7 +34,7 @@ DEPEND="${RDEPEND}
 # https://github.com/google/shaderc/issues/470
 RESTRICT=test
 
-PATCHES=( "${FILESDIR}/${PN}-2017.2-fix-glslang-link-order.patch" )
+PATCHES=( "${FILESDIR}/${P}-fix-glslang-link-order.patch" )
 
 python_check_deps() {
 	if use test; then
@@ -68,7 +68,6 @@ multilib_src_configure() {
 	local mycmakeargs=(
 		-Dglslang_SOURCE_DIR="${EROOT}/usr/include/glslang"
 		-DSHADERC_ENABLE_SPVC="$(usex spvc)"
-		-DSHADERC_ENABLE_SPVC_PARSER="$(usex spvc)"
 		-DSHADERC_SKIP_TESTS="$(usex !test)"
 	)
 	cmake-utils_src_configure

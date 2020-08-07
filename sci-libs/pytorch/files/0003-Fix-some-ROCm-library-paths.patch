@@ -1,18 +1,21 @@
-From 2ce55e559a608d6c3bd408564e37b9fbcd9fe971 Mon Sep 17 00:00:00 2001
-From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sun, 19 Jul 2020 13:04:48 +0200
-Subject: [PATCH 3/6] Fix some ROCm library paths
-
----
- cmake/public/LoadHIP.cmake | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
-
 diff --git a/cmake/public/LoadHIP.cmake b/cmake/public/LoadHIP.cmake
-index 34902db988..a25616193e 100644
+index 386280cbb4..d6057fee54 100644
 --- a/cmake/public/LoadHIP.cmake
 +++ b/cmake/public/LoadHIP.cmake
-@@ -182,14 +182,14 @@ if(HIP_FOUND)
-   find_library(PYTORCH_HIP_HCC_LIBRARIES hip_hcc HINTS ${HIP_PATH}/lib)
+@@ -1,6 +1,6 @@
+ set(PYTORCH_FOUND_HIP FALSE)
+ 
+-if(NOT DEFINED ENV{ROCM_PATH})
++/if(NOT DEFINED ENV{ROCM_PATH})
+   set(ROCM_PATH /opt/rocm)
+ else()
+   set(ROCM_PATH $ENV{ROCM_PATH})
+@@ -191,17 +191,17 @@ if(HIP_FOUND)
+   # recognizable by hcc, but not gcc and clang. Right now in our
+   # setup, hcc is only used for linking, but it should be used to
+   # compile the *_hip.cc files as well.
+-  find_library(PYTORCH_HIP_HCC_LIBRARIES ${hip_library_name} HINTS ${HIP_PATH}/lib)
++  find_library(PYTORCH_HIP_HCC_LIBRARIES ${hip_library_name} HINTS ${HIP_PATH}/lib64)
    # TODO: miopen_LIBRARIES should return fullpath to the library file,
    # however currently it's just the lib name
 -  find_library(PYTORCH_MIOPEN_LIBRARIES ${miopen_LIBRARIES} HINTS ${MIOPEN_PATH}/lib)
@@ -22,13 +25,11 @@ index 34902db988..a25616193e 100644
 -  find_library(PYTORCH_RCCL_LIBRARIES ${rccl_LIBRARIES} HINTS ${RCCL_PATH}/lib)
 +  find_library(PYTORCH_RCCL_LIBRARIES ${rccl_LIBRARIES} HINTS ${RCCL_PATH}/lib64)
    # hiprtc is part of HIP
-   find_library(ROCM_HIPRTC_LIB hiprtc HINTS ${HIP_PATH}/lib)
+-  find_library(ROCM_HIPRTC_LIB ${hip_library_name} HINTS ${HIP_PATH}/lib)
++  find_library(ROCM_HIPRTC_LIB ${hip_library_name} HINTS ${HIP_PATH}/lib64)
    # roctx is part of roctracer
 -  find_library(ROCM_ROCTX_LIB roctx64 HINTS ${ROCTRACER_PATH}/lib)
 +  find_library(ROCM_ROCTX_LIB roctx64 HINTS ${ROCTRACER_PATH}/lib64)
    set(roctracer_INCLUDE_DIRS ${ROCTRACER_PATH}/include)
  
    # Necessary includes for building PyTorch since we include HIP headers that depend on hcc/hsa headers.
--- 
-2.27.0
-

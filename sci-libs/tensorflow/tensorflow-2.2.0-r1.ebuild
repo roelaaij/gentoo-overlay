@@ -85,12 +85,13 @@ RDEPEND="
 	mpi? ( virtual/mpi )
 	python? (
 		${PYTHON_DEPS}
-		>=dev-libs/flatbuffers-1.8.0
+		>=dev-libs/flatbuffers-1.12.0
 		dev-python/absl-py[${PYTHON_USEDEP}]
 		>=dev-python/astor-0.7.1[${PYTHON_USEDEP}]
 		dev-python/astunparse[${PYTHON_USEDEP}]
 		>=dev-python/gast-0.3.3[${PYTHON_USEDEP}]
-		>=dev-python/numpy-1.16[${PYTHON_USEDEP}]
+		dev-python/h5py[${PYTHON_USEDEP}]
+		>=dev-python/numpy-1.19[${PYTHON_USEDEP}]
 		>=dev-python/google-pasta-0.1.8[${PYTHON_USEDEP}]
 		dev-python/opt-einsum[${PYTHON_USEDEP}]
 		>=dev-python/protobuf-python-3.8.0[${PYTHON_USEDEP}]
@@ -101,7 +102,7 @@ RDEPEND="
 		>=net-libs/google-cloud-cpp-0.10.0
 		>=sci-libs/keras-applications-1.0.8[${PYTHON_USEDEP}]
 		>=sci-libs/keras-preprocessing-1.1.0[${PYTHON_USEDEP}]
-		>=sci-visualization/tensorboard-2.0.0[${PYTHON_USEDEP}]
+		>=sci-visualization/tensorboard-2.2.0[${PYTHON_USEDEP}]
 	)"
 DEPEND="${RDEPEND}
 	python? (
@@ -109,7 +110,7 @@ DEPEND="${RDEPEND}
 		dev-python/setuptools
 	)"
 PDEPEND="python? (
-		>=sci-libs/tensorflow-estimator-2.0.0[${PYTHON_USEDEP}]
+		>=sci-libs/tensorflow-estimator-2.2.0[${PYTHON_USEDEP}]
 	)"
 BDEPEND="
 	app-arch/unzip
@@ -134,8 +135,7 @@ DOCS=( AUTHORS CONTRIBUTING.md ISSUE_TEMPLATE.md README.md RELEASE.md )
 CHECKREQS_MEMORY="5G"
 CHECKREQS_DISK_BUILD="10G"
 
-PATCHES=( "${FILESDIR}/fix-numpy-overload.patch"
-		  "${FILESDIR}/cuda-host-compiler.patch" )
+PATCHES=( "${FILESDIR}/cuda-host-compiler.patch" )
 
 get-cpu-flags() {
 	local i f=()
@@ -311,8 +311,14 @@ src_compile() {
 		cd "${BUILD_DIR}"
 	fi
 
-	export CXX="$(tc-getCXX)-10.1.0"
-	export CC="$(tc-getCC)-10.1.0"
+	if tc-is-gcc; then
+		host_cxx_version="$(gcc-fullversion)"
+	else
+		host_cxx_version="$(clang-fullversion)"
+	fi
+
+	export CXX="$(tc-getCXX)-${host_cxx_version}"
+	export CC="$(tc-getCC)-${host_cxx_version}"
 
 	# fail early if any deps are missing
 	ebazel build -k --nobuild \

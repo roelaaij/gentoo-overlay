@@ -1,4 +1,4 @@
-# Copyright 2007-2020 Gentoo Authors
+# Copyright 1999-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -36,8 +36,7 @@ RDEPEND="${DEPEND}
 	|| (
 		media-video/mpv
 		media-video/mplayer[bidi?,libass,png,X]
-	)
-"
+	)"
 
 PATCHES=(
 	"${FILESDIR}/${PN}-14.9.0.6966-unbundle-qtsingleapplication.patch" # bug 487544

@@ -30,8 +30,8 @@ LICENSE="LGPL-2.1+ GPL-2+ BSD ISC"
 SLOT="0"
 IUSE="+alsa aqua archive bluray cdda +cli coreaudio cplugins cuda debug doc drm dvb
 	   dvd +egl gamepad gbm +iconv jack javascript jpeg lcms libcaca libmpv +lua
-	   luajit openal +opengl pulseaudio raspberry-pi rubberband sdl
-	   selinux test tools +uchardet vaapi vapoursynth vdpau vulkan wayland +X +xv zlib zimg"
+	   luajit openal +opengl pulseaudio raspberry-pi rubberband sdl selinux
+	   sixel test tools +uchardet vaapi vapoursynth vdpau vulkan wayland +X +xv zlib zimg"
 
 REQUIRED_USE="
 	|| ( cli libmpv )
@@ -93,6 +93,7 @@ COMMON_DEPEND="
 	raspberry-pi? ( >=media-libs/raspberrypi-userland-0_pre20160305-r1 )
 	rubberband? ( >=media-libs/rubberband-1.8.0 )
 	sdl? ( media-libs/libsdl2[sound,threads,video] )
+	sixel? ( media-libs/libsixel )
 	vaapi? ( x11-libs/libva:=[drm?,X?,wayland?] )
 	vapoursynth? ( media-libs/vapoursynth )
 	vdpau? ( x11-libs/libvdpau )
@@ -199,6 +200,7 @@ src_configure() {
 		$(use_enable wayland wayland-scanner)
 		$(use_enable wayland wayland-protocols)
 		$(use_enable wayland)
+		$(use_enable sixel)
 		$(use_enable X x11)
 		$(use_enable xv)
 		$(usex opengl "$(use_enable aqua gl-cocoa)" '--disable-gl-cocoa')

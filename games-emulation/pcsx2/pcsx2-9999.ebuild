@@ -40,7 +40,6 @@ DEPEND="${RDEPEND}
 "
 
 FILECAPS=( cap_net_raw usr/bin/PCSX2 -- cap_net_admin usr/bin/PCSX2 )
-PATCHES=( "${FILESDIR}/system-fmt.patch" )
 
 pkg_setup() {
 	if [[ ${MERGE_TYPE} != binary && $(tc-getCC) == *gcc* ]]; then

@@ -39,7 +39,11 @@ DEPEND="${RDEPEND}
 	dev-cpp/sparsehash
 "
 
-FILECAPS=( cap_net_raw usr/bin/PCSX2 -- cap_net_admin usr/bin/PCSX2 )
+FILECAPS=(
+	"CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/PCSX2
+)
+
+PATCHES=( "${FILESDIR}/visibility.patch" )
 
 pkg_setup() {
 	if [[ ${MERGE_TYPE} != binary && $(tc-getCC) == *gcc* ]]; then

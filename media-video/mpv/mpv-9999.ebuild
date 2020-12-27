@@ -3,7 +3,7 @@
 
 EAPI=6
 
-PYTHON_COMPAT=( python{3_6,3_7,3_8} )
+PYTHON_COMPAT=( python{3_7,3_8,3_9} )
 PYTHON_REQ_USE='threads(+)'
 
 WAF_PV=2.0.9
@@ -59,7 +59,6 @@ REQUIRED_USE="
 RESTRICT="!test? ( test )"
 
 COMMON_DEPEND="
-	!!app-shells/mpv-bash-completion
 	>=media-video/ffmpeg-4.0:0=[encode,threads,vaapi?,vdpau?]
 	alsa? ( >=media-libs/alsa-lib-1.0.18 )
 	archive? ( >=app-arch/libarchive-3.4.0:= )
@@ -85,7 +84,7 @@ COMMON_DEPEND="
 	virtual/ttf-fonts
 	libcaca? ( >=media-libs/libcaca-0.99_beta18 )
 	lua? (
-		!luajit? ( <dev-lang/lua-5.3:= )
+		!luajit? ( <dev-lang/lua-5.3:0= )
 		luajit? ( dev-lang/luajit:2 )
 	)
 	openal? ( >=media-libs/openal-1.13 )
@@ -99,6 +98,7 @@ COMMON_DEPEND="
 	vdpau? ( x11-libs/libvdpau )
 	vulkan? (
 		media-libs/libplacebo:=[vulkan]
+		media-libs/shaderc
 	)
 	wayland? (
 		>=dev-libs/wayland-1.6.0

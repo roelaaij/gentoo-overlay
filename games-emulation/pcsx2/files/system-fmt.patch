@@ -1,0 +1,13 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1bc43a8e3..09287557c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -44,6 +44,8 @@ endif()
+ # 3rdpary Libraries
+ if(EXISTS "${CMAKE_SOURCE_DIR}/3rdparty/fmt/fmt")
+     add_subdirectory(3rdparty/fmt/fmt)
++else()
++    find_package(fmt REQUIRED)
+ endif()
+ 
+ # make common

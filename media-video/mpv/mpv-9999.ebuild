@@ -3,7 +3,7 @@
 
 EAPI=6
 
-PYTHON_COMPAT=( python{3_6,3_7,3_8} )
+PYTHON_COMPAT=( python{3_7,3_8,3_9} )
 PYTHON_REQ_USE='threads(+)'
 
 WAF_PV=2.0.9
@@ -30,8 +30,8 @@ LICENSE="LGPL-2.1+ GPL-2+ BSD ISC"
 SLOT="0"
 IUSE="+alsa aqua archive bluray cdda +cli coreaudio cplugins cuda debug doc drm dvb
 	   dvd +egl gamepad gbm +iconv jack javascript jpeg lcms libcaca libmpv +lua
-	   luajit openal +opengl pulseaudio raspberry-pi rubberband sdl
-	   selinux test tools +uchardet vaapi vapoursynth vdpau vulkan wayland +X +xv zlib zimg"
+	   luajit openal +opengl pulseaudio raspberry-pi rubberband sdl selinux
+	   sixel test tools +uchardet vaapi vapoursynth vdpau vulkan wayland +X +xv zlib zimg"
 
 REQUIRED_USE="
 	|| ( cli libmpv )
@@ -59,7 +59,6 @@ REQUIRED_USE="
 RESTRICT="!test? ( test )"
 
 COMMON_DEPEND="
-	!!app-shells/mpv-bash-completion
 	>=media-video/ffmpeg-4.0:0=[encode,threads,vaapi?,vdpau?]
 	alsa? ( >=media-libs/alsa-lib-1.0.18 )
 	archive? ( >=app-arch/libarchive-3.4.0:= )
@@ -81,11 +80,11 @@ COMMON_DEPEND="
 	javascript? ( >=dev-lang/mujs-1.0.0 )
 	jpeg? ( virtual/jpeg:0 )
 	lcms? ( >=media-libs/lcms-2.6:2 )
-	>=media-libs/libass-0.12.1:=[fontconfig,harfbuzz]
+	>=media-libs/libass-0.12.1:=[fontconfig]
 	virtual/ttf-fonts
 	libcaca? ( >=media-libs/libcaca-0.99_beta18 )
 	lua? (
-		!luajit? ( <dev-lang/lua-5.3:= )
+		!luajit? ( <dev-lang/lua-5.3:0= )
 		luajit? ( dev-lang/luajit:2 )
 	)
 	openal? ( >=media-libs/openal-1.13 )
@@ -93,11 +92,13 @@ COMMON_DEPEND="
 	raspberry-pi? ( >=media-libs/raspberrypi-userland-0_pre20160305-r1 )
 	rubberband? ( >=media-libs/rubberband-1.8.0 )
 	sdl? ( media-libs/libsdl2[sound,threads,video] )
+	sixel? ( media-libs/libsixel )
 	vaapi? ( x11-libs/libva:=[drm?,X?,wayland?] )
 	vapoursynth? ( media-libs/vapoursynth )
 	vdpau? ( x11-libs/libvdpau )
 	vulkan? (
 		media-libs/libplacebo:=[vulkan]
+		media-libs/shaderc
 	)
 	wayland? (
 		>=dev-libs/wayland-1.6.0
@@ -199,6 +200,7 @@ src_configure() {
 		$(use_enable wayland wayland-scanner)
 		$(use_enable wayland wayland-protocols)
 		$(use_enable wayland)
+		$(use_enable sixel)
 		$(use_enable X x11)
 		$(use_enable xv)
 		$(usex opengl "$(use_enable aqua gl-cocoa)" '--disable-gl-cocoa')

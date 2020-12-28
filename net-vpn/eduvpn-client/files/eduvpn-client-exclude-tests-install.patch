@@ -1,6 +1,6 @@
---- a/setup.py	2019-07-25 22:35:30.384858623 +0200
-+++ b/setup.py	2019-07-25 22:35:39.614523929 +0200
-@@ -61,7 +61,7 @@
+--- a/setup.py	2020-08-17 15:10:46.510050474 +0200
++++ b/setup.py	2020-08-17 15:10:51.180056997 +0200
+@@ -62,7 +62,7 @@
  setup(
      name="eduvpn_client",
      version=__version__,
@@ -9,3 +9,11 @@
      data_files=data_files,
      install_requires=install_requires,
      extras_require=extras_require,
+@@ -70,7 +70,6 @@
+     author_email="gijs@pythonic.nl",
+     description="eduVPN client",
+     license="GPL3",
+-    setup_requires=['pytest-runner'],
+     tests_require=['pytest'],
+     test_suite="tests",
+     keywords="vpn openvpn networking security",

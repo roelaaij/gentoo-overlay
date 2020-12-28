@@ -1,18 +1,31 @@
-From c8b037ba80af2ad6dfa0c371acc40460d785de9f Mon Sep 17 00:00:00 2001
+From 9e616ee3d6646af932ae247354ee108a03290de9 Mon Sep 17 00:00:00 2001
 From: Alexey Chernov <4ernov@gmail.com>
-Date: Wed, 20 May 2020 23:13:46 +0300
-Subject: [PATCH 1/5] Use system-wide `pybind11` properly
+Date: Tue, 18 Aug 2020 00:39:11 +0300
+Subject: [PATCH 1/2] Use system-wide `pybind11` properly
 
 And depend on it both in build and install interfaces.
 ---
+ caffe2/CMakeLists.txt       | 1 +
  cmake/Caffe2Config.cmake.in | 2 +-
- cmake/Dependencies.cmake    | 6 ++----
+ cmake/Dependencies.cmake    | 8 ++------
  cmake/TorchConfig.cmake.in  | 6 ++++--
  setup.py                    | 3 ---
- 4 files changed, 7 insertions(+), 10 deletions(-)
+ 5 files changed, 8 insertions(+), 12 deletions(-)
 
+diff --git a/caffe2/CMakeLists.txt b/caffe2/CMakeLists.txt
+index 304f355..d799e65 100644
+--- a/caffe2/CMakeLists.txt
++++ b/caffe2/CMakeLists.txt
+@@ -1270,6 +1270,7 @@ if(BUILD_PYTHON)
+   set_target_properties(caffe2_pybind11_state PROPERTIES LINK_FLAGS "${_caffe2_pybind11_state_linker_flags}")
+   target_include_directories(caffe2_pybind11_state PRIVATE $<INSTALL_INTERFACE:include>)
+   target_include_directories(caffe2_pybind11_state PRIVATE ${Caffe2_CPU_INCLUDE})
++  target_include_directories(caffe2_pybind11_state PRIVATE ${pybind11_INCLUDE_DIRS})
+ 
+   target_link_libraries(
+       caffe2_pybind11_state torch_library)
 diff --git a/cmake/Caffe2Config.cmake.in b/cmake/Caffe2Config.cmake.in
-index 7ab55bb4be..54aecb3d12 100644
+index f997900..71b057d 100644
 --- a/cmake/Caffe2Config.cmake.in
 +++ b/cmake/Caffe2Config.cmake.in
 @@ -132,4 +132,4 @@ get_filename_component(
@@ -22,31 +35,33 @@ index 7ab55bb4be..54aecb3d12 100644
 -set(CAFFE2_INCLUDE_DIRS "${_INSTALL_PREFIX}/include")
 +set(CAFFE2_INCLUDE_DIRS "${_INSTALL_PREFIX}/include" @pybind11_INCLUDE_DIRS@)
 diff --git a/cmake/Dependencies.cmake b/cmake/Dependencies.cmake
-index d396daf5f9..2075e06c6c 100644
+index 36e1ab7..09b8931 100644
 --- a/cmake/Dependencies.cmake
 +++ b/cmake/Dependencies.cmake
-@@ -831,13 +831,11 @@ if(BUILD_PYTHON)
+@@ -941,15 +941,11 @@ if(BUILD_PYTHON)
  endif()
  
  # ---[ pybind11
--find_package(pybind11 CONFIG)
--if(NOT pybind11_FOUND)
--  find_package(pybind11)
+-if(NOT ${pybind11_PREFER_third_party})
+-  find_package(pybind11 CONFIG)
+-  if(NOT pybind11_FOUND)
+-    find_package(pybind11)
+-  endif()
 -endif()
 +set(pybind11_FOUND TRUE)
  
  if(pybind11_FOUND)
      message(STATUS "System pybind11 found")
-+	set(pybind11_INCLUDE_DIRS ${PYTHON_INCLUDE_DIR})
++    set(pybind11_INCLUDE_DIRS ${PYTHON_INCLUDE_DIR})
  else()
      message(STATUS "Using third_party/pybind11.")
      set(pybind11_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/../third_party/pybind11/include)
 diff --git a/cmake/TorchConfig.cmake.in b/cmake/TorchConfig.cmake.in
-index a77c9ac06b..f0f5a07e13 100644
+index 2c3b759..d9060e4 100644
 --- a/cmake/TorchConfig.cmake.in
 +++ b/cmake/TorchConfig.cmake.in
 @@ -28,11 +28,13 @@ endif()
- if (EXISTS "${TORCH_INSTALL_PREFIX}/include")
+ if(EXISTS "${TORCH_INSTALL_PREFIX}/include")
    set(TORCH_INCLUDE_DIRS
      ${TORCH_INSTALL_PREFIX}/include
 -    ${TORCH_INSTALL_PREFIX}/include/torch/csrc/api/include)
@@ -62,7 +77,7 @@ index a77c9ac06b..f0f5a07e13 100644
  
  # Library dependencies.
 diff --git a/setup.py b/setup.py
-index 7352d3b667..827d002c78 100644
+index a55cee2..d9ddd05 100644
 --- a/setup.py
 +++ b/setup.py
 @@ -293,7 +293,6 @@ def build_deps():
@@ -73,7 +88,7 @@ index 7352d3b667..827d002c78 100644
      check_file(os.path.join(third_party_path, 'cpuinfo', 'CMakeLists.txt'))
      check_file(os.path.join(third_party_path, 'tbb', 'Makefile'))
      check_file(os.path.join(third_party_path, 'onnx', 'CMakeLists.txt'))
-@@ -850,8 +849,6 @@ if __name__ == '__main__':
+@@ -848,8 +847,6 @@ if __name__ == '__main__':
                  'include/torch/csrc/jit/testing/*.h',
                  'include/torch/csrc/onnx/*.h',
                  'include/torch/csrc/utils/*.h',

@@ -1,14 +1,15 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
+EAPI=7
 
-PYTHON_COMPAT=( python2_7 python3_{4,5,6} )
+PYTHON_COMPAT=( python3_{7,8,9} )
 inherit distutils-r1
 
-DESCRIPTION="sphinx extension to support coroutines in markup"
-HOMEPAGE="http://sphinxcontrib-fulltoc.readthedocs.org"
-SRC_URI="mirror://pypi/${PN:0:1}/${PN}/${P}.tar.gz"
+PYPI_PN=${PN/sphinx/sphinxcontrib}
+DESCRIPTION="sphinx extension to support markdown tables"
+HOMEPAGE="https://github.com/westurner/${PYPI_PN}"
+SRC_URI="https://github.com/westurner/${PYPI_PN}/archive/v${PV}.tar.gz -> ${P}.tar.gz"
 
 LICENSE="Apache-2.0"
 SLOT="0"
@@ -19,15 +20,15 @@ DEPEND="
 	dev-python/setuptools[${PYTHON_USEDEP}]
 	doc? ( dev-python/sphinx[${PYTHON_USEDEP}] )
 "
-RDEPEND="dev-python/sphinx[${PYTHON_USEDEP}]
-	dev-python/namespace-sphinxcontrib[${PYTHON_USEDEP}]"
+RDEPEND="dev-python/sphinx[${PYTHON_USEDEP}]"
+
+S="${WORKDIR}/${PYPI_PN}-${PV}"
 
 python_compile_all() {
 	use doc && emake -C docs html
 }
 
 python_install() {
-	rm "${BUILD_DIR}"/lib/sphinxcontrib/__init__.py || die
 	distutils-r1_python_install --skip-build
 }
 

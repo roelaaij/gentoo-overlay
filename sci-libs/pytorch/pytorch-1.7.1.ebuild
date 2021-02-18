@@ -8,7 +8,7 @@ PYTHON_COMPAT=( python3_{7,8} )
 DISTUTILS_OPTIONAL=1
 DISTUTILS_USE_SETUPTOOLS=rdepend
 
-inherit distutils-r1 cmake git-r3 python-r1 python-utils-r1
+inherit distutils-r1 cmake git-r3 python-r1 python-utils-r1 cuda
 
 DESCRIPTION="An open source machine learning framework"
 HOMEPAGE="https://pytorch.org/"

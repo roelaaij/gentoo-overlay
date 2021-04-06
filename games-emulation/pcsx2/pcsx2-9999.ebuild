@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -43,7 +43,8 @@ FILECAPS=(
 	"CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/PCSX2
 )
 
-PATCHES=( "${FILESDIR}/visibility.patch" )
+PATCHES=( "${FILESDIR}/visibility.patch"
+		  "${FILESDIR}/size_t.patch" )
 
 pkg_setup() {
 	if [[ ${MERGE_TYPE} != binary && $(tc-getCC) == *gcc* ]]; then

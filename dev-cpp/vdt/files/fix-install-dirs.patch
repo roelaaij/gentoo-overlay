@@ -1,0 +1,31 @@
+--- a/lib/CMakeLists.txt	2020-07-03 15:54:02.121105843 +0200
++++ b/lib/CMakeLists.txt	2020-07-03 15:54:26.151139406 +0200
+@@ -19,9 +19,8 @@
+ ADD_LIBRARY(vdt ${SRC_DIR}/vdtMath_signatures.cc ${INC_DIR}/vdtMath.h )
+ 
+ # Installation of the lib
+-INSTALL(TARGETS vdt  
+-        DESTINATION lib)
+-        
++INSTALL(TARGETS vdt
++        DESTINATION ${CMAKE_INSTALL_LIBDIR})
+ 
+ # Build Vc wrapper (without c++11)
+ if(USE_VC)
+--- a/CMakeLists.txt	2020-07-03 15:59:32.371567107 +0200
++++ b/CMakeLists.txt	2020-07-03 16:00:17.501630141 +0200
+@@ -196,6 +196,7 @@
+ 
+ #-------------------------------------------------------------------------------
+ # Installation
++include(GNUInstallDirs)
+ 
+ # Install location
+ INSTALL(FILES
+@@ -214,5 +215,4 @@
+         include/tan.h
+         include/vdtcore_common.h
+         include/vdtMath.h
+-        DESTINATION include/vdt)
+-
++        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/vdt)

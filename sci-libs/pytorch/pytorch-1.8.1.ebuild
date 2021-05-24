@@ -8,7 +8,7 @@ PYTHON_COMPAT=( python3_{7,8,9} )
 DISTUTILS_OPTIONAL=1
 DISTUTILS_USE_SETUPTOOLS=rdepend
 
-inherit distutils-r1 cmake git-r3 python-r1 python-utils-r1
+inherit distutils-r1 cmake git-r3 python-r1 python-utils-r1 cuda
 
 DESCRIPTION="An open source machine learning framework"
 HOMEPAGE="https://pytorch.org/"
@@ -172,6 +172,13 @@ src_configure() {
 	)
 
 	if use cuda; then
+		cuda_host_compiler="$(cuda_gccdir)/$(tc-getCC)"
+		if [[ *$(gcc-version)* != $(cuda-config -s) ]]; then
+			ewarn "pytorch is being built with Nvidia CUDA support. Your default compiler"
+			ewarn "version is not supported by the currently installed CUDA. pytorch will"
+			ewarn "be compiled using CUDA host compiler: ${cuda_host_compiler}"
+		fi
+
 		if [[ -z "$CUDA_COMPUTE_CAPABILITIES" ]]; then
 			ewarn "WARNING: pytorch is being built with its default CUDA compute capabilities: All."
 			ewarn "These may not be optimal for your GPU."
@@ -185,6 +192,7 @@ src_configure() {
 			CUDA_COMPUTE_CAPABILITIES=All
 		fi
 		mycmakeargs+=(
+			-DCUDA_HOST_COMPILER=${cuda_host_compiler}
 			-DTORCH_CUDA_ARCH_LIST=${CUDA_COMPUTE_CAPABILITIES/,/;}
 		)
 	fi

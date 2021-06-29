@@ -1,30 +1,29 @@
-# Copyright 1999-2019 Gentoo Authors
+# Copyright 1999-2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-PYTHON_COMPAT=( python2_7 python3_{5,6,7} )
+PYTHON_COMPAT=( python3_{7,8,9} )
 PYTHON_REQ_USE="threads(+)"
 DISTUTILS_OPTIONAL=true
 DISTUTILS_IN_SOURCE_BUILD=true
 
-inherit autotools distutils-r1
-
-MY_PV=$(ver_rs 1-2 '_')
-MY_P=${PN/-rasterbar}-${MY_PV}
+inherit autotools flag-o-matic distutils-r1
 
 DESCRIPTION="C++ BitTorrent implementation focusing on efficiency and scalability"
 HOMEPAGE="https://libtorrent.org https://github.com/arvidn/libtorrent"
-SRC_URI="https://github.com/arvidn/libtorrent/archive/${MY_P}.tar.gz -> ${P}.tar.gz"
+SRC_URI="https://github.com/arvidn/libtorrent/archive/v${PV}.tar.gz -> libtorrent-${PV}.tar.gz"
 
 LICENSE="BSD"
-SLOT="0/9"
+SLOT="0/10"
 KEYWORDS="~amd64 ~arm ~ppc ~ppc64 ~sparc ~x86"
-IUSE="debug +dht doc examples libressl python +ssl static-libs test"
+IUSE="debug +dht doc examples python +ssl static-libs test"
 
 REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
 
 RESTRICT="!test? ( test )"
+
+S="${WORKDIR}/libtorrent-${PV}"
 
 RDEPEND="
 	dev-libs/boost:=[threads]
@@ -35,19 +34,17 @@ RDEPEND="
 		dev-libs/boost:=[python,${PYTHON_USEDEP}]
 	)
 	ssl? (
-		!libressl? ( dev-libs/openssl:0= )
-		libressl? ( dev-libs/libressl:= )
+		dev-libs/openssl:0=
 	)
 "
 DEPEND="${RDEPEND}
 	sys-devel/libtool
 "
 
-S="${WORKDIR}/${PN/-rasterbar}-${MY_P}"
-
 src_prepare() {
-	mkdir "${S}"/build-aux/ || die
+	mkdir -p "${S}"/build-aux || die
 	touch "${S}"/build-aux/config.rpath || die
+	append-cxxflags -std=c++14
 	eautoreconf
 
 	default
@@ -73,7 +70,9 @@ src_configure() {
 		$(use_enable ssl encryption)
 		$(use_enable static-libs static)
 		$(use_enable test tests)
+		--with-boost="${ESYSROOT}/usr"
 		--with-libiconv
+		--enable-logging
 	)
 	econf "${myeconfargs[@]}"
 
@@ -82,6 +81,9 @@ src_configure() {
 			econf "${myeconfargs[@]}" \
 				--enable-python-binding \
 				--with-boost-python="boost_${EPYTHON/./}"
+				# git rid of c++11
+				sed s/-std=c++11//g < bindings/python/compile_cmd > bindings/python/compile_cmd.new || die
+				mv -f bindings/python/compile_cmd.new bindings/python/compile_cmd || die
 		}
 		distutils-r1_src_configure
 	fi
@@ -94,6 +96,7 @@ src_compile() {
 		cd "${BUILD_DIR}/../bindings/python" || die
 		distutils-r1_python_compile
 	}
+	export BOOST_BUILD_PATH=/usr/share/boost-build
 	use python && distutils-r1_src_compile
 }
 

@@ -1,9 +1,9 @@
 # Copyright 1999-2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=7
 
-PYTHON_COMPAT=( python3_{7,8} )
+PYTHON_COMPAT=( python3_{7,8,9,10} )
 inherit waf-utils python-single-r1 git-r3
 
 DESCRIPTION="Opengl test suite"
@@ -27,6 +27,7 @@ REQUIRED_USE="|| ( opengl gles2 )
 			  || ( drm wayland X )"
 
 src_prepare() {
+	default
 	rm -rf "${S}/src/libpng"
 	sed -i "s/libpng15/libpng/g" "${S}/wscript" # allow build with >= libpng:1.6
 }

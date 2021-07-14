@@ -93,6 +93,7 @@ PATCHES=(
 	"${FILESDIR}/Include-mkl-Caffe2-targets-only-when-enabled.patch"
 	"${FILESDIR}/1.8/Use-platform-dependent-LIBDIR-in-TorchConfig.cmake.in.patch"
 	"${FILESDIR}/Fix-path-to-torch_global_deps-library-in-installatio.patch"
+	"${FILESDIR}/1.8/cuda-11.4.patch"
 )
 
 src_prepare() {

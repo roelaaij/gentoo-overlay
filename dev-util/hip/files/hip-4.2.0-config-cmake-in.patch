@@ -1,0 +1,26 @@
+--- a/hip-config.cmake.in	2020-06-21 21:17:35.576297760 +0200
++++ b/hip-config.cmake.in	2020-06-21 21:17:59.861296628 +0200
+@@ -185,8 +185,8 @@
+
+   if(NOT WIN32)
+     set_target_properties(hip::device PROPERTIES
+-      INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/../include"
+-      INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/../include"
++      INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include"
++      INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include"
+     )
+   endif()
+ endif()
+@@ -156,9 +158,9 @@
+     INTERFACE_LINK_LIBRARIES --hip-device-lib-path=${AMD_DEVICE_LIBS_PREFIX}/lib --hip-link
+   )
+
+-  set_property(TARGET hip::device APPEND PROPERTY
+-    INTERFACE_INCLUDE_DIRECTORIES "${HIP_CLANG_INCLUDE_PATH}/.."
+-  )
++#  set_property(TARGET hip::device APPEND PROPERTY
++#    INTERFACE_INCLUDE_DIRECTORIES "${HIP_CLANG_INCLUDE_PATH}/.."
++#  )
+
+   set_property(TARGET hip::device APPEND PROPERTY
+     INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${HIP_CLANG_INCLUDE_PATH}/.."

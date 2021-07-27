@@ -1,9 +1,9 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
 
-inherit cmake flag-o-matic git-r3 multilib toolchain-funcs wxwidgets fcaps
+inherit cmake flag-o-matic git-r3 toolchain-funcs wxwidgets fcaps
 
 DESCRIPTION="A PlayStation 2 emulator"
 HOMEPAGE="https://www.pcsx2.net"
@@ -43,7 +43,9 @@ FILECAPS=(
 	"CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/PCSX2
 )
 
-PATCHES=( "${FILESDIR}/visibility.patch" )
+PATCHES=( "${FILESDIR}/visibility.patch"
+		  "${FILESDIR}/link-to-rt.patch"
+		  "${FILESDIR}/utilities-static.patch" )
 
 pkg_setup() {
 	if [[ ${MERGE_TYPE} != binary && $(tc-getCC) == *gcc* ]]; then
@@ -61,7 +63,7 @@ src_prepare() {
 }
 
 src_configure() {
-	multilib_toolchain_setup x86
+	# multilib_toolchain_setup x86
 	# Build with ld.gold fails
 	# https://github.com/PCSX2/pcsx2/issues/1671
 	tc-ld-disable-gold
@@ -70,11 +72,11 @@ src_configure() {
 	# if it something other than "Devel|Debug|Release"
 	local CMAKE_BUILD_TYPE="Release"
 
-	if use amd64; then
-		# Passing correct CMAKE_TOOLCHAIN_FILE for amd64
-		# https://github.com/PCSX2/pcsx2/pull/422
-		local MYCMAKEARGS=(-DCMAKE_TOOLCHAIN_FILE=cmake/linux-compiler-i386-multilib.cmake)
-	fi
+	# if use amd64; then
+	# 	# Passing correct CMAKE_TOOLCHAIN_FILE for amd64
+	# 	# https://github.com/PCSX2/pcsx2/pull/422
+	# 	local MYCMAKEARGS=(-DCMAKE_TOOLCHAIN_FILE=cmake/linux-compiler-i386-multilib.cmake)
+	# fi
 
 	local mycmakeargs=(
 		-DARCH_FLAG=

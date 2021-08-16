@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -6,7 +6,7 @@ EAPI=7
 PLOCALES="ar ca cs da de el en es fa fr hr hu it ja ko ms nb nl pl pt pt_BR ro ru sr sv tr zh_CN zh_TW"
 PLOCALE_BACKUP="en"
 
-inherit cmake-utils desktop xdg-utils l10n pax-utils
+inherit cmake-utils desktop xdg-utils plocale pax-utils
 
 if [[ ${PV} == 9999* ]]
 then
@@ -109,15 +109,15 @@ src_prepare() {
 
 	remove_locale() {
 		# Ensure preservation of the backup locale when no valid LINGUA is set
-		if [[ "${PLOCALE_BACKUP}" == "${1}" ]] && [[ "${PLOCALE_BACKUP}" == "$(l10n_get_locales)" ]]; then
+		if [[ "${PLOCALE_BACKUP}" == "${1}" ]] && [[ "${PLOCALE_BACKUP}" == "$(plocale_get_locales)" ]]; then
 			return
 		else
 			rm "Languages/po/${1}.po" || die
 		fi
 	}
 
-	l10n_find_plocales_changes "Languages/po/" "" '.po'
-	l10n_for_each_disabled_locale_do remove_locale
+	plocale_find_changes "Languages/po/" "" '.po'
+	plocale_for_each_disabled_locale remove_locale
 }
 
 src_configure() {

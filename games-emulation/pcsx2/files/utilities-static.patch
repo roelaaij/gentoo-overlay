@@ -1,13 +1,13 @@
 diff --git a/common/src/Utilities/CMakeLists.txt b/common/src/Utilities/CMakeLists.txt
-index a05ad497c..40b198575 100644
+index f7bd56c10..0dd22ce4e 100644
 --- a/common/src/Utilities/CMakeLists.txt
 +++ b/common/src/Utilities/CMakeLists.txt
-@@ -102,7 +102,7 @@ set(UtilitiesFinalSources
- )
+@@ -5,7 +5,7 @@ if(NOT TOP_CMAKE_WAS_SOURCED)
+ 	It is advice to delete all wrongly generated cmake stuff => CMakeFiles & CMakeCache.txt")
+ endif(NOT TOP_CMAKE_WAS_SOURCED)
  
- foreach(library Utilities Utilities_NO_TLS)
--	add_library(${library} "${UtilitiesFinalSources}")
-+	add_library(${library} STATIC "${UtilitiesFinalSources}")
- 	target_link_libraries(${library} PRIVATE ${LIBC_LIBRARIES} PUBLIC wxWidgets::all)
- 	target_compile_features(${library} PUBLIC cxx_std_17)
- 	target_include_directories(${library} PUBLIC ../../../3rdparty/include ../../include PRIVATE ../../include/Utilities .)
+-add_library(Utilities)
++add_library(Utilities STATIC)
+ 
+ # Utilities sources
+ target_sources(Utilities PRIVATE

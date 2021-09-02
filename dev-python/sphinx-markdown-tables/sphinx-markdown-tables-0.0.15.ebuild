@@ -21,6 +21,11 @@ DEPEND="
 "
 RDEPEND="dev-python/sphinx[${PYTHON_USEDEP}]"
 
+src_prepare() {
+	sed -i -E 's/data_files/# data_files/g' setup.py
+	distutils-r1_src_prepare
+}
+
 python_compile_all() {
 	use doc && emake -C docs html
 }

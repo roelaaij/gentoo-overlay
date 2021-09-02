@@ -1,8 +1,8 @@
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index 6654fbf42..ce50e99d0 100644
+index c66584c51..43949907f 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
-@@ -371,7 +371,7 @@ set(pcsx2DEV9Headers
+@@ -397,7 +397,7 @@ set(pcsx2DEV9Headers
  set(pcsx2USBNullSources USB/USBNull.cpp)
  set(pcsx2USBNullHeaders USB/USB.h)
  
@@ -11,20 +11,11 @@ index 6654fbf42..ce50e99d0 100644
  set(pcsx2USBSources
  	USB/USB.cpp
  	USB/deviceproxy.cpp
-@@ -514,7 +514,7 @@ add_custom_command(
- 	DEPENDS ${CMAKE_SOURCE_DIR}/pcsx2/PAD/Linux/res/PAD-res.xml ${CMAKE_SOURCE_DIR}/pcsx2/PAD/Linux/res/game_controller_db.txt)
- 
- 
--# PAD/Linux sources 
-+# PAD/Linux sources
- set(pcsx2PADSources
- 	PAD/Linux/Device.cpp
- 	PAD/Linux/InputManager.cpp
-@@ -1211,6 +1211,7 @@ if(Linux)
+@@ -1393,6 +1393,7 @@ if(Linux)
  		PkgConfig::XCB
  		X11::X11
  		ALSA::ALSA
-+        rt
++		rt
  		)
  elseif(UNIX AND NOT APPLE)
- 	set(Platform_Libs X11::X11)
+ 	target_link_libraries(PCSX2 PRIVATE X11::X11)

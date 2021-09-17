@@ -94,6 +94,7 @@ PATCHES=(
 	"${FILESDIR}/1.9/Don-t-check-submodules-sanity.patch"
 	"${FILESDIR}/1.8/xnnpack-gcc11.patch"
 	"${FILESDIR}/1.8/cuda-11.4.patch"
+	"${FILESDIR}/1.9/fix_c10.patch"
 )
 
 src_prepare() {

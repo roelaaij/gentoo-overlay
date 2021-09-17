@@ -44,8 +44,7 @@ FILECAPS=(
 )
 
 PATCHES=( "${FILESDIR}/visibility.patch"
-		  "${FILESDIR}/link-to-rt.patch"
-		  "${FILESDIR}/utilities-static.patch" )
+		  "${FILESDIR}/link-to-rt.patch" )
 
 pkg_setup() {
 	if [[ ${MERGE_TYPE} != binary && $(tc-getCC) == *gcc* ]]; then

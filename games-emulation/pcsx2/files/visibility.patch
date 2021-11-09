@@ -1,11 +1,11 @@
 diff --git a/cmake/BuildParameters.cmake b/cmake/BuildParameters.cmake
-index d8e6d7d83..837d8fc5a 100644
+index 5eed920d6..4fa6dd167 100644
 --- a/cmake/BuildParameters.cmake
 +++ b/cmake/BuildParameters.cmake
-@@ -244,7 +244,7 @@ option(USE_PGO_OPTIMIZE "Enable PGO optimization (use profile)")
- # Note1: Builtin strcmp/memcmp was proved to be slower on Mesa than stdlib version.
- # Note2: float operation SSE is impacted by the PCSX2 SSE configuration. In particular, flush to zero denormal.
- if(NOT MSVC)
+@@ -223,7 +223,7 @@ option(USE_PGO_OPTIMIZE "Enable PGO optimization (use profile)")
+ if(MSVC)
+ 	add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/Zc:externConstexpr>")
+ else()
 -	add_compile_options(-pipe -fvisibility=hidden -pthread -fno-builtin-strcmp -fno-builtin-memcmp -mfpmath=sse -fno-operator-names)
 +	add_compile_options(-pipe -pthread -fno-builtin-strcmp -fno-builtin-memcmp -mfpmath=sse -fno-operator-names)
  endif()

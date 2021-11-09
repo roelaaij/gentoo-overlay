@@ -1,8 +1,8 @@
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index c66584c51..43949907f 100644
+index 351d56c13..3abf87858 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
-@@ -397,7 +397,7 @@ set(pcsx2DEV9Headers
+@@ -389,7 +389,7 @@ set(pcsx2DEV9Headers
  set(pcsx2USBNullSources USB/USBNull.cpp)
  set(pcsx2USBNullHeaders USB/USB.h)
  
@@ -11,11 +11,11 @@ index c66584c51..43949907f 100644
  set(pcsx2USBSources
  	USB/USB.cpp
  	USB/deviceproxy.cpp
-@@ -1393,6 +1393,7 @@ if(Linux)
- 		PkgConfig::XCB
- 		X11::X11
+@@ -1380,6 +1380,7 @@ if(Linux)
+ 		PkgConfig::AIO
+ 		PkgConfig::LIBUDEV
  		ALSA::ALSA
 +		rt
- 		)
- elseif(UNIX AND NOT APPLE)
- 	target_link_libraries(PCSX2 PRIVATE X11::X11)
+ 	)
+ endif()
+ 

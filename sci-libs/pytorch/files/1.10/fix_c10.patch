@@ -1,0 +1,13 @@
+diff --git a/c10/core/TensorImpl.h b/c10/core/TensorImpl.h
+index bd47391f61..1408d10816 100644
+--- a/c10/core/TensorImpl.h
++++ b/c10/core/TensorImpl.h
+@@ -2603,7 +2603,7 @@ struct C10_API TensorImpl : public c10::intrusive_ptr_target {
+ //    DispatchKeySet
+ //
+ static_assert(
+-    sizeof(void*) != sizeof(int64_t) || // if 64-bit...
++    sizeof(void*) <= sizeof(int64_t) || // if 64-bit...
+         sizeof(TensorImpl) == sizeof(int64_t) * 24,
+     "You changed the size of TensorImpl on 64-bit arch."
+     "See Note [TensorImpl size constraints] on how to proceed.");

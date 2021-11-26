@@ -79,7 +79,7 @@ BDEPEND="
 "
 
 PATCHES=(
-	"${FILESDIR}/1.9/Use-FHS-compliant-paths-from-GNUInstallDirs-module.patch"
+	"${FILESDIR}/1.10/Use-FHS-compliant-paths-from-GNUInstallDirs-module.patch"
 	"${FILESDIR}/1.7/Don-t-build-libtorch-again-for-PyTorch.patch"
 	"${FILESDIR}/1.9/Change-path-to-caffe2-build-dir-made-by-libtorch.patch"
 	"${FILESDIR}/0004-Don-t-fill-rpath-of-Caffe2-library-for-system-wide-i.patch"
@@ -87,14 +87,16 @@ PATCHES=(
 	"${FILESDIR}/0007-Add-necessary-include-directory-for-ATen-CPU-tests.patch"
 	"${FILESDIR}/1.9/Fix-ROCm-paths-in-LoadHIP.cmake.patch"
 	"${FILESDIR}/Include-neon2sse-third-party-header-library.patch"
-	"${FILESDIR}/1.9/Use-system-wide-pybind11-properly.patch"
+	"${FILESDIR}/1.10/Use-system-wide-pybind11-properly.patch"
 	"${FILESDIR}/Include-mkl-Caffe2-targets-only-when-enabled.patch"
 	"${FILESDIR}/1.8/Use-platform-dependent-LIBDIR-in-TorchConfig.cmake.in.patch"
 	"${FILESDIR}/Fix-path-to-torch_global_deps-library-in-installatio.patch"
 	"${FILESDIR}/1.9/Don-t-check-submodules-sanity.patch"
-	"${FILESDIR}/1.8/xnnpack-gcc11.patch"
 	"${FILESDIR}/1.8/cuda-11.4.patch"
-	"${FILESDIR}/1.9/fix_c10.patch"
+	"${FILESDIR}/1.10/fix_c10.patch"
+	"${FILESDIR}/1.10/mkl-dnn-thread-include.patch"
+	"${FILESDIR}/1.10/fix_exception_handler_long_int.patch"
+	"${FILESDIR}/1.10/jit-emitter-null-deref.patch"
 )
 
 src_prepare() {
@@ -174,7 +176,7 @@ src_configure() {
 	)
 
 	if use cuda; then
-		cuda_host_compiler="/usr/x86_64-pc-linux-gnu/gcc-bin/10.3.0/g++"
+		cuda_host_compiler="/usr/lib/ccache/bin/g++-10.3.0"
 		if [[ *$(gcc-version)* != $(cuda-config -s) ]]; then
 			ewarn "pytorch is being built with Nvidia CUDA support. Your default compiler"
 			ewarn "version is not supported by the currently installed CUDA. pytorch will"

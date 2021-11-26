@@ -1,0 +1,28 @@
+diff --git a/common/CMakeLists.txt b/common/CMakeLists.txt
+index 3768cf73a..cf10e1b37 100644
+--- a/common/CMakeLists.txt
++++ b/common/CMakeLists.txt
+@@ -5,7 +5,7 @@ if(NOT TOP_CMAKE_WAS_SOURCED)
+ 	It is advice to delete all wrongly generated cmake stuff => CMakeFiles & CMakeCache.txt")
+ endif(NOT TOP_CMAKE_WAS_SOURCED)
+ 
+-add_library(common)
++add_library(common STATIC)
+ 
+ # x86emitter sources
+ target_sources(common PRIVATE
+diff --git a/3rdparty/glad/CMakeLists.txt b/3rdparty/glad/CMakeLists.txt
+index 0f14df9a5..06d844094 100644
+--- a/3rdparty/glad/CMakeLists.txt
++++ b/3rdparty/glad/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-add_library(glad
++add_library(glad STATIC
+ 	src/glad.c
+ )
+ 
+@@ -19,4 +19,3 @@ target_link_libraries(glad PRIVATE Threads::Threads "${CMAKE_DL_LIBS}")
+ if(APPLE)
+ 	target_compile_options(glad PRIVATE -fno-common)
+ endif()
+-

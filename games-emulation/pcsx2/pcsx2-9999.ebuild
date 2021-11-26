@@ -3,6 +3,8 @@
 
 EAPI=7
 
+WX_GTK_VER="3.1-gtk3"
+
 inherit cmake flag-o-matic git-r3 toolchain-funcs wxwidgets fcaps
 
 DESCRIPTION="A PlayStation 2 emulator"
@@ -43,7 +45,8 @@ FILECAPS=(
 	"CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/PCSX2
 )
 
-PATCHES=( "${FILESDIR}/visibility.patch"
+PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
+		  "${FILESDIR}/visibility.patch"
 		  "${FILESDIR}/link-to-rt.patch" )
 
 pkg_setup() {
@@ -94,7 +97,7 @@ src_configure() {
 		-DUSE_VTUNE=FALSE
 	)
 
-	WX_GTK_VER="3.0-gtk3" setup-wxwidgets
+	setup-wxwidgets
 	cmake_src_configure
 }
 

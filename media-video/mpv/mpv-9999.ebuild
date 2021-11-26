@@ -1,4 +1,4 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -70,7 +70,7 @@ COMMON_DEPEND="
 			>=media-libs/libdvdnav-4.2.0:=
 			>=media-libs/libdvdread-4.1.0:=
 	)
-	egl? ( media-libs/mesa[egl,gbm(-)?,wayland(-)?] )
+	egl? ( media-libs/mesa[wayland(-)?] )
 	gamepad? ( media-libs/libsdl2 )
 	iconv? (
 		virtual/libiconv

@@ -1,13 +1,13 @@
 diff --git a/cmake/BuildParameters.cmake b/cmake/BuildParameters.cmake
-index 5eed920d6..4fa6dd167 100644
+index b4b81b134..4079f3193 100644
 --- a/cmake/BuildParameters.cmake
 +++ b/cmake/BuildParameters.cmake
-@@ -223,7 +223,7 @@ option(USE_PGO_OPTIMIZE "Enable PGO optimization (use profile)")
+@@ -215,7 +215,7 @@ option(USE_PGO_OPTIMIZE "Enable PGO optimization (use profile)")
  if(MSVC)
  	add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/Zc:externConstexpr>")
  else()
--	add_compile_options(-pipe -fvisibility=hidden -pthread -fno-builtin-strcmp -fno-builtin-memcmp -mfpmath=sse -fno-operator-names)
-+	add_compile_options(-pipe -pthread -fno-builtin-strcmp -fno-builtin-memcmp -mfpmath=sse -fno-operator-names)
- endif()
+-	add_compile_options(-pipe -fvisibility=hidden -pthread -fno-builtin-strcmp -fno-builtin-memcmp -mfpmath=sse)
++	add_compile_options(-pipe -pthread -fno-builtin-strcmp -fno-builtin-memcmp -mfpmath=sse)
  
- if(WIN32)
+ 	# -fno-operator-names should only be for C++ files, not C files.
+ 	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-operator-names>)

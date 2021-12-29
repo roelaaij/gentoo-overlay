@@ -1,0 +1,28 @@
+--- a/CMakeLists.txt	2021-12-21 22:04:35.058454689 +0100
++++ b/CMakeLists.txt	2021-12-21 22:04:13.828228797 +0100
+@@ -11,6 +11,7 @@
+ # Dynarmic project options
+ option(DYNARMIC_ENABLE_CPU_FEATURE_DETECTION "Turning this off causes dynarmic to assume the host CPU doesn't support anything later than SSE3" ON)
+ option(DYNARMIC_ENABLE_NO_EXECUTE_SUPPORT "Enables support for systems that require W^X" OFF)
++option(DYNARMIC_SKIP_EXTERNALS "Do not use bundled dependencies" OFF)
+ option(DYNARMIC_FATAL_ERRORS "Errors are fatal" OFF)
+ option(DYNARMIC_TESTS "Build tests" ${MASTER_PROJECT})
+ option(DYNARMIC_TESTS_USE_UNICORN "Enable fuzzing tests against unicorn" OFF)
+@@ -136,8 +137,17 @@
+     find_package(Unicorn REQUIRED)
+ endif()
+
++if (NOT DYNARMIC_SKIP_EXTERNALS)
+ # Pull in externals CMakeLists for libs where available
+ add_subdirectory(externals)
++else (NOT DYNARMIC_SKIP_EXTERNALS)
++	find_package(fmt 6.0 CONFIG REQUIRED)
++	message(STATUS "Using shared fmt ${fmt_VERSION}")
++
++	add_library(xbyak INTERFACE)
++	target_include_directories(xbyak SYSTEM INTERFACE /usr/include/xbyak)
++	target_compile_definitions(xbyak INTERFACE XBYAK_NO_OP_NAMES)
++endif (NOT DYNARMIC_SKIP_EXTERNALS)
+
+ # Dynarmic project files
+ add_subdirectory(src)

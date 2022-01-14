@@ -1,4 +1,4 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -38,15 +38,17 @@ RDEPEND="
 "
 DEPEND="${RDEPEND}
 	dev-cpp/pngpp
+	>=dev-cpp/rapidyaml-0.3.0
 	dev-cpp/sparsehash
 "
 
 FILECAPS=(
-	"CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/PCSX2
+	"CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/pcsx2
 )
 
 PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/visibility.patch"
+		  "${FILESDIR}/system-glslang.patch"
 		  "${FILESDIR}/link-to-rt.patch" )
 
 pkg_setup() {
@@ -82,6 +84,7 @@ src_configure() {
 
 	local mycmakeargs=(
 		-DARCH_FLAG=
+		-DUSE_SYSTEM_YAML=TRUE
 		-DDISABLE_BUILD_DATE=TRUE
 		-DDISABLE_PCSX2_WRAPPER=TRUE
 		-DEXTRA_PLUGINS=FALSE
@@ -105,7 +108,7 @@ src_install() {
 	# Upstream issues:
 	#  https://github.com/PCSX2/pcsx2/issues/417
 	#  https://github.com/PCSX2/pcsx2/issues/3077
-	QA_EXECSTACK="usr/bin/PCSX2"
-	QA_TEXTRELS="usr/$(get_libdir)/pcsx2/* usr/bin/PCSX2"
+	QA_EXECSTACK="usr/bin/pcsx2"
+	QA_TEXTRELS="usr/$(get_libdir)/pcsx2/* usr/bin/pcsx2"
 	cmake_src_install
 }

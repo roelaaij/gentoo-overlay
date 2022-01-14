@@ -26,3 +26,18 @@ index 0f14df9a5..06d844094 100644
  	target_compile_options(glad PRIVATE -fno-common)
  endif()
 -
+diff --git a/3rdparty/imgui/CMakeLists.txt b/3rdparty/imgui/CMakeLists.txt
+index 622695386..c1d0e2e90 100644
+--- a/3rdparty/imgui/CMakeLists.txt
++++ b/3rdparty/imgui/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-add_library(imgui
++add_library(imgui STATIC
+ 	imgui/imconfig.h
+ 	imgui/imgui.cpp
+ 	imgui/imgui.h
+@@ -23,4 +23,3 @@ endif()
+ 
+ target_include_directories(imgui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/imgui" "${CMAKE_CURRENT_SOURCE_DIR}/include")
+ target_link_libraries(imgui glad)
+-

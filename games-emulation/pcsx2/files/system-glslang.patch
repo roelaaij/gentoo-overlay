@@ -1,0 +1,47 @@
+diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
+index 1e4e07333..f42ddef49 100644
+--- a/cmake/SearchForStuff.cmake
++++ b/cmake/SearchForStuff.cmake
+@@ -247,12 +247,6 @@ add_subdirectory(3rdparty/glad EXCLUDE_FROM_ALL)
+ add_subdirectory(3rdparty/simpleini EXCLUDE_FROM_ALL)
+ add_subdirectory(3rdparty/imgui EXCLUDE_FROM_ALL)
+
+-if(USE_VULKAN)
+-	add_subdirectory(3rdparty/glslang EXCLUDE_FROM_ALL)
+-	add_subdirectory(3rdparty/vulkan-headers EXCLUDE_FROM_ALL)
+-endif()
+-
+ if(CUBEB_API)
+ 	add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
+ endif()
+-
+diff --git a/common/CMakeLists.txt b/common/CMakeLists.txt
+index d527304b2..19f94120d 100644
+--- a/common/CMakeLists.txt
++++ b/common/CMakeLists.txt
+@@ -134,8 +134,8 @@ target_sources(common PRIVATE
+ )
+
+ if(USE_VULKAN)
+-	target_link_libraries(common PUBLIC
+-		Vulkan-Headers glslang
++    target_link_libraries(common PUBLIC
++      glslang glslang-default-resource-limits
+ 	)
+ 	target_sources(common PRIVATE
+ 		Vulkan/ShaderCache.cpp
+diff --git a/common/Vulkan/ShaderCompiler.cpp b/common/Vulkan/ShaderCompiler.cpp
+index 4d03a1ce0..d1450b89b 100644
+--- a/common/Vulkan/ShaderCompiler.cpp
++++ b/common/Vulkan/ShaderCompiler.cpp
+@@ -23,8 +23,8 @@
+ #include <memory>
+
+ // glslang includes
+-#include "SPIRV/GlslangToSpv.h"
+-#include "StandAlone/ResourceLimits.h"
++#include "glslang/SPIRV/GlslangToSpv.h"
++#include "glslang/Standalone/ResourceLimits.h"
+ #include "glslang/Public/ShaderLang.h"
+
+ namespace Vulkan::ShaderCompiler

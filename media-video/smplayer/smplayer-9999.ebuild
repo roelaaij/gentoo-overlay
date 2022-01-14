@@ -1,4 +1,4 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -8,11 +8,11 @@ he_IL hr hu id it ja ka ko ku lt mk ms_MY nl nn_NO pl pt_BR pt ro_RO ru_RU
 sk sl_SI sq_AL sr sv th tr uk_UA uz vi_VN zh_CN zh_TW"
 PLOCALE_BACKUP="en_US"
 
-inherit plocale qmake-utils toolchain-funcs xdg subversion
+inherit plocale qmake-utils toolchain-funcs xdg git-r3
 
 DESCRIPTION="Great Qt GUI front-end for mplayer/mpv"
 HOMEPAGE="https://www.smplayer.eu/"
-ESVN_REPO_URI="https://subversion.assembla.com/svn/smplayer/smplayer/trunk"
+EGIT_REPO_URI="https://github.com/smplayer-dev/smplayer.git"
 
 LICENSE="GPL-2+ BSD-2"
 SLOT="0"

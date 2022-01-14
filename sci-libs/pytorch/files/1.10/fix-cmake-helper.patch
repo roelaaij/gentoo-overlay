@@ -1,0 +1,35 @@
+--- a/tools/setup_helpers/cmake.py	2021-12-31 18:58:30.498499283 +0100
++++ b/tools/setup_helpers/cmake.py	2021-12-31 18:52:07.023952739 +0100
+@@ -114,16 +114,16 @@
+     @staticmethod
+     def _get_cmake_command() -> str:
+         "Returns cmake command."
+-
++        from distutils.version import LooseVersion
+         cmake_command = 'cmake'
+         if IS_WINDOWS:
+             return cmake_command
+         cmake3 = which('cmake3')
+         cmake = which('cmake')
+-        if cmake3 is not None and CMake._get_version(cmake3) >= distutils.version.LooseVersion("3.10.0"):
++        if cmake3 is not None and CMake._get_version(cmake3) >= LooseVersion("3.10.0"):
+             cmake_command = 'cmake3'
+             return cmake_command
+-        elif cmake is not None and CMake._get_version(cmake) >= distutils.version.LooseVersion("3.10.0"):
++        elif cmake is not None and CMake._get_version(cmake) >= LooseVersion("3.10.0"):
+             return cmake_command
+         else:
+             raise RuntimeError('no cmake or cmake3 with version >= 3.10.0 found')
+@@ -131,10 +131,11 @@
+     @staticmethod
+     def _get_version(cmd: str) -> Any:
+         "Returns cmake version."
++        from distutils.version import LooseVersion
+
+         for line in check_output([cmd, '--version']).decode('utf-8').split('\n'):
+             if 'version' in line:
+-                return distutils.version.LooseVersion(line.strip().split(' ')[2])
++                return LooseVersion(line.strip().split(' ')[2])
+         raise RuntimeError('no version found')
+
+     def run(self, args: List[str], env: Dict[str, str]) -> None:

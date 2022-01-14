@@ -57,55 +57,69 @@ https://github.com/mikey/linux-syscall-support/archive/e1e7b0ad8ee99a875b272c8e3
 LICENSE="BSD"
 SLOT="0/${PV}"
 KEYWORDS="~amd64 ~x86"
-IUSE="asan atlas cuda doc eigen +fbgemm ffmpeg gflags glog +gloo leveldb lmdb mkl +mkldnn mpi namedtensor +nnpack numa +numpy +observers openblas opencl opencv +openmp +python +qnnpack redis rocm static tbb test tools zeromq"
+IUSE="asan atlas cuda doc eigen +fbgemm ffmpeg gflags glog +gloo leveldb lmdb mkl +mkldnn mpi namedtensor +nnpack numa +observers openblas opencl opencv +openmp +python +qnnpack redis rocm static tbb test tools zeromq"
 
-REQUIRED_USE="
-	python? ( ${PYTHON_REQUIRED_USE} )
-	numpy? ( python )
-	atlas? ( !eigen !mkl !openblas )
-	eigen? ( !atlas !mkl !openblas )
-	mkl? ( !atlas !eigen !openblas )
-	openblas? ( !atlas !eigen !mkl )
-	rocm? ( !mkldnn !cuda )
+REQUIRED_USE="  ?? ( cuda rocm )
+				?? ( atlas eigen mkl openblas )
 "
 
-DEPEND="
-	dev-libs/protobuf
+RDEPEND="
+	$(python_gen_cond_dep '
 	dev-python/pyyaml[${PYTHON_USEDEP}]
-	>=dev-python/pybind11-2.6.2[${PYTHON_USEDEP}]
-	dev-python/requests[${PYTHON_USEDEP}]
+	')
+	openblas? ( sci-libs/openblas )
 	atlas? ( sci-libs/atlas )
-	cuda? ( dev-util/nvidia-cuda-toolkit:0=[profiler] )
-	doc? ( dev-python/pytorch-sphinx-theme[${PYTHON_USEDEP}] )
-	ffmpeg? ( virtual/ffmpeg )
+	eigen? ( dev-cpp/eigen )
+	cuda? ( dev-libs/cudnn
+		dev-cpp/eigen[cuda] )
+	rocm? ( >=dev-util/hip-4.3
+			>=dev-libs/rccl-4.3
+			>=sci-libs/rocThrust-4.3
+			>=sci-libs/hipCUB-4.3
+			>=sci-libs/rocPRIM-4.3
+			>=sci-libs/miopen-4.3
+			>=sci-libs/rocBLAS-4.3
+			>=sci-libs/rocRAND-4.3
+			>=sci-libs/hipSPARSE-4.3
+			>=sci-libs/rocFFT-4.3
+			>=dev-util/roctracer-4.3 )
+	ffmpeg? ( media-video/ffmpeg )
 	gflags? ( dev-cpp/gflags )
-	glog? ( dev-cpp/glog )
+	glog? ( dev-cpp/glog[gflags] )
 	leveldb? ( dev-libs/leveldb )
 	lmdb? ( dev-db/lmdb )
-	mkl? ( sci-libs/mkl )
 	mpi? ( virtual/mpi )
-	numpy? ( dev-python/numpy[${PYTHON_USEDEP}] )
-	openblas? ( sci-libs/openblas )
-	opencl? ( dev-libs/clhpp virtual/opencl )
-	opencv? ( media-libs/opencv[${PYTHON_USEDEP}] )
-	python? ( ${PYTHON_DEPS} )
-	redis? ( dev-db/redis )
-	rocm? (
-		dev-util/amd-rocm-meta
-		dev-util/rocm-cmake
-		dev-libs/rccl
-		sci-libs/miopen
-		dev-libs/roct-thunk-interface
+	opencl? ( dev-libs/clhpp )
+	opencv? ( media-libs/opencv )
+	python? ( ${PYTHON_DEPS}
+		$(python_gen_cond_dep '
+		dev-python/setuptools[${PYTHON_USEDEP}]
+		dev-python/pybind11[${PYTHON_USEDEP}]
+		dev-python/numpy[${PYTHON_USEDEP}]
+		dev-python/protobuf-python:=[${PYTHON_USEDEP}]
+		')
 	)
+	redis? ( dev-db/redis )
 	zeromq? ( net-libs/zeromq )
-"
-
-RDEPEND="${DEPEND}
-	sci-libs/onnx[python?]
+	dev-cpp/eigen
+	dev-libs/protobuf:=
+	dev-libs/libuv
 "
 
 BDEPEND="
+	dev-python/pyyaml
 	doc? ( app-doc/doxygen )
+"
+
+DEPEND="${RDEPEND}
+	dev-cpp/tbb
+	app-arch/zstd
+	$(python_gen_cond_dep '
+		dev-python/pybind11[${PYTHON_USEDEP}]
+		dev-python/typing-extensions[${PYTHON_USEDEP}]
+	')
+	sys-fabric/libibverbs
+	sys-process/numactl
 "
 
 PATCHES=(
@@ -126,6 +140,7 @@ PATCHES=(
 	"${FILESDIR}/1.8/cuda-11.4.patch"
 	"${FILESDIR}/1.10/fix_c10.patch"
 	"${FILESDIR}/1.10/cuda-11.5-cub-namespace.patch"
+	"${FILESDIR}/1.10/fix-cmake-helper.patch"
 )
 
 src_prepare() {
@@ -249,6 +264,9 @@ src_configure() {
 		blas="OpenBLAS"
 	fi
 
+	export PYTORCH_BUILD_VERSION="${PV}"
+	export PYTORCH_BUILD_NUMBER="0"
+
 	if use rocm; then
 		export HCC_PATH="${HCC_HOME}"
 		export ROCBLAS_PATH="/usr"
@@ -293,7 +311,7 @@ src_configure() {
 		-DUSE_NCCL=$(usex cuda ON OFF)
 		-DUSE_NNPACK=$(usex nnpack ON OFF)
 		-DUSE_NUMA=$(usex numa ON OFF)
-		-DUSE_NUMPY=$(usex numpy ON OFF)
+		-DUSE_NUMPY=$(usex python ON OFF)
 		-DUSE_OBSERVERS=$(usex observers ON OFF)
 		-DUSE_OPENCL=$(usex opencl ON OFF)
 		-DUSE_OPENCV=$(usex opencv ON OFF)
@@ -341,7 +359,7 @@ src_configure() {
 	cmake_src_configure
 
 	if use python; then
-		PYTORCH_BUILD_VERSION="${PV}" CMAKE_BUILD_DIR="${BUILD_DIR}" distutils-r1_src_configure
+		CMAKE_BUILD_DIR="${BUILD_DIR}" distutils-r1_src_configure
 	fi
 }
 
@@ -349,7 +367,7 @@ src_compile() {
 	cmake_src_compile
 
 	if use python; then
-		PYTORCH_BUILD_VERSION="${PV}" USE_SYSTEM_LIBS=ON CMAKE_BUILD_DIR=${BUILD_DIR} distutils-r1_src_compile
+		USE_SYSTEM_LIBS=ON CMAKE_BUILD_DIR=${BUILD_DIR} distutils-r1_src_compile
 	fi
 }
 
@@ -373,7 +391,6 @@ src_install() {
 	rm -r "${ED}/usr/include/asmjit" || die
 	rm -r "${ED}/usr/include/c10d" || die
 	rm -r "${ED}/usr/include/fbgemm" || die
-	rm -r "${ED}/usr/include/fp16" || die
 	rm -r "${ED}/usr/include/gloo" || die
 
 	if use rocm; then
@@ -410,7 +427,7 @@ src_install() {
 		}
 
 		scanelf -r --fix "${BUILD_DIR}/caffe2/python" || die
-		PYTORCH_BUILD_VERSION="${PV}" CMAKE_BUILD_DIR=${BUILD_DIR} distutils-r1_src_install
+		CMAKE_BUILD_DIR=${BUILD_DIR} distutils-r1_src_install
 
 		fix_caffe_convert_utils() {
 			python_setup

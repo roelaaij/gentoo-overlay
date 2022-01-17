@@ -26,7 +26,7 @@ index d527304b2..19f94120d 100644
 -	target_link_libraries(common PUBLIC
 -		Vulkan-Headers glslang
 +    target_link_libraries(common PUBLIC
-+      glslang glslang-default-resource-limits
++      glslang glslang-default-resource-limits SPIRV
  	)
  	target_sources(common PRIVATE
  		Vulkan/ShaderCache.cpp

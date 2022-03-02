@@ -2,7 +2,7 @@ diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
 index 1e4e07333..f42ddef49 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
-@@ -247,12 +247,6 @@ add_subdirectory(3rdparty/glad EXCLUDE_FROM_ALL)
+@@ -263,14 +263,8 @@ add_subdirectory(3rdparty/glad EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/simpleini EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/imgui EXCLUDE_FROM_ALL)
 
@@ -13,6 +13,8 @@ index 1e4e07333..f42ddef49 100644
 -
  if(CUBEB_API)
  	add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
+ 	target_compile_options(cubeb PRIVATE "-w")
+ 	target_compile_options(speex PRIVATE "-w")
  endif()
 -
 diff --git a/common/CMakeLists.txt b/common/CMakeLists.txt

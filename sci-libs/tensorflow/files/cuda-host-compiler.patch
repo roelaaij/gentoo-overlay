@@ -1,7 +1,7 @@
 --- a/third_party/gpus/cuda_configure.bzl	2022-01-06 11:56:45.200352371 +0100
 +++ b/third_party/gpus/cuda_configure.bzl	2022-01-06 11:58:47.021539114 +0100
 @@ -4,6 +4,7 @@
- 
+
    * `TF_NEED_CUDA`: Whether to enable building with CUDA.
    * `GCC_HOST_COMPILER_PATH`: The GCC host compiler path
 +  * `CUDA_HOST_COMPILER_PATH`: The CUDA host compiler path
@@ -10,7 +10,7 @@
      both host and device code compilation if TF_CUDA_CLANG is 1.
 @@ -54,6 +55,7 @@
  )
- 
+
  _GCC_HOST_COMPILER_PATH = "GCC_HOST_COMPILER_PATH"
 +_CUDA_HOST_COMPILER_PATH = "CUDA_HOST_COMPILER_PATH"
  _GCC_HOST_COMPILER_PREFIX = "GCC_HOST_COMPILER_PREFIX"
@@ -37,12 +37,12 @@
          cc_path_envvar = _GCC_HOST_COMPILER_PATH
 @@ -1176,7 +1181,7 @@
          download_clang(repository_ctx, "crosstool/extra_tools")
- 
+
      # Set up crosstool/
 -    cc = find_cc(repository_ctx)
 +    cc = find_cc(repository_ctx, False)
      cc_fullpath = cc if not should_download_clang else "crosstool/" + cc
- 
+
      host_compiler_includes = get_cxx_inc_directories(
 @@ -1184,6 +1189,16 @@
          cc_fullpath,
@@ -96,3 +96,14 @@
      _CLANG_CUDA_COMPILER_PATH,
      "TF_NEED_CUDA",
      "TF_CUDA_CLANG",
+--- a/third_party/gpus/crosstool/clang/bin/crosstool_wrapper_driver_is_not_gcc.tpl	2022-01-31 20:17:33.000000000 +0100
++++ b/third_party/gpus/crosstool/clang/bin/crosstool_wrapper_driver_is_not_gcc.tpl	2022-03-06 21:26:34.224876415 +0100
+@@ -184,7 +184,7 @@
+   undefines = ''.join([' -U' + define for define in undefines])
+   std_options = GetOptionValue(argv, '-std')
+   # Supported -std flags as of CUDA 9.0. Only keep last to mimic gcc/clang.
+-  nvcc_allowed_std_options = ["c++03", "c++11", "c++14"]
++  nvcc_allowed_std_options = ["c++03", "c++11", "c++14", "c++17"]
+   std_options = ''.join([' -std=' + define
+       for define in std_options if define in nvcc_allowed_std_options][-1:])
+   fatbin_options = ''.join([' --fatbin-options=' + option

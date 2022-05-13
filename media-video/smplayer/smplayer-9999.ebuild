@@ -1,7 +1,7 @@
 # Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 PLOCALES="am ar_SY ar bg ca cs da de el en_GB en en_US es et eu fa fi fr gl
 he_IL hr hu id it ja ka ko ku lt mk ms_MY nl nn_NO pl pt_BR pt ro_RO ru_RU
@@ -54,6 +54,9 @@ src_prepare() {
 	# Upstream Makefile sucks
 	sed -i -e "/^PREFIX=/ s:/usr/local:${EPREFIX}/usr:" \
 		-e "/^DOC_PATH=/ s:packages/smplayer:${PF}:" \
+		-e '/\.\/get_svn_revision\.sh/,+2c\
+	\.\/get_svn_revision.sh\
+	cd src && $(DEFS) $(MAKE)' \
 		Makefile || die
 
 	# Turn off online update checker, bug #479902

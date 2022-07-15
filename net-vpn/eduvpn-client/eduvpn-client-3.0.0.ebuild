@@ -1,9 +1,9 @@
 # Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License
 
-EAPI=7
+EAPI=8
 
-PYTHON_COMPAT=( python3_{8..9} )
+PYTHON_COMPAT=( python3_{8..10} )
 DISTUTILS_SINGLE_IMPL=1
 
 inherit distutils-r1
@@ -22,17 +22,18 @@ IUSE=""
 DEPEND="
 	x11-libs/libnotify[introspection]
 	net-vpn/networkmanager-openvpn
-	dev-libs/gobject-introspection[${PYTHON_SINGLE_USEDEP}]
+	dev-libs/gobject-introspection
+	net-vpn/wireguard-tools
 	$(python_gen_cond_dep '
-		dev-python/dbus-python[${PYTHON_MULTI_USEDEP}]
-		dev-python/pynacl[${PYTHON_MULTI_USEDEP}]
-		dev-python/requests-oauthlib[${PYTHON_MULTI_USEDEP}]
-		dev-python/future[${PYTHON_MULTI_USEDEP}]
-		dev-python/python-dateutil[${PYTHON_MULTI_USEDEP}]
-		dev-python/pytest[${PYTHON_MULTI_USEDEP}]
-		dev-python/pytest-mock[${PYTHON_MULTI_USEDEP}]
-		dev-python/qrcode[${PYTHON_MULTI_USEDEP}]
-		dev-python/repoze-lru[${PYTHON_MULTI_USEDEP}]
+		dev-python/dbus-python[${PYTHON_USEDEP}]
+		dev-python/pynacl[${PYTHON_USEDEP}]
+		dev-python/requests-oauthlib[${PYTHON_USEDEP}]
+		dev-python/future[${PYTHON_USEDEP}]
+		dev-python/python-dateutil[${PYTHON_USEDEP}]
+		dev-python/pytest[${PYTHON_USEDEP}]
+		dev-python/pytest-mock[${PYTHON_USEDEP}]
+		dev-python/qrcode[${PYTHON_USEDEP}]
+		dev-python/repoze-lru[${PYTHON_USEDEP}]
 	')"
 
 RDEPEND="${DEPEND}"

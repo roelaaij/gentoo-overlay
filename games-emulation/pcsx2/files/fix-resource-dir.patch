@@ -1,0 +1,13 @@
+diff --git a/pcsx2-qt/QtHost.cpp b/pcsx2-qt/QtHost.cpp
+index e7e1805c2..ebd41243d 100644
+--- a/pcsx2-qt/QtHost.cpp
++++ b/pcsx2-qt/QtHost.cpp
+@@ -163,7 +163,7 @@ void QtHost::SetResourcesDirectory()
+ {
+ #ifndef __APPLE__
+ 	// On Windows/Linux, these are in the binary directory.
+-	EmuFolders::Resources = Path::Combine(EmuFolders::AppRoot, "resources");
++	EmuFolders::Resources = Path::Canonicalize(Path::Combine(EmuFolders::AppRoot, PCSX2_APP_DATADIR	"/resources"));
+ #else
+ 	// On macOS, this is in the bundle resources directory.
+ 	EmuFolders::Resources = Path::Canonicalize(Path::Combine(EmuFolders::AppRoot, "../Resources"));

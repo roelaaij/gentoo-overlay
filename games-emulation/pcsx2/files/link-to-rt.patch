@@ -1,20 +1,11 @@
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index 351d56c13..3abf87858 100644
+index 3236eec24..b544336eb 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
-@@ -389,7 +389,7 @@ set(pcsx2DEV9Headers
- set(pcsx2USBNullSources USB/USBNull.cpp)
- set(pcsx2USBNullHeaders USB/USB.h)
- 
--# USB sources 
-+# USB sources
- set(pcsx2USBSources
- 	USB/USB.cpp
- 	USB/deviceproxy.cpp
-@@ -1380,6 +1380,7 @@ if(Linux)
+@@ -1550,6 +1550,7 @@ if(Linux)
+ 	target_link_libraries(PCSX2_FLAGS INTERFACE
  		PkgConfig::AIO
  		PkgConfig::LIBUDEV
- 		ALSA::ALSA
 +		rt
  	)
  endif()

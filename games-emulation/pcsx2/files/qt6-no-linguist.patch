@@ -1,0 +1,13 @@
+diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
+index 7047d4e98..17e47c8c0 100644
+--- a/cmake/SearchForStuff.cmake
++++ b/cmake/SearchForStuff.cmake
+@@ -222,7 +222,7 @@ if(QT_BUILD)
+ 	endif()
+ 
+ 	# Find the Qt components that we need.
+-	find_package(Qt6 COMPONENTS CoreTools Core GuiTools Gui WidgetsTools Widgets Network LinguistTools REQUIRED)
++	find_package(Qt6 COMPONENTS CoreTools Core GuiTools Gui WidgetsTools Widgets Network REQUIRED)
+ 
+ 	if (APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET AND "${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_LESS 10.15)
+ 		get_target_property(QT_FEATURES Qt6::Core QT_ENABLED_PUBLIC_FEATURES)

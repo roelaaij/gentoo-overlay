@@ -1,7 +1,7 @@
 # Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 WX_GTK_VER="3.1-gtk3"
 
@@ -14,27 +14,44 @@ EGIT_REPO_URI="https://github.com/PCSX2/${PN}.git"
 LICENSE="GPL-3"
 SLOT="0"
 KEYWORDS=""
-IUSE=""
+IUSE="cubeb opengl vulkan wayland X qt wxWidgets"
+
+REQUIRED_USE="X? ( wxWidgets )
+			  wayland? ( wxWidgets )
+			  ^^ ( wxWidgets qt )"
 
 RDEPEND="
-	app-arch/bzip2[abi_x86_32(-)]
-	app-arch/xz-utils[abi_x86_32(-)]
-	dev-libs/libaio[abi_x86_32(-)]
-	dev-libs/libxml2:2[abi_x86_32(-)]
-	media-libs/alsa-lib[abi_x86_32(-)]
-	media-libs/libpng:=[abi_x86_32(-)]
-	media-libs/libsdl2[abi_x86_32(-),haptic,joystick,sound]
-	media-libs/libsoundtouch[abi_x86_32(-)]
-	media-libs/portaudio[abi_x86_32(-)]
-	net-libs/libpcap[abi_x86_32(-)]
-	sys-libs/zlib[abi_x86_32(-)]
-	virtual/libudev[abi_x86_32(-)]
-	virtual/opengl[abi_x86_32(-)]
-	x11-libs/gtk+:3[abi_x86_32(-)]
-	x11-libs/libICE[abi_x86_32(-)]
-	x11-libs/libX11[abi_x86_32(-)]
-	x11-libs/libXext[abi_x86_32(-)]
-	>=x11-libs/wxGTK-3.0.4-r301:3.0-gtk3[abi_x86_32(-),X]
+	app-arch/bzip2
+	app-arch/xz-utils
+	dev-libs/libaio
+	dev-libs/libxml2:2
+	media-libs/alsa-lib
+	media-libs/libpng:=
+	>=media-libs/libsdl2-2.0.22[haptic,joystick,sound]
+	media-libs/libsoundtouch
+	net-libs/libpcap
+	sys-libs/zlib
+	dev-libs/libzip[zstd]
+	virtual/libudev
+	dev-libs/libchdr
+	media-libs/cubeb
+	cubeb? ( media-libs/cubeb )
+	opengl? ( virtual/opengl )
+	vulkan? ( media-libs/vulkan-loader:= )
+	wayland? (
+			>=dev-libs/wayland-1.20.0
+			>=dev-libs/wayland-protocols-1.23
+			media-libs/mesa[wayland]
+			>=x11-libs/libxkbcommon-0.2
+	)
+	X? (
+		   x11-libs/libICE
+		   x11-libs/libX11
+		   x11-libs/libXext
+		   x11-libs/libxcb
+	)
+	wxWidgets? ( >=x11-libs/wxGTK-3.0.4-r301:3.0-gtk3[X] )
+	qt? ( dev-qt/qtbase[gui,widgets,network] )
 "
 DEPEND="${RDEPEND}
 	dev-cpp/pngpp
@@ -42,14 +59,15 @@ DEPEND="${RDEPEND}
 	dev-cpp/sparsehash
 "
 
-FILECAPS=(
-	"CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/pcsx2
-)
-
 PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/visibility.patch"
 		  "${FILESDIR}/system-glslang.patch"
-		  "${FILESDIR}/link-to-rt.patch" )
+		  "${FILESDIR}/link-to-rt.patch"
+		  "${FILESDIR}/qt6-no-linguist.patch"
+		  "${FILESDIR}/more-system-libs.patch"
+		  "${FILESDIR}/static-core-library.patch"
+		  "${FILESDIR}/fix-resource-dir.patch"
+		)
 
 pkg_setup() {
 	if [[ ${MERGE_TYPE} != binary && $(tc-getCC) == *gcc* ]]; then
@@ -76,27 +94,21 @@ src_configure() {
 	# if it something other than "Devel|Debug|Release"
 	local CMAKE_BUILD_TYPE="Release"
 
-	# if use amd64; then
-	# 	# Passing correct CMAKE_TOOLCHAIN_FILE for amd64
-	# 	# https://github.com/PCSX2/pcsx2/pull/422
-	# 	local MYCMAKEARGS=(-DCMAKE_TOOLCHAIN_FILE=cmake/linux-compiler-i386-multilib.cmake)
-	# fi
-
 	local mycmakeargs=(
-		-DARCH_FLAG=
-		-DUSE_SYSTEM_YAML=TRUE
 		-DDISABLE_BUILD_DATE=TRUE
 		-DDISABLE_PCSX2_WRAPPER=TRUE
-		-DEXTRA_PLUGINS=FALSE
-		-DOPTIMIZATION_FLAG=
 		-DPACKAGE_MODE=TRUE
 		-DXDG_STD=TRUE
 		-DDISABLE_SETCAP=TRUE
 		-DCMAKE_LIBRARY_PATH="/usr/$(get_libdir)/${PN}"
-		-DDOC_DIR=/usr/share/doc/"${PF}"
-		-DPLUGIN_DIR="/usr/$(get_libdir)/${PN}"
+		-DCPUINFO_LIBRARY_TYPE=static
 		# wxGTK must be built against same sdl version
-		-DSDL2_API=TRUE
+		-DCUBEB_API=$(usex cubeb)
+		-DX11_API=$(usex X)
+		-DWAYLAND_API=$(usex wayland)
+		-DQT_BUILD=$(usex qt)
+		-DUSE_VULKAN=$(usex vulkan)
+		-DUSE_OPENGL=$(usex opengl)
 		-DUSE_VTUNE=FALSE
 	)
 
@@ -111,4 +123,8 @@ src_install() {
 	QA_EXECSTACK="usr/bin/pcsx2"
 	QA_TEXTRELS="usr/$(get_libdir)/pcsx2/* usr/bin/pcsx2"
 	cmake_src_install
+}
+
+pkg_postinst() {
+	fcaps "CAP_NET_RAW+eip CAP_NET_ADMIN+eip" $(usex qt 'usr/bin/pcsx2-qt' 'usr/bin/pcsx2')
 }

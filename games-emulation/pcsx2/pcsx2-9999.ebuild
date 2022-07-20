@@ -10,6 +10,7 @@ inherit cmake flag-o-matic git-r3 toolchain-funcs wxwidgets fcaps
 DESCRIPTION="A PlayStation 2 emulator"
 HOMEPAGE="https://www.pcsx2.net"
 EGIT_REPO_URI="https://github.com/PCSX2/${PN}.git"
+EGIT_SUBMODULES=( '3rdparty/imgui/imgui' )
 
 LICENSE="GPL-3"
 SLOT="0"
@@ -27,11 +28,11 @@ RDEPEND="
 	dev-libs/libxml2:2
 	media-libs/alsa-lib
 	media-libs/libpng:=
-	>=media-libs/libsdl2-2.0.22[haptic,joystick,sound]
 	media-libs/libsoundtouch
 	net-libs/libpcap
 	sys-libs/zlib
 	dev-libs/libzip[zstd]
+	dev-libs/cpuinfo
 	virtual/libudev
 	dev-libs/libchdr
 	media-libs/cubeb
@@ -39,10 +40,10 @@ RDEPEND="
 	opengl? ( virtual/opengl )
 	vulkan? ( media-libs/vulkan-loader:= )
 	wayland? (
-			>=dev-libs/wayland-1.20.0
-			>=dev-libs/wayland-protocols-1.23
-			media-libs/mesa[wayland]
-			>=x11-libs/libxkbcommon-0.2
+		  >=dev-libs/wayland-1.20.0
+		  >=dev-libs/wayland-protocols-1.23
+		  media-libs/mesa[wayland]
+		  >=x11-libs/libxkbcommon-0.2
 	)
 	X? (
 		   x11-libs/libICE
@@ -50,8 +51,14 @@ RDEPEND="
 		   x11-libs/libXext
 		   x11-libs/libxcb
 	)
-	wxWidgets? ( >=x11-libs/wxGTK-3.0.4-r301:3.0-gtk3[X] )
-	qt? ( dev-qt/qtbase[gui,widgets,network] )
+	wxWidgets? (
+		   x11-libs/wxGTK:3.1-gtk3[X]
+		   >=media-libs/libsdl2-2.0.12[haptic,joystick,sound]
+	)
+	qt? (
+		   dev-qt/qtbase[gui,widgets,network]
+		   >=media-libs/libsdl2-2.0.22[haptic,joystick,sound]
+	)
 "
 DEPEND="${RDEPEND}
 	dev-cpp/pngpp
@@ -64,8 +71,8 @@ PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/system-glslang.patch"
 		  "${FILESDIR}/link-to-rt.patch"
 		  "${FILESDIR}/qt6-no-linguist.patch"
-		  "${FILESDIR}/more-system-libs.patch"
 		  "${FILESDIR}/static-core-library.patch"
+		  "${FILESDIR}/more-system-libs.patch"
 		  "${FILESDIR}/fix-resource-dir.patch"
 		)
 
@@ -101,8 +108,6 @@ src_configure() {
 		-DXDG_STD=TRUE
 		-DDISABLE_SETCAP=TRUE
 		-DCMAKE_LIBRARY_PATH="/usr/$(get_libdir)/${PN}"
-		-DCPUINFO_LIBRARY_TYPE=static
-		# wxGTK must be built against same sdl version
 		-DCUBEB_API=$(usex cubeb)
 		-DX11_API=$(usex X)
 		-DWAYLAND_API=$(usex wayland)
@@ -110,9 +115,12 @@ src_configure() {
 		-DUSE_VULKAN=$(usex vulkan)
 		-DUSE_OPENGL=$(usex opengl)
 		-DUSE_VTUNE=FALSE
+		-DENABLE_TESTS=FALSE
 	)
 
-	setup-wxwidgets
+	if use wxWidgets; then
+		setup-wxwidgets
+	fi
 	cmake_src_configure
 }
 

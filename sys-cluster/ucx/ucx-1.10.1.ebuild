@@ -17,6 +17,7 @@ KEYWORDS="~amd64 ~x86 ~amd64-linux ~x86-linux"
 IUSE="+numa +openmp"
 
 RDEPEND="
+	>=sys-cluster/rdma-core-41.0
 	sys-libs/binutils-libs:=
 	numa? ( sys-process/numactl )
 "

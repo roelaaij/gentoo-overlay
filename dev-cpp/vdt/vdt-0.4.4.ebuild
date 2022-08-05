@@ -1,8 +1,8 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
-inherit eutils cmake-utils
+EAPI=8
+inherit cmake
 
 DESCRIPTION="The vdt mathematical library"
 HOMEPAGE="https://github.com/dpiparo/vdt"
@@ -75,5 +75,5 @@ src_configure() {
 		-DNEON=$(usex cpu_flags_arm_neon)
 	)
 
-	cmake-utils_src_configure
+	cmake_src_configure
 }

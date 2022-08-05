@@ -1,8 +1,8 @@
-# Copyright 1999-2018 Gentoo Foundation
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=6
-inherit cmake-utils
+EAPI=8
+inherit cmake
 
 DESCRIPTION="Reliable MTP client with minimalistic UI"
 HOMEPAGE="https://whoozle.github.io/android-file-transfer-linux/"
@@ -20,8 +20,6 @@ RDEPEND=" sys-libs/readline
 DEPEND="${RDEPEND}
 	virtual/pkgconfig"
 
-PATCHES="${FILESDIR}/fix_link_order.patch"
-
 S=${WORKDIR}/${PN}-linux-${PV}
 src_configure() {
 	local mycmakeargs=(
@@ -29,5 +27,5 @@ src_configure() {
 		-DBUILD_QT_UI=$(usex qt5)
 		-DUSB_BACKEND_LIBUSB=OFF
 	)
-	cmake-utils_src_configure
+	cmake_src_configure
 }

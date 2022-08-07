@@ -1,9 +1,9 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
-inherit cmake-utils vcs-snapshot
+inherit cmake vcs-snapshot
 
 DESCRIPTION="An ARM dynamic recompiler"
 HOMEPAGE="https://github.com/MerryMage/dynarmic"
@@ -36,7 +36,7 @@ src_unpack() {
 }
 
 src_prepare() {
-	cmake-utils_src_prepare
+	cmake_src_prepare
 	rm -r externals/{catch,fmt,xbyak} || die
 }
 
@@ -46,7 +46,7 @@ src_configure() {
 		-DDYNARMIC_TESTS=$(usex test)
 		-DDYNARMIC_WARNINGS_AS_ERRORS=OFF
 	)
-	cmake-utils_src_configure
+	cmake_src_configure
 }
 
 src_install() {

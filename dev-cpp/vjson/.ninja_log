@@ -1,7 +1,0 @@
-# ninja log v5
-0	64	0	CMakeFiles/vjson.dir/json.cpp.o	2215b1dd7fc8207a
-0	68	0	CMakeFiles/vjson_test.dir/json.cpp.o	4b396ff59750691
-64	104	0	libvjson.so	b706a6dfe548481b
-0	125	0	CMakeFiles/vjson_test.dir/block_allocator.cpp.o	84108c0214043660
-1	189	0	CMakeFiles/vjson_test.dir/main.cpp.o	1541f65bd43e811e
-189	217	0	vjson_test	b072149dbefe822f

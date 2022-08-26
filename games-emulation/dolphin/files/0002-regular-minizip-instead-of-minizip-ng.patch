@@ -1,79 +1,90 @@
-From f545e1522d58b2fde85bb216506d658821273390 Mon Sep 17 00:00:00 2001
+From 9b963af8af7df0b99a83a323c6e30f72991e21d3 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 16 Jul 2022 11:39:27 +0200
-Subject: [PATCH 2/3] regular minizip instead of minizip-ng
+Date: Sun, 21 Aug 2022 20:07:15 +0200
+Subject: [PATCH] regular minizip instead of minizip ng
 
 ---
- CMakeLists.txt                                     | 2 +-
+ CMakeLists.txt                                     | 5 ++---
  Source/Core/Common/CMakeLists.txt                  | 2 +-
  Source/Core/Common/MinizipUtil.h                   | 3 ++-
- Source/Core/DiscIO/CMakeLists.txt                  | 2 +-
+ Source/Core/Core/CMakeLists.txt                    | 3 ++-
+ Source/Core/DiscIO/CMakeLists.txt                  | 4 ++--
  Source/Core/DiscIO/VolumeVerifier.cpp              | 3 ++-
  Source/Core/UICommon/CMakeLists.txt                | 2 +-
  Source/Core/UICommon/ResourcePack/ResourcePack.cpp | 3 ++-
- 7 files changed, 10 insertions(+), 7 deletions(-)
+ 8 files changed, 14 insertions(+), 11 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 1f22fb76cf..5f68f231ba 100644
+index 163ea2c943..d8b3465046 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -792,7 +792,7 @@ else()
-   add_subdirectory(Externals/zlib)
+@@ -787,12 +787,10 @@ else()
+   add_subdirectory(Externals/zstd)
  endif()
  
+-add_subdirectory(Externals/zlib-ng)
+-
 -pkg_check_modules(MINIZIP minizip-ng>=3.0.0)
-+pkg_check_modules(MINIZIP minizip)
- if(MINIZIP_FOUND)
+-if(MINIZIP_FOUND)
++pkg_check_modules(minizip REQUIRED IMPORTED_TARGET minizip)
++pkg_check_modules(zlib REQUIRED IMPORTED_TARGET zlib)
++if(minizip_FOUND)
    message(STATUS "Using shared minizip")
-   include_directories(${MINIZIP_INCLUDE_DIRS})
+-  include_directories(${MINIZIP_INCLUDE_DIRS})
+ else()
+   check_vendoring_approved(minizip)
+   message(STATUS "Shared minizip not found, falling back to the static library")
 diff --git a/Source/Core/Common/CMakeLists.txt b/Source/Core/Common/CMakeLists.txt
-index 86fd37a788..faf2e19266 100644
+index 134d38062c..826dbd0892 100644
 --- a/Source/Core/Common/CMakeLists.txt
 +++ b/Source/Core/Common/CMakeLists.txt
-@@ -142,7 +142,7 @@ PUBLIC
+@@ -157,7 +157,7 @@ PUBLIC
    enet
    fmt::fmt
    ${MBEDTLS_LIBRARIES}
 -  minizip-ng
-+  minizip
++  PkgConfig::minizip
  
  PRIVATE
    ${CURL_LIBRARIES}
-diff --git a/Source/Core/Common/MinizipUtil.h b/Source/Core/Common/MinizipUtil.h
-index 6057632ddd..5f56053405 100644
---- a/Source/Core/Common/MinizipUtil.h
-+++ b/Source/Core/Common/MinizipUtil.h
-@@ -5,7 +5,8 @@
+diff --git a/Source/Core/Core/CMakeLists.txt b/Source/Core/Core/CMakeLists.txt
+index 26787fcd3d..4dd6570b98 100644
+--- a/Source/Core/Core/CMakeLists.txt
++++ b/Source/Core/Core/CMakeLists.txt
+@@ -595,7 +595,8 @@ PUBLIC
+ PRIVATE
+   fmt::fmt
+   ${LZO}
+-  ZLIB::ZLIB
++  PkgConfig::minizip
++  PkgConfig::zlib
+ )
  
- #include <algorithm>
- 
--#include <mz_compat.h>
-+#include <minizip/zip.h>
-+#include <minizip/unzip.h>
- 
- #include "Common/CommonTypes.h"
- #include "Common/ScopeGuard.h"
+ if ((DEFINED CMAKE_ANDROID_ARCH_ABI AND CMAKE_ANDROID_ARCH_ABI MATCHES "x86|x86_64") OR
 diff --git a/Source/Core/DiscIO/CMakeLists.txt b/Source/Core/DiscIO/CMakeLists.txt
-index ec1562325a..68028dbcfc 100644
+index 61790d89d8..dc420f9d6d 100644
 --- a/Source/Core/DiscIO/CMakeLists.txt
 +++ b/Source/Core/DiscIO/CMakeLists.txt
-@@ -73,7 +73,7 @@ PUBLIC
+@@ -75,9 +75,9 @@ PUBLIC
  
  PRIVATE
    fmt::fmt
 -  minizip-ng
-+  minizip
    pugixml
-   ZLIB::ZLIB
+-  ZLIB::ZLIB
++  PkgConfig::minizip
++  PkgConfig::zlib
  )
+ 
+ if(MSVC)
 diff --git a/Source/Core/DiscIO/VolumeVerifier.cpp b/Source/Core/DiscIO/VolumeVerifier.cpp
-index fc1eddfb19..58f3913050 100644
+index 109b4c2f64..460c065f86 100644
 --- a/Source/Core/DiscIO/VolumeVerifier.cpp
 +++ b/Source/Core/DiscIO/VolumeVerifier.cpp
-@@ -14,7 +14,8 @@
+@@ -13,7 +13,8 @@
+ #include <unordered_set>
  
  #include <mbedtls/md5.h>
- #include <mbedtls/sha1.h>
 -#include <mz_compat.h>
 +#include <minizip/zip.h>
 +#include <minizip/unzip.h>
@@ -81,7 +92,7 @@ index fc1eddfb19..58f3913050 100644
  
  #include "Common/Align.h"
 diff --git a/Source/Core/UICommon/CMakeLists.txt b/Source/Core/UICommon/CMakeLists.txt
-index f2ffbd0821..2b7d5bd2a6 100644
+index f2ffbd0821..fd3a8af9ff 100644
 --- a/Source/Core/UICommon/CMakeLists.txt
 +++ b/Source/Core/UICommon/CMakeLists.txt
 @@ -31,7 +31,7 @@ target_link_libraries(uicommon
@@ -89,7 +100,7 @@ index f2ffbd0821..2b7d5bd2a6 100644
    common
    cpp-optparse
 -  minizip-ng
-+  minizip
++  PkgConfig::minizip
    pugixml
  
  PRIVATE
@@ -108,5 +119,4 @@ index 585559029d..f2dc6d41e0 100644
  #include "Common/CommonPaths.h"
  #include "Common/FileSearch.h"
 -- 
-2.35.1
-
+2.37.2

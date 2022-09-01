@@ -1,24 +1,24 @@
-From 9b963af8af7df0b99a83a323c6e30f72991e21d3 Mon Sep 17 00:00:00 2001
+From 4801827c62f1c5869b88f6d2026fca4a8e144558 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sun, 21 Aug 2022 20:07:15 +0200
+Date: Tue, 30 Aug 2022 17:20:24 +0200
 Subject: [PATCH] regular minizip instead of minizip ng
 
 ---
- CMakeLists.txt                                     | 5 ++---
+ CMakeLists.txt                                     | 7 +++----
  Source/Core/Common/CMakeLists.txt                  | 2 +-
  Source/Core/Common/MinizipUtil.h                   | 3 ++-
  Source/Core/Core/CMakeLists.txt                    | 3 ++-
  Source/Core/DiscIO/CMakeLists.txt                  | 4 ++--
  Source/Core/DiscIO/VolumeVerifier.cpp              | 3 ++-
  Source/Core/UICommon/CMakeLists.txt                | 2 +-
- Source/Core/UICommon/ResourcePack/ResourcePack.cpp | 3 ++-
- 8 files changed, 14 insertions(+), 11 deletions(-)
+ Source/Core/UICommon/ResourcePack/ResourcePack.cpp | 4 ++--
+ 8 files changed, 15 insertions(+), 13 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 163ea2c943..d8b3465046 100644
+index 163ea2c943..8540b90db0 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -787,12 +787,10 @@ else()
+@@ -787,10 +787,9 @@ else()
    add_subdirectory(Externals/zstd)
  endif()
  
@@ -30,10 +30,8 @@ index 163ea2c943..d8b3465046 100644
 +pkg_check_modules(zlib REQUIRED IMPORTED_TARGET zlib)
 +if(minizip_FOUND)
    message(STATUS "Using shared minizip")
--  include_directories(${MINIZIP_INCLUDE_DIRS})
+   include_directories(${MINIZIP_INCLUDE_DIRS})
  else()
-   check_vendoring_approved(minizip)
-   message(STATUS "Shared minizip not found, falling back to the static library")
 diff --git a/Source/Core/Common/CMakeLists.txt b/Source/Core/Common/CMakeLists.txt
 index 134d38062c..826dbd0892 100644
 --- a/Source/Core/Common/CMakeLists.txt
@@ -47,6 +45,20 @@ index 134d38062c..826dbd0892 100644
  
  PRIVATE
    ${CURL_LIBRARIES}
+diff --git a/Source/Core/Common/MinizipUtil.h b/Source/Core/Common/MinizipUtil.h
+index 29b365c028..32772cfdc5 100644
+--- a/Source/Core/Common/MinizipUtil.h
++++ b/Source/Core/Common/MinizipUtil.h
+@@ -5,7 +5,8 @@
+ 
+ #include <algorithm>
+ 
+-#include <mz_compat.h>
++#include <minizip/zip.h>
++#include <minizip/unzip.h>
+ 
+ #include "Common/CommonTypes.h"
+ #include "Common/ScopeGuard.h"
 diff --git a/Source/Core/Core/CMakeLists.txt b/Source/Core/Core/CMakeLists.txt
 index 26787fcd3d..4dd6570b98 100644
 --- a/Source/Core/Core/CMakeLists.txt
@@ -105,14 +117,15 @@ index f2ffbd0821..fd3a8af9ff 100644
  
  PRIVATE
 diff --git a/Source/Core/UICommon/ResourcePack/ResourcePack.cpp b/Source/Core/UICommon/ResourcePack/ResourcePack.cpp
-index 585559029d..f2dc6d41e0 100644
+index 355dc8acf2..f6ef61236a 100644
 --- a/Source/Core/UICommon/ResourcePack/ResourcePack.cpp
 +++ b/Source/Core/UICommon/ResourcePack/ResourcePack.cpp
-@@ -5,7 +5,8 @@
- 
+@@ -6,8 +6,8 @@
  #include <algorithm>
+ #include <memory>
  
 -#include <mz_compat.h>
+-#include <mz_os.h>
 +#include <minizip/zip.h>
 +#include <minizip/unzip.h>
  
@@ -120,3 +133,4 @@ index 585559029d..f2dc6d41e0 100644
  #include "Common/FileSearch.h"
 -- 
 2.37.2
+

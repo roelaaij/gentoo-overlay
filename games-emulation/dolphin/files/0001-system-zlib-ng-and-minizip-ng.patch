@@ -1,0 +1,218 @@
+From 2eab56ab7827292a46c08f9343db83e849c64de8 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Thu, 1 Sep 2022 12:36:38 +0200
+Subject: [PATCH] system zlib-ng and minizip-ng
+
+---
+ CMakeLists.txt                              |  8 +++-----
+ Source/Core/Common/Hash.cpp                 |  8 ++++----
+ Source/Core/Core/CMakeLists.txt             |  2 +-
+ Source/Core/DiscIO/CMakeLists.txt           |  4 ++--
+ Source/Core/DiscIO/CompressedBlob.cpp       | 20 ++++++++++----------
+ Source/Core/UpdaterCommon/CMakeLists.txt    |  2 +-
+ Source/Core/UpdaterCommon/UpdaterCommon.cpp |  2 +-
+ 7 files changed, 22 insertions(+), 24 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 163ea2c943..e7a4120cd6 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -787,12 +787,10 @@ else()
+   add_subdirectory(Externals/zstd)
+ endif()
+ 
+-add_subdirectory(Externals/zlib-ng)
+-
+-pkg_check_modules(MINIZIP minizip-ng>=3.0.0)
+-if(MINIZIP_FOUND)
++pkg_check_modules(zlib-ng REQUIRED IMPORTED_TARGET zlib-ng>=2.0.0)
++pkg_check_modules(minizip-ng REQUIRED IMPORTED_TARGET minizip-ng>=3.0.0)
++if(minizip-ng_FOUND)
+   message(STATUS "Using shared minizip")
+-  include_directories(${MINIZIP_INCLUDE_DIRS})
+ else()
+   check_vendoring_approved(minizip)
+   message(STATUS "Shared minizip not found, falling back to the static library")
+diff --git a/Source/Core/Common/Hash.cpp b/Source/Core/Common/Hash.cpp
+index f11ac4d62c..cb0c0ba1db 100644
+--- a/Source/Core/Common/Hash.cpp
++++ b/Source/Core/Common/Hash.cpp
+@@ -5,7 +5,7 @@
+ 
+ #include <algorithm>
+ #include <cstring>
+-#include <zlib.h>
++#include <zlib-ng.h>
+ 
+ #include "Common/BitUtils.h"
+ #include "Common/CPUDetect.h"
+@@ -25,7 +25,7 @@ namespace Common
+ u32 HashAdler32(const u8* data, size_t len)
+ {
+   // Use fast implementation from zlib-ng
+-  return adler32_z(1, data, len);
++  return zng_adler32_z(1, data, len);
+ }
+ 
+ // Stupid hash - but can't go back now :)
+@@ -451,12 +451,12 @@ u64 GetHash64(const u8* src, u32 len, u32 samples)
+ 
+ u32 StartCRC32()
+ {
+-  return crc32_z(0L, Z_NULL, 0);
++  return zng_crc32_z(0L, Z_NULL, 0);
+ }
+ 
+ u32 UpdateCRC32(u32 crc, const u8* data, size_t len)
+ {
+-  return crc32_z(crc, data, len);
++  return zng_crc32_z(crc, data, len);
+ }
+ 
+ u32 ComputeCRC32(const u8* data, size_t len)
+diff --git a/Source/Core/Core/CMakeLists.txt b/Source/Core/Core/CMakeLists.txt
+index 26787fcd3d..3a79ef7998 100644
+--- a/Source/Core/Core/CMakeLists.txt
++++ b/Source/Core/Core/CMakeLists.txt
+@@ -595,7 +595,7 @@ PUBLIC
+ PRIVATE
+   fmt::fmt
+   ${LZO}
+-  ZLIB::ZLIB
++  PkgConfig::zlib-ng
+ )
+ 
+ if ((DEFINED CMAKE_ANDROID_ARCH_ABI AND CMAKE_ANDROID_ARCH_ABI MATCHES "x86|x86_64") OR
+diff --git a/Source/Core/DiscIO/CMakeLists.txt b/Source/Core/DiscIO/CMakeLists.txt
+index 61790d89d8..57bcb92f4d 100644
+--- a/Source/Core/DiscIO/CMakeLists.txt
++++ b/Source/Core/DiscIO/CMakeLists.txt
+@@ -75,9 +75,9 @@ PUBLIC
+ 
+ PRIVATE
+   fmt::fmt
+-  minizip-ng
++  PkgConfig::minizip-ng
+   pugixml
+-  ZLIB::ZLIB
++  PkgConfig::zlib-ng
+ )
+ 
+ if(MSVC)
+diff --git a/Source/Core/DiscIO/CompressedBlob.cpp b/Source/Core/DiscIO/CompressedBlob.cpp
+index 139a1e6d17..12ed85c875 100644
+--- a/Source/Core/DiscIO/CompressedBlob.cpp
++++ b/Source/Core/DiscIO/CompressedBlob.cpp
+@@ -11,7 +11,7 @@
+ #include <utility>
+ #include <vector>
+ 
+-#include <zlib.h>
++#include <zlib-ng.h>
+ 
+ #ifdef _WIN32
+ #include <windows.h>
+@@ -129,7 +129,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
+   }
+   else
+   {
+-    z_stream z = {};
++    zng_stream z = {};
+     z.next_in = m_zlib_buffer.data();
+     z.avail_in = comp_block_size;
+     if (z.avail_in > m_header.block_size)
+@@ -138,8 +138,8 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
+     }
+     z.next_out = out_ptr;
+     z.avail_out = m_header.block_size;
+-    inflateInit(&z);
+-    int status = inflate(&z, Z_FULL_FLUSH);
++    zng_inflateInit(&z);
++    int status = zng_inflate(&z, Z_FULL_FLUSH);
+     u32 uncomp_size = m_header.block_size - z.avail_out;
+     if (status != Z_STREAM_END)
+     {
+@@ -147,7 +147,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
+       // to be sure, don't use compressed isos :P
+       ERROR_LOG_FMT(DISCIO, "Failure reading block {} - out of data and not at end.", block_num);
+     }
+-    inflateEnd(&z);
++    zng_inflateEnd(&z);
+     if (uncomp_size != m_header.block_size)
+     {
+       ERROR_LOG_FMT(DISCIO, "Wrong block size");
+@@ -160,7 +160,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
+ struct CompressThreadState
+ {
+   CompressThreadState() : z{} {}
+-  ~CompressThreadState() { deflateEnd(&z); }
++  ~CompressThreadState() { zng_deflateEnd(&z); }
+ 
+   // z_stream will stop working if it changes address, so this object must not be moved
+   CompressThreadState(const CompressThreadState&) = delete;
+@@ -169,7 +169,7 @@ struct CompressThreadState
+   CompressThreadState& operator=(CompressThreadState&&) = delete;
+ 
+   std::vector<u8> compressed_buffer;
+-  z_stream z;
++  zng_stream z;
+ };
+ 
+ struct CompressParameters
+@@ -189,7 +189,7 @@ struct OutputParameters
+ 
+ static ConversionResultCode SetUpCompressThreadState(CompressThreadState* state)
+ {
+-  return deflateInit(&state->z, 9) == Z_OK ? ConversionResultCode::Success :
++  return zng_deflateInit(&state->z, 9) == Z_OK ? ConversionResultCode::Success :
+                                              ConversionResultCode::InternalError;
+ }
+ 
+@@ -200,7 +200,7 @@ static ConversionResult<OutputParameters> Compress(CompressThreadState* state,
+ {
+   state->compressed_buffer.resize(block_size);
+ 
+-  int retval = deflateReset(&state->z);
++  int retval = zng_deflateReset(&state->z);
+   state->z.next_in = parameters.data.data();
+   state->z.avail_in = block_size;
+   state->z.next_out = state->compressed_buffer.data();
+@@ -212,7 +212,7 @@ static ConversionResult<OutputParameters> Compress(CompressThreadState* state,
+     return ConversionResultCode::InternalError;
+   }
+ 
+-  const int status = deflate(&state->z, Z_FINISH);
++  const int status = zng_deflate(&state->z, Z_FINISH);
+ 
+   state->compressed_buffer.resize(block_size - state->z.avail_out);
+ 
+diff --git a/Source/Core/UpdaterCommon/CMakeLists.txt b/Source/Core/UpdaterCommon/CMakeLists.txt
+index c026cd577d..edb1b92e87 100644
+--- a/Source/Core/UpdaterCommon/CMakeLists.txt
++++ b/Source/Core/UpdaterCommon/CMakeLists.txt
+@@ -7,8 +7,8 @@ add_library(updatercommon
+ target_link_libraries(updatercommon PRIVATE
+   uicommon
+   mbedtls
+-  ZLIB::ZLIB
+   ed25519
++  PkgConfig::zlib-ng
+   cpp-optparse
+ )
+ 
+diff --git a/Source/Core/UpdaterCommon/UpdaterCommon.cpp b/Source/Core/UpdaterCommon/UpdaterCommon.cpp
+index 6bbe5b936a..222c8941cb 100644
+--- a/Source/Core/UpdaterCommon/UpdaterCommon.cpp
++++ b/Source/Core/UpdaterCommon/UpdaterCommon.cpp
+@@ -10,7 +10,7 @@
+ #include <ed25519.h>
+ #include <mbedtls/base64.h>
+ #include <mbedtls/sha256.h>
+-#include <zlib.h>
++#include <zlib-ng.h>
+ 
+ #include "Common/CommonPaths.h"
+ #include "Common/FileUtil.h"
+-- 
+2.37.2
+

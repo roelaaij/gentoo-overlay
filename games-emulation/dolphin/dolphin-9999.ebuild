@@ -112,9 +112,8 @@ declare -A KEEP_BUNDLED=(
 )
 
 PATCHES=( "${FILESDIR}/0001-shared-xxhash.patch"
+		  "${FILESDIR}/0001-system-zlib-ng-and-minizip-ng.patch"
 		  "${FILESDIR}/0003-shared-glslang.patch"
-		  "${FILESDIR}/0002-regular-minizip-instead-of-minizip-ng.patch"
-		  "${FILESDIR}/0001-fix-minizip-util.patch"
 		  "${FILESDIR}/0004-system-libspng.patch" )
 
 src_prepare() {

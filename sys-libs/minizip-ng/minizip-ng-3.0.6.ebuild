@@ -28,21 +28,15 @@ DEPEND="${RDEPEND} ${BDEPEND}"
 src_configure() {
 	local mycmakeargs=(
 		-DMZ_COMPAT="$(usex compat)"
+		-DMZ_PROJECT_SUFFIX="-ng"
 		-DMZ_BUILD_TESTS="$(usex test)"
 	)
-
-	if use compat; then
-		local mycmakeargs=(-DMZ_ZLIB="OFF")
-	fi
-
 	cmake_src_configure
 }
 
 src_install() {
 	cmake_src_install
-
-	if use compat ; then
-		ewarn "minizip-ng is experimental and replacing the system zlib[minizip] is dangerous"
-		ewarn "Please be careful!"
+	if use compat; then
+		rm ${D}/usr/include/{un,}zip.h || die
 	fi
 }

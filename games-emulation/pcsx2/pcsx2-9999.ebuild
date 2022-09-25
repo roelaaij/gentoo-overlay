@@ -68,6 +68,7 @@ DEPEND="${RDEPEND}
 
 PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/visibility.patch"
+		  "${FILESDIR}/jpgd-static.patch"
 		  "${FILESDIR}/system-glslang.patch"
 		  "${FILESDIR}/link-to-rt.patch"
 		  "${FILESDIR}/qt6-no-linguist.patch"
@@ -104,7 +105,7 @@ src_configure() {
 	local mycmakeargs=(
 		-DDISABLE_BUILD_DATE=TRUE
 		-DDISABLE_PCSX2_WRAPPER=TRUE
-		-DPACKAGE_MODE=TRUE
+		-DPACKAGE_MODE=ON
 		-DXDG_STD=TRUE
 		-DDISABLE_SETCAP=TRUE
 		-DCMAKE_LIBRARY_PATH="/usr/$(get_libdir)/${PN}"

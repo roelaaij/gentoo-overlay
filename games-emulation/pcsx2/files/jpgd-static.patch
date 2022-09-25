@@ -1,0 +1,15 @@
+diff --git a/3rdparty/jpgd/CMakeLists.txt b/3rdparty/jpgd/CMakeLists.txt
+index d22505b31..bff47362b 100644
+--- a/3rdparty/jpgd/CMakeLists.txt
++++ b/3rdparty/jpgd/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-add_library(jpgd
++add_library(jpgd STATIC
+ 	jpgd.cpp
+ 	jpgd.h
+ 	jpgd_idct.h
+@@ -9,4 +9,3 @@ add_library(jpgd
+ target_include_directories(jpgd PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+ set_property(TARGET jpgd PROPERTY CXX_STANDARD 17)
+ set_property(TARGET jpgd PROPERTY CXX_STANDARD_REQUIRED ON)
+-

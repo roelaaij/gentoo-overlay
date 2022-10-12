@@ -75,6 +75,7 @@ PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/static-core-library.patch"
 		  "${FILESDIR}/more-system-libs.patch"
 		  "${FILESDIR}/fix-resource-dir.patch"
+		  "${FILESDIR}/system-fast-float.patch"
 		)
 
 pkg_setup() {

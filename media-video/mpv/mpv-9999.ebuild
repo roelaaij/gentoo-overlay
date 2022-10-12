@@ -1,4 +1,4 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=6
@@ -93,7 +93,7 @@ COMMON_DEPEND="
 	rubberband? ( >=media-libs/rubberband-1.8.0 )
 	sdl? ( media-libs/libsdl2[sound,threads,video] )
 	sixel? ( media-libs/libsixel )
-	vaapi? ( x11-libs/libva:=[drm?,X?,wayland?] )
+	vaapi? ( x11-libs/libva:=[X?,wayland?] )
 	vapoursynth? ( media-libs/vapoursynth )
 	vdpau? ( x11-libs/libvdpau )
 	vulkan? (

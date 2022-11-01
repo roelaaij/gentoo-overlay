@@ -76,6 +76,7 @@ PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/more-system-libs.patch"
 		  "${FILESDIR}/fix-resource-dir.patch"
 		  "${FILESDIR}/system-fast-float.patch"
+		  "${FILESDIR}/${PN}-fix-no-achievements.patch"
 		)
 
 pkg_setup() {
@@ -118,6 +119,7 @@ src_configure() {
 		-DUSE_OPENGL=$(usex opengl)
 		-DUSE_VTUNE=FALSE
 		-DENABLE_TESTS=FALSE
+		-DUSE_ACHIEVEMENTS=FALSE
 	)
 
 	if use wxWidgets; then

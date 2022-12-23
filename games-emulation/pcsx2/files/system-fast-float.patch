@@ -1,19 +1,19 @@
-From 245014d8a4c8d9a1bee97fe766cc857efb569985 Mon Sep 17 00:00:00 2001
+From 35bb8dc24442ade219eeacd7a1f6db95545f1bbb Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Mon, 26 Sep 2022 13:49:16 +0200
-Subject: [PATCH] Use from_chars from c++ libs
+Date: Fri, 23 Dec 2022 13:19:48 +0100
+Subject: [PATCH] system fast float
 
 ---
  cmake/SearchForStuff.cmake | 8 --------
  common/CMakeLists.txt      | 1 -
- common/StringUtil.h        | 3 +--
- 3 files changed, 1 insertion(+), 11 deletions(-)
+ common/StringUtil.h        | 5 ++---
+ 3 files changed, 2 insertions(+), 12 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index b061982e6..109d8ee95 100644
+index b8424334b..688d7bdd9 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
-@@ -252,14 +252,6 @@ else()
+@@ -272,14 +272,6 @@ else()
  	set(BIN2CPPDEP ${CMAKE_SOURCE_DIR}/linux_various/hex2h.pl)
  endif()
  
@@ -29,10 +29,10 @@ index b061982e6..109d8ee95 100644
  add_subdirectory(3rdparty/simpleini EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/imgui EXCLUDE_FROM_ALL)
 diff --git a/common/CMakeLists.txt b/common/CMakeLists.txt
-index 51101e626..8d6e2b3c6 100644
+index 31f350f63..1d614fb9f 100644
 --- a/common/CMakeLists.txt
 +++ b/common/CMakeLists.txt
-@@ -288,7 +288,6 @@ target_link_libraries(common PRIVATE
+@@ -297,7 +297,6 @@ target_link_libraries(common PRIVATE
  
  target_link_libraries(common PUBLIC
  	fmt::fmt
@@ -41,7 +41,7 @@ index 51101e626..8d6e2b3c6 100644
  
  fixup_file_properties(common)
 diff --git a/common/StringUtil.h b/common/StringUtil.h
-index b9db36b8f..e6f82b6f3 100644
+index e0195b2c1..d86c190be 100644
 --- a/common/StringUtil.h
 +++ b/common/StringUtil.h
 @@ -25,7 +25,6 @@
@@ -52,7 +52,7 @@ index b9db36b8f..e6f82b6f3 100644
  
  // Older versions of libstdc++ are missing support for from_chars() with floats, and was only recently
  // merged in libc++. So, just fall back to stringstream (yuck!) on everywhere except MSVC.
-@@ -94,7 +93,7 @@ namespace StringUtil
+@@ -113,7 +112,7 @@ namespace StringUtil
  	{
  		T value;
  
@@ -61,6 +61,15 @@ index b9db36b8f..e6f82b6f3 100644
  		if (result.ec != std::errc())
  			return std::nullopt;
  
+@@ -126,7 +125,7 @@ namespace StringUtil
+ 
+ 		const char* ptr = str.data();
+ 		const char* end = ptr + str.length();
+-		const fast_float::from_chars_result result = fast_float::from_chars(ptr, end, value);
++		const std::from_chars_result result = std::from_chars(ptr, end, value);
+ 		if (result.ec != std::errc())
+ 			return std::nullopt;
+ 
 -- 
-2.37.3
+2.39.0
 

@@ -69,13 +69,14 @@ DEPEND="${RDEPEND}
 PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/visibility.patch"
 		  "${FILESDIR}/jpgd-static.patch"
-		  "${FILESDIR}/system-glslang.patch"
 		  "${FILESDIR}/link-to-rt.patch"
 		  "${FILESDIR}/qt6-no-linguist.patch"
 		  "${FILESDIR}/static-core-library.patch"
 		  "${FILESDIR}/more-system-libs.patch"
+		  "${FILESDIR}/system-glslang.patch"
 		  "${FILESDIR}/fix-resource-dir.patch"
 		  "${FILESDIR}/system-fast-float.patch"
+		  "${FILESDIR}/auto-noderef.patch"
 		  "${FILESDIR}/${PN}-fix-no-achievements.patch"
 		)
 
@@ -110,6 +111,7 @@ src_configure() {
 		-DPACKAGE_MODE=ON
 		-DXDG_STD=TRUE
 		-DDISABLE_SETCAP=TRUE
+		-DUSE_DISCORD_PRESENCE=FALSE
 		-DCMAKE_LIBRARY_PATH="/usr/$(get_libdir)/${PN}"
 		-DCUBEB_API=$(usex cubeb)
 		-DX11_API=$(usex X)

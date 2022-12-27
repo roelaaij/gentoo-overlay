@@ -1,14 +1,14 @@
 # Copyright 1999-2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 inherit cmake desktop xdg-utils pax-utils
 
 if [[ ${PV} == *9999 ]]
 then
 	EGIT_REPO_URI="https://github.com/dolphin-emu/dolphin"
-	EGIT_SUBMODULES=( Externals/mGBA/mgba )
+	EGIT_SUBMODULES=( Externals/mGBA/mgba Externals/implot/implot Externals/VulkanMemoryAllocator )
 	inherit git-r3
 else
 	EGIT_COMMIT=0f2540a0d1133950467845f20b1e003181147781
@@ -95,7 +95,7 @@ declare -A KEEP_BUNDLED=(
 	[Bochs_disasm]=LGPL-2.1+
 	[cpp-optparse]=MIT
 	[imgui]=MIT
-	[glslang]=BSD
+	[implot]=MIT
 
 	[FreeSurround]=GPL-2+
 	[soundtouch]=LGPL-2.1+
@@ -106,13 +106,16 @@ declare -A KEEP_BUNDLED=(
 	[mGBA]=MPL-2.0
 
 	[picojson]=BSD-2
+	[expr]=MIT
 	[rangeset]=ZLIB
 	[FatFs]=AS-IS
 	[gtest]= # (build-time only)
+
+	[VulkanMemoryAllocator]=MIT
 )
 
-PATCHES=( "${FILESDIR}/0001-shared-xxhash.patch"
-		  "${FILESDIR}/0001-system-zlib-ng-and-minizip-ng.patch"
+PATCHES=( "${FILESDIR}/0001-system-zlib-ng-and-minizip-ng.patch"
+		  "${FILESDIR}/0002-shared-xxhash.patch"
 		  "${FILESDIR}/0003-shared-glslang.patch"
 		  "${FILESDIR}/0004-system-libspng.patch" )
 

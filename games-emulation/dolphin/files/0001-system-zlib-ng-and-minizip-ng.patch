@@ -1,6 +1,6 @@
-From 2eab56ab7827292a46c08f9343db83e849c64de8 Mon Sep 17 00:00:00 2001
+From 3a42124fa68ee9138cf9a602e3165b69ef9be059 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Thu, 1 Sep 2022 12:36:38 +0200
+Date: Sat, 24 Dec 2022 09:07:10 +0100
 Subject: [PATCH] system zlib-ng and minizip-ng
 
 ---
@@ -14,10 +14,10 @@ Subject: [PATCH] system zlib-ng and minizip-ng
  7 files changed, 22 insertions(+), 24 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 163ea2c943..e7a4120cd6 100644
+index c8c494bfdb..13830bad70 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -787,12 +787,10 @@ else()
+@@ -788,12 +788,10 @@ else()
    add_subdirectory(Externals/zstd)
  endif()
  
@@ -34,19 +34,19 @@ index 163ea2c943..e7a4120cd6 100644
    check_vendoring_approved(minizip)
    message(STATUS "Shared minizip not found, falling back to the static library")
 diff --git a/Source/Core/Common/Hash.cpp b/Source/Core/Common/Hash.cpp
-index f11ac4d62c..cb0c0ba1db 100644
+index e6b421e96f..a6d5f80ea9 100644
 --- a/Source/Core/Common/Hash.cpp
 +++ b/Source/Core/Common/Hash.cpp
-@@ -5,7 +5,7 @@
- 
- #include <algorithm>
+@@ -7,7 +7,7 @@
+ #include <bit>
  #include <cstring>
+ 
 -#include <zlib.h>
 +#include <zlib-ng.h>
  
  #include "Common/BitUtils.h"
  #include "Common/CPUDetect.h"
-@@ -25,7 +25,7 @@ namespace Common
+@@ -27,7 +27,7 @@ namespace Common
  u32 HashAdler32(const u8* data, size_t len)
  {
    // Use fast implementation from zlib-ng
@@ -55,7 +55,7 @@ index f11ac4d62c..cb0c0ba1db 100644
  }
  
  // Stupid hash - but can't go back now :)
-@@ -451,12 +451,12 @@ u64 GetHash64(const u8* src, u32 len, u32 samples)
+@@ -453,12 +453,12 @@ u64 GetHash64(const u8* src, u32 len, u32 samples)
  
  u32 StartCRC32()
  {
@@ -71,11 +71,11 @@ index f11ac4d62c..cb0c0ba1db 100644
  
  u32 ComputeCRC32(const u8* data, size_t len)
 diff --git a/Source/Core/Core/CMakeLists.txt b/Source/Core/Core/CMakeLists.txt
-index 26787fcd3d..3a79ef7998 100644
+index b5f1dfdb87..1393000618 100644
 --- a/Source/Core/Core/CMakeLists.txt
 +++ b/Source/Core/Core/CMakeLists.txt
-@@ -595,7 +595,7 @@ PUBLIC
- PRIVATE
+@@ -610,7 +610,7 @@ PRIVATE
+   FatFs
    fmt::fmt
    ${LZO}
 -  ZLIB::ZLIB
@@ -201,18 +201,18 @@ index c026cd577d..edb1b92e87 100644
  )
  
 diff --git a/Source/Core/UpdaterCommon/UpdaterCommon.cpp b/Source/Core/UpdaterCommon/UpdaterCommon.cpp
-index 6bbe5b936a..222c8941cb 100644
+index 6fdb9630a0..9ad57b6ba6 100644
 --- a/Source/Core/UpdaterCommon/UpdaterCommon.cpp
 +++ b/Source/Core/UpdaterCommon/UpdaterCommon.cpp
-@@ -10,7 +10,7 @@
+@@ -11,7 +11,7 @@
  #include <ed25519.h>
  #include <mbedtls/base64.h>
  #include <mbedtls/sha256.h>
 -#include <zlib.h>
 +#include <zlib-ng.h>
  
+ #include "Common/CommonFuncs.h"
  #include "Common/CommonPaths.h"
- #include "Common/FileUtil.h"
 -- 
-2.37.2
+2.39.0
 

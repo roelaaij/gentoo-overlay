@@ -1,22 +1,24 @@
-From 4408e17215f55264fce11dcb23e702bfd515276d Mon Sep 17 00:00:00 2001
+From deb0cdc7d6d22c9b2ba7c97d5b0a9d8a1a86459a Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sun, 18 Sep 2022 20:32:04 +0200
-Subject: [PATCH 2/2] system glslang
+Date: Sat, 24 Dec 2022 13:23:44 +0100
+Subject: [PATCH] shared glslang
 
 ---
  CMakeLists.txt                                  | 12 ++++++++++--
  Source/Core/VideoBackends/Vulkan/CMakeLists.txt |  4 +++-
- Source/Core/VideoCommon/CMakeLists.txt          |  4 +++-
- 3 files changed, 16 insertions(+), 4 deletions(-)
+ Source/Core/VideoCommon/CMakeLists.txt          | 14 +++-----------
+ Source/Core/VideoCommon/Spirv.cpp               |  8 ++++----
+ Source/Core/VideoCommon/Spirv.h                 |  2 +-
+ 5 files changed, 21 insertions(+), 19 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index eac99af420..5e40070ce3 100644
+index c8c494bfdb..6eaabfe9d7 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -693,8 +693,16 @@ else()
-   add_subdirectory(Externals/fmt EXCLUDE_FROM_ALL)
+@@ -694,8 +694,16 @@ else()
  endif()
  add_subdirectory(Externals/imgui)
+ add_subdirectory(Externals/implot)
 -add_subdirectory(Externals/glslang)
 -add_subdirectory(Externals/spirv_cross)
 +
@@ -33,28 +35,28 @@ index eac99af420..5e40070ce3 100644
  if(ENABLE_VULKAN)
    add_definitions(-DHAS_VULKAN)
 diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-index 826cd5e932..1bea95e127 100644
+index 5fd6aa1ed7..5d886ce454 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 +++ b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-@@ -44,7 +44,9 @@ PUBLIC
+@@ -39,7 +39,9 @@ add_library(videovulkan
  
- PRIVATE
-   # Link against glslang, the other necessary libraries are referenced by the executable.
--  glslang
+ target_link_libraries(videovulkan
+ PUBLIC
+-  common
 +  glslang::glslang
 +  glslang::SPIRV
 +  glslang::glslang-default-resource-limits
-   PkgConfig::xxhash
- )
+   videocommon
  
+ PRIVATE
 diff --git a/Source/Core/VideoCommon/CMakeLists.txt b/Source/Core/VideoCommon/CMakeLists.txt
-index 5da849ef9e..ebe6779020 100644
+index a7a52c5e40..c79ab8b3b7 100644
 --- a/Source/Core/VideoCommon/CMakeLists.txt
 +++ b/Source/Core/VideoCommon/CMakeLists.txt
-@@ -167,7 +167,9 @@ PRIVATE
-   spng
-   PkgConfig::xxhash
+@@ -171,7 +171,9 @@ PRIVATE
+   xxhash
    imgui
+   implot
 -  glslang
 +  glslang::glslang
 +  glslang::SPIRV
@@ -62,6 +64,62 @@ index 5da849ef9e..ebe6779020 100644
  )
  
  if(_M_X86)
+@@ -214,16 +216,6 @@ if(FFmpeg_FOUND)
+   endif()
+ endif()
+ 
+-# Silence warnings on glslang by flagging it as a system include
+-target_include_directories(videocommon
+-SYSTEM PUBLIC
+-  ${CMAKE_SOURCE_DIR}/Externals/glslang/glslang/Public
+-SYSTEM PRIVATE
+-  ${CMAKE_SOURCE_DIR}/Externals/glslang/StandAlone
+-  ${CMAKE_SOURCE_DIR}/Externals/glslang/SPIRV
+-  ${CMAKE_SOURCE_DIR}/Externals/glslang
+-)
+-
+ if(MSVC)
+   # Add precompiled header
+   target_link_libraries(videocommon PRIVATE use_pch)
+diff --git a/Source/Core/VideoCommon/Spirv.cpp b/Source/Core/VideoCommon/Spirv.cpp
+index 6fee98b536..91166ce2c3 100644
+--- a/Source/Core/VideoCommon/Spirv.cpp
++++ b/Source/Core/VideoCommon/Spirv.cpp
+@@ -4,9 +4,9 @@
+ #include "VideoCommon/Spirv.h"
+ 
+ // glslang includes
+-#include "GlslangToSpv.h"
+-#include "ResourceLimits.h"
+-#include "disassemble.h"
++#include "glslang/Public/ResourceLimits.h"
++#include "glslang/SPIRV/GlslangToSpv.h"
++#include "glslang/SPIRV/disassemble.h"
+ 
+ #include "Common/FileUtil.h"
+ #include "Common/Logging/Log.h"
+@@ -39,7 +39,7 @@ bool InitializeGlslang()
+ 
+ const TBuiltInResource* GetCompilerResourceLimits()
+ {
+-  return &glslang::DefaultTBuiltInResource;
++  return GetDefaultResources();
+ }
+ 
+ std::optional<SPIRV::CodeVector>
+diff --git a/Source/Core/VideoCommon/Spirv.h b/Source/Core/VideoCommon/Spirv.h
+index fe75ea0f99..55fe4416f3 100644
+--- a/Source/Core/VideoCommon/Spirv.h
++++ b/Source/Core/VideoCommon/Spirv.h
+@@ -8,7 +8,7 @@
+ #include <string_view>
+ #include <vector>
+ 
+-#include "ShaderLang.h"
++#include "glslang/Public/ShaderLang.h"
+ 
+ #include "Common/CommonTypes.h"
+ #include "VideoCommon/VideoCommon.h"
 -- 
-2.37.3
+2.39.0
 

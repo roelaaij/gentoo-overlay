@@ -55,16 +55,22 @@ RDEPEND="
 		   x11-libs/wxGTK:3.1-gtk3[X]
 		   >=media-libs/libsdl2-2.0.12[haptic,joystick,sound]
 	)
-	qt? (
-		   dev-qt/qtbase[gui,widgets,network]
-		   >=media-libs/libsdl2-2.0.22[haptic,joystick,sound]
-	)
+	dev-qt/qtbase:6[gui,network,widgets]
+	dev-qt/qtsvg:6
+	>=media-libs/libsdl2-2.0.22[haptic,joystick,sound]
 "
 DEPEND="${RDEPEND}
 	dev-cpp/pngpp
 	>=dev-cpp/rapidyaml-0.3.0
 	dev-cpp/sparsehash
 "
+BDEPEND="
+	dev-lang/perl
+	dev-qt/qttools[linguist]"
+
+FILECAPS=(
+	-m 0755 "CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/pcsx2
+)
 
 PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/visibility.patch"
@@ -74,7 +80,6 @@ PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/static-core-library.patch"
 		  "${FILESDIR}/more-system-libs.patch"
 		  "${FILESDIR}/system-glslang.patch"
-		  "${FILESDIR}/fix-resource-dir.patch"
 		  "${FILESDIR}/system-fast-float.patch"
 		  "${FILESDIR}/auto-noderef.patch"
 		  "${FILESDIR}/${PN}-fix-no-achievements.patch"
@@ -93,6 +98,9 @@ pkg_setup() {
 src_prepare() {
 	rm -rf 3rdparty/fmt || die
 	cmake_src_prepare
+
+	sed -e "/EmuFolders::AppRoot =/s|=.*|= \"${EPREFIX}/usr/share/${PN}\";|" \
+			-i pcsx2/Frontend/CommonHost.cpp || die
 }
 
 src_configure() {
@@ -106,9 +114,8 @@ src_configure() {
 	local CMAKE_BUILD_TYPE="Release"
 
 	local mycmakeargs=(
-		-DDISABLE_BUILD_DATE=TRUE
-		-DDISABLE_PCSX2_WRAPPER=TRUE
-		-DPACKAGE_MODE=ON
+		-DBUILD_SHARED_LIBS=no
+		-DDISABLE_BUILD_DATE=yes
 		-DXDG_STD=TRUE
 		-DDISABLE_SETCAP=TRUE
 		-DUSE_DISCORD_PRESENCE=FALSE
@@ -131,14 +138,19 @@ src_configure() {
 }
 
 src_install() {
-	# Upstream issues:
-	#  https://github.com/PCSX2/pcsx2/issues/417
-	#  https://github.com/PCSX2/pcsx2/issues/3077
-	QA_EXECSTACK="usr/bin/pcsx2"
-	QA_TEXTRELS="usr/$(get_libdir)/pcsx2/* usr/bin/pcsx2"
-	cmake_src_install
+	# package mode was removed turning cmake_src_install into a noop
+	newbin "${BUILD_DIR}"/pcsx2-qt/pcsx2-qt ${PN}
+
+	insinto /usr/share/${PN}
+	doins -r "${BUILD_DIR}"/pcsx2-qt/resources
+
+	dodoc README.md bin/docs/{Debugger.pdf,GameIndex.pdf,PCSX2_FAQ.pdf,debugger.txt}
+	newman bin/docs/PCSX2.1 ${PN}.1
+
+	newicon linux_various/PCSX2.xpm ${PN}.xpm
+	make_desktop_entry ${PN} ${PN^^}
 }
 
 pkg_postinst() {
-	fcaps "CAP_NET_RAW+eip CAP_NET_ADMIN+eip" $(usex qt 'usr/bin/pcsx2-qt' 'usr/bin/pcsx2')
+	fcaps_pkg_postinst
 }

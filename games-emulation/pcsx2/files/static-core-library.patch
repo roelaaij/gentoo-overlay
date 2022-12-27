@@ -1,6 +1,6 @@
-From fbd065705f4900b1ee64bcc8985aee571eb1757e Mon Sep 17 00:00:00 2001
+From 3d9a87ae89493028652b5a425535be8e93973aba Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Thu, 22 Dec 2022 21:38:17 +0100
+Date: Tue, 27 Dec 2022 20:08:55 +0100
 Subject: [PATCH] static core library
 
 ---
@@ -8,18 +8,18 @@ Subject: [PATCH] static core library
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index 792f581b0..779e1f85f 100644
+index c2b4f9216..c1241fdd2 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
-@@ -10,7 +10,7 @@ else()
- 		# Fixes issues with some compiler + linker combinations
- 		add_library(PCSX2 OBJECT)
- 	else()
--		add_library(PCSX2)
-+		add_library(PCSX2 STATIC)
- 	endif()
- 	target_compile_definitions(PCSX2_FLAGS INTERFACE
- 		"PCSX2_CORE"
+@@ -5,7 +5,7 @@ if(DISABLE_ADVANCE_SIMD OR LTO_PCSX2_CORE)
+ 	# Fixes issues with some compiler + linker combinations
+ 	add_library(PCSX2 OBJECT)
+ else()
+-	add_library(PCSX2)
++	add_library(PCSX2 STATIC)
+ endif()
+ target_link_libraries(PCSX2 PRIVATE PCSX2_FLAGS)
+ 
 -- 
 2.39.0
 

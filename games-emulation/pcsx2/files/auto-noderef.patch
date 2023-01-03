@@ -1,17 +1,17 @@
-From 384ab428d558241ba7714995080823e5a137f739 Mon Sep 17 00:00:00 2001
+From ebe3ecb8f1be9cd87e960d7ec2c2c9732c1df52a Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Fri, 23 Dec 2022 13:27:06 +0100
+Date: Sun, 1 Jan 2023 14:47:00 +0100
 Subject: [PATCH] auto noderef
 
 ---
- pcsx2/GameDatabase.cpp | 10 +++++-----
- 1 file changed, 5 insertions(+), 5 deletions(-)
+ pcsx2/GameDatabase.cpp | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
 
 diff --git a/pcsx2/GameDatabase.cpp b/pcsx2/GameDatabase.cpp
-index cbed32b9c..1dbe5ad74 100644
+index b8907e24b..2ffb6105b 100644
 --- a/pcsx2/GameDatabase.cpp
 +++ b/pcsx2/GameDatabase.cpp
-@@ -150,7 +150,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
+@@ -175,7 +175,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
  	// Validate game fixes, invalid ones will be dropped!
  	if (node.has_child("gameFixes") && node["gameFixes"].has_children())
  	{
@@ -20,7 +20,7 @@ index cbed32b9c..1dbe5ad74 100644
  		{
  			bool fixValidated = false;
  			auto fix = std::string(n.val().str, n.val().len);
-@@ -181,7 +181,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
+@@ -206,7 +206,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
  	// Validate speed hacks, invalid ones will be dropped!
  	if (node.has_child("speedHacks") && node["speedHacks"].has_children())
  	{
@@ -29,7 +29,7 @@ index cbed32b9c..1dbe5ad74 100644
  		{
  			bool speedHackValidated = false;
  			auto speedHack = std::string(n.key().str, n.key().len);
-@@ -211,7 +211,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
+@@ -236,7 +236,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
  
  	if (node.has_child("gsHWFixes"))
  	{
@@ -38,7 +38,7 @@ index cbed32b9c..1dbe5ad74 100644
  		{
  			const std::string_view id_name(n.key().data(), n.key().size());
  			std::optional<GameDatabaseSchema::GSHWFixId> id = GameDatabaseSchema::parseHWFixName(id_name);
-@@ -232,7 +232,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
+@@ -257,7 +257,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
  	// - currently they are used as a '\n' delimited string in the app
  	if (node.has_child("memcardFilters") && node["memcardFilters"].has_children())
  	{
@@ -47,7 +47,7 @@ index cbed32b9c..1dbe5ad74 100644
  		{
  			auto memcardFilter = std::string(n.val().str, n.val().len);
  			gameEntry.memcardFilters.emplace_back(std::move(memcardFilter));
-@@ -242,7 +242,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
+@@ -267,7 +267,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
  	// Game Patches
  	if (node.has_child("patches") && node["patches"].has_children())
  	{
@@ -56,6 +56,31 @@ index cbed32b9c..1dbe5ad74 100644
  		{
  			// use a crc of 0 for default patches
  			const std::string_view crc_str(n.key().str, n.key().len);
+@@ -292,13 +292,13 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
+ 
+ 	if (node.has_child("dynaPatches") && node["dynaPatches"].has_children())
+ 	{
+-		for (const ryml::NodeRef& n : node["dynaPatches"].children())
++		for (const auto& n : node["dynaPatches"].children())
+ 		{
+ 			DynamicPatch patch;
+ 
+ 			if (n.has_child("pattern") && n["pattern"].has_children())
+ 			{
+-				for (const ryml::NodeRef& db_pattern : n["pattern"].children())
++				for (const auto& db_pattern : n["pattern"].children())
+ 				{
+ 					DynamicPatchEntry entry;
+ 					db_pattern["offset"] >> entry.offset;
+@@ -306,7 +306,7 @@ void GameDatabase::parseAndInsert(const std::string_view& serial, const c4::yml:
+ 
+ 					patch.pattern.push_back(entry);
+ 				}
+-				for (const ryml::NodeRef& db_replacement : n["replacement"].children())
++				for (const auto& db_replacement : n["replacement"].children())
+ 				{
+ 					DynamicPatchEntry entry;
+ 					db_replacement["offset"] >> entry.offset;
 -- 
 2.39.0
 

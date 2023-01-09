@@ -1,4 +1,4 @@
-# Copyright 1999-2022 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -60,7 +60,6 @@ RDEPEND="
 	>=media-libs/libsdl2-2.0.22[haptic,joystick,sound]
 "
 DEPEND="${RDEPEND}
-	dev-cpp/pngpp
 	>=dev-cpp/rapidyaml-0.3.0
 	dev-cpp/sparsehash
 "
@@ -116,8 +115,6 @@ src_configure() {
 	local mycmakeargs=(
 		-DBUILD_SHARED_LIBS=no
 		-DDISABLE_BUILD_DATE=yes
-		-DXDG_STD=TRUE
-		-DDISABLE_SETCAP=TRUE
 		-DUSE_DISCORD_PRESENCE=FALSE
 		-DCMAKE_LIBRARY_PATH="/usr/$(get_libdir)/${PN}"
 		-DCUBEB_API=$(usex cubeb)
@@ -139,10 +136,10 @@ src_configure() {
 
 src_install() {
 	# package mode was removed turning cmake_src_install into a noop
-	newbin "${BUILD_DIR}"/pcsx2-qt/pcsx2-qt ${PN}
+	newbin "${BUILD_DIR}"/bin/pcsx2-qt ${PN}
 
 	insinto /usr/share/${PN}
-	doins -r "${BUILD_DIR}"/pcsx2-qt/resources
+	doins -r "${BUILD_DIR}"/bin/resources
 
 	dodoc README.md bin/docs/{Debugger.pdf,GameIndex.pdf,PCSX2_FAQ.pdf,debugger.txt}
 	newman bin/docs/PCSX2.1 ${PN}.1

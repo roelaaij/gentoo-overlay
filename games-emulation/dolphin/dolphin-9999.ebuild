@@ -1,4 +1,4 @@
-# Copyright 1999-2022 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -155,6 +155,7 @@ src_configure() {
 		-DENABLE_LLVM=OFF
 		# just adds -flto, user can do that via flags
 		-DENABLE_LTO=OFF
+		-DENABLE_TESTS=OFF
 		-DUSE_MGBA=$(usex mgba)
 		-DENABLE_PULSEAUDIO=$(usex pulseaudio)
 		-DENABLE_QT=$(usex gui)

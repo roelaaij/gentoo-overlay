@@ -1,6 +1,6 @@
-From 3a42124fa68ee9138cf9a602e3165b69ef9be059 Mon Sep 17 00:00:00 2001
+From f2d1f91fa5672e848659777286a1ca6078574f96 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 24 Dec 2022 09:07:10 +0100
+Date: Tue, 17 Jan 2023 20:54:41 +0100
 Subject: [PATCH] system zlib-ng and minizip-ng
 
 ---
@@ -14,7 +14,7 @@ Subject: [PATCH] system zlib-ng and minizip-ng
  7 files changed, 22 insertions(+), 24 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c8c494bfdb..13830bad70 100644
+index 90650f0d12..ee62367dc5 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -788,12 +788,10 @@ else()
@@ -23,7 +23,7 @@ index c8c494bfdb..13830bad70 100644
  
 -add_subdirectory(Externals/zlib-ng)
 -
--pkg_check_modules(MINIZIP minizip-ng>=3.0.0)
+-pkg_check_modules(MINIZIP minizip>=3.0.0)
 -if(MINIZIP_FOUND)
 +pkg_check_modules(zlib-ng REQUIRED IMPORTED_TARGET zlib-ng>=2.0.0)
 +pkg_check_modules(minizip-ng REQUIRED IMPORTED_TARGET minizip-ng>=3.0.0)

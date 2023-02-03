@@ -1,0 +1,34 @@
+From 3aa783e0a2e23addf061a84412dee240bb188136 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Thu, 26 Jan 2023 13:48:29 +0100
+Subject: [PATCH] build shared libs
+
+---
+ layers/CMakeLists.txt | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/layers/CMakeLists.txt b/layers/CMakeLists.txt
+index 503dbc07d..495e4bf9f 100644
+--- a/layers/CMakeLists.txt
++++ b/layers/CMakeLists.txt
+@@ -14,7 +14,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ # ~~~
+-add_library(VkLayer_utils STATIC)
++add_library(VkLayer_utils SHARED)
+ target_sources(VkLayer_utils PRIVATE
+     generated/vk_format_utils.h
+     generated/vk_format_utils.cpp
+@@ -159,7 +159,7 @@ else()
+     message(NOTICE "VulkanVL_generated_source target requires python 3")
+ endif()
+ 
+-add_library(VkLayer_khronos_validation MODULE)
++add_library(VkLayer_khronos_validation SHARED)
+ 
+ target_sources(VkLayer_khronos_validation PRIVATE
+     best_practices/best_practices_error_enums.h
+-- 
+2.39.0
+

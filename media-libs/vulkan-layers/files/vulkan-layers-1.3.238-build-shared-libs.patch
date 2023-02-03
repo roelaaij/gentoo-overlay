@@ -1,0 +1,22 @@
+diff --git a/layers/CMakeLists.txt b/layers/CMakeLists.txt
+index 4923a7fac..adbb62569 100644
+--- a/layers/CMakeLists.txt
++++ b/layers/CMakeLists.txt
+@@ -23,7 +23,7 @@
+ # https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/4640
+ add_definitions(-DXXH_NO_LONG_LONG)
+ 
+-add_library(VkLayer_utils STATIC)
++add_library(VkLayer_utils SHARED)
+ target_sources(VkLayer_utils PRIVATE
+     cast_utils.h
+     hash_util.h
+@@ -278,7 +278,7 @@ else()
+     message(NOTICE "VulkanVL_generated_source target requires python 3")
+ endif()
+ 
+-add_library(VkLayer_khronos_validation MODULE)
++add_library(VkLayer_khronos_validation SHARED)
+ 
+ target_sources(VkLayer_khronos_validation PRIVATE
+     ${CHASSIS_LIBRARY_FILES}

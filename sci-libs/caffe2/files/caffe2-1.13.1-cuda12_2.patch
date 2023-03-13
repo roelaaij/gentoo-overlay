@@ -1,0 +1,51 @@
+From 79009cbc53d82e029189daa4b43c30819342c206 Mon Sep 17 00:00:00 2001
+From: Xiao Wang <24860335+xwang233@users.noreply.github.com>
+Date: Thu, 15 Dec 2022 11:28:52 +0000
+Subject: [PATCH] [CUDA 12] Fix the endif guard position for cusparse const
+ descriptors (#90897)
+
+[CUDA 12] Fix the endif guard position for cusparse const descriptors
+
+Related https://github.com/pytorch/pytorch/pull/90765
+Pull Request resolved: https://github.com/pytorch/pytorch/pull/90897
+Approved by: https://github.com/IvanYashchuk
+---
+ aten/src/ATen/cuda/CUDASparseDescriptors.h | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/aten/src/ATen/cuda/CUDASparseDescriptors.h b/aten/src/ATen/cuda/CUDASparseDescriptors.h
+index 0f741c0639030..fb24495f95563 100644
+--- a/aten/src/ATen/cuda/CUDASparseDescriptors.h
++++ b/aten/src/ATen/cuda/CUDASparseDescriptors.h
+@@ -133,7 +133,6 @@ class TORCH_CUDA_CPP_API CuSparseDnMatDescriptor
+  public:
+   explicit CuSparseDnMatDescriptor(const Tensor& input, int64_t batch_offset = -1);
+ };
+-#endif //AT_USE_HIPSPARSE_GENERIC_52_API() || AT_USE_CUSPARSE_GENERIC_API()
+ 
+ class TORCH_CUDA_CPP_API CuSparseDnVecDescriptor
+     : public CuSparseDescriptor<cusparseDnVecDescr, &cusparseDestroyDnVec> {
+@@ -144,10 +143,7 @@ class TORCH_CUDA_CPP_API CuSparseDnVecDescriptor
+ class TORCH_CUDA_CPP_API CuSparseSpMatDescriptor
+     : public CuSparseDescriptor<cusparseSpMatDescr, &cusparseDestroySpMat> {};
+ 
+-class TORCH_CUDA_CPP_API CuSparseSpMatCsrDescriptor
+-    : public CuSparseSpMatDescriptor {
+- public:
+-  explicit CuSparseSpMatCsrDescriptor(const Tensor& input, int64_t batch_offset = -1);
++#endif //AT_USE_HIPSPARSE_GENERIC_52_API() || (AT_USE_CUSPARSE_GENERIC_API() || AT_USE_CUSPARSE_NON_CONST_DESCRIPTORS())
+ 
+ #if AT_USE_CUSPARSE_CONST_DESCRIPTORS()
+   class TORCH_CUDA_CPP_API CuSparseDnMatDescriptor
+@@ -174,6 +170,11 @@ class TORCH_CUDA_CPP_API CuSparseSpMatCsrDescriptor
+             &cusparseDestroySpMat> {};
+ #endif // AT_USE_CUSPARSE_CONST_DESCRIPTORS()
+ 
++class TORCH_CUDA_CPP_API CuSparseSpMatCsrDescriptor
++    : public CuSparseSpMatDescriptor {
++ public:
++  explicit CuSparseSpMatCsrDescriptor(const Tensor& input, int64_t batch_offset = -1);
++
+ #if defined(USE_ROCM) || (defined(CUDA_VERSION) && CUDA_VERSION >= 11000)
+   std::tuple<int64_t, int64_t, int64_t> get_size() {
+     int64_t rows, cols, nnz;

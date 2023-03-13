@@ -1,23 +1,20 @@
-From f2d1f91fa5672e848659777286a1ca6078574f96 Mon Sep 17 00:00:00 2001
+From 129d661d114886803ddee9fc5f559e29ccf9a7ce Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Tue, 17 Jan 2023 20:54:41 +0100
+Date: Sun, 26 Feb 2023 21:25:43 +0100
 Subject: [PATCH] system zlib-ng and minizip-ng
 
 ---
- CMakeLists.txt                              |  8 +++-----
- Source/Core/Common/Hash.cpp                 |  8 ++++----
- Source/Core/Core/CMakeLists.txt             |  2 +-
- Source/Core/DiscIO/CMakeLists.txt           |  4 ++--
- Source/Core/DiscIO/CompressedBlob.cpp       | 20 ++++++++++----------
- Source/Core/UpdaterCommon/CMakeLists.txt    |  2 +-
- Source/Core/UpdaterCommon/UpdaterCommon.cpp |  2 +-
- 7 files changed, 22 insertions(+), 24 deletions(-)
+ CMakeLists.txt                      | 8 +++-----
+ Source/Core/Core/CMakeLists.txt     | 2 +-
+ Source/Core/DiscIO/CMakeLists.txt   | 4 ++--
+ Source/Core/UICommon/CMakeLists.txt | 2 +-
+ 4 files changed, 7 insertions(+), 9 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 90650f0d12..ee62367dc5 100644
+index 2530c1a0ef..4cedcffff4 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -788,12 +788,10 @@ else()
+@@ -778,12 +778,10 @@ else()
    add_subdirectory(Externals/zstd)
  endif()
  
@@ -25,194 +22,56 @@ index 90650f0d12..ee62367dc5 100644
 -
 -pkg_check_modules(MINIZIP minizip>=3.0.0)
 -if(MINIZIP_FOUND)
-+pkg_check_modules(zlib-ng REQUIRED IMPORTED_TARGET zlib-ng>=2.0.0)
-+pkg_check_modules(minizip-ng REQUIRED IMPORTED_TARGET minizip-ng>=3.0.0)
-+if(minizip-ng_FOUND)
++pkg_check_modules(zlib REQUIRED IMPORTED_TARGET zlib-ng>=2.0.0)
++pkg_check_modules(minizip REQUIRED IMPORTED_TARGET minizip-ng>=3.0.0)
++if(minizip_FOUND)
    message(STATUS "Using shared minizip")
 -  include_directories(${MINIZIP_INCLUDE_DIRS})
  else()
    check_vendoring_approved(minizip)
    message(STATUS "Shared minizip not found, falling back to the static library")
-diff --git a/Source/Core/Common/Hash.cpp b/Source/Core/Common/Hash.cpp
-index e6b421e96f..a6d5f80ea9 100644
---- a/Source/Core/Common/Hash.cpp
-+++ b/Source/Core/Common/Hash.cpp
-@@ -7,7 +7,7 @@
- #include <bit>
- #include <cstring>
- 
--#include <zlib.h>
-+#include <zlib-ng.h>
- 
- #include "Common/BitUtils.h"
- #include "Common/CPUDetect.h"
-@@ -27,7 +27,7 @@ namespace Common
- u32 HashAdler32(const u8* data, size_t len)
- {
-   // Use fast implementation from zlib-ng
--  return adler32_z(1, data, len);
-+  return zng_adler32_z(1, data, len);
- }
- 
- // Stupid hash - but can't go back now :)
-@@ -453,12 +453,12 @@ u64 GetHash64(const u8* src, u32 len, u32 samples)
- 
- u32 StartCRC32()
- {
--  return crc32_z(0L, Z_NULL, 0);
-+  return zng_crc32_z(0L, Z_NULL, 0);
- }
- 
- u32 UpdateCRC32(u32 crc, const u8* data, size_t len)
- {
--  return crc32_z(crc, data, len);
-+  return zng_crc32_z(crc, data, len);
- }
- 
- u32 ComputeCRC32(const u8* data, size_t len)
 diff --git a/Source/Core/Core/CMakeLists.txt b/Source/Core/Core/CMakeLists.txt
-index b5f1dfdb87..1393000618 100644
+index 682c686c7d..017768d00d 100644
 --- a/Source/Core/Core/CMakeLists.txt
 +++ b/Source/Core/Core/CMakeLists.txt
-@@ -610,7 +610,7 @@ PRIVATE
+@@ -612,7 +612,7 @@ PRIVATE
    FatFs
    fmt::fmt
    ${LZO}
 -  ZLIB::ZLIB
-+  PkgConfig::zlib-ng
++  PkgConfig::zlib
  )
  
  if ((DEFINED CMAKE_ANDROID_ARCH_ABI AND CMAKE_ANDROID_ARCH_ABI MATCHES "x86|x86_64") OR
 diff --git a/Source/Core/DiscIO/CMakeLists.txt b/Source/Core/DiscIO/CMakeLists.txt
-index 61790d89d8..57bcb92f4d 100644
+index b688d7a4d5..2a37372094 100644
 --- a/Source/Core/DiscIO/CMakeLists.txt
 +++ b/Source/Core/DiscIO/CMakeLists.txt
-@@ -75,9 +75,9 @@ PUBLIC
+@@ -73,9 +73,9 @@ PUBLIC
  
  PRIVATE
    fmt::fmt
 -  minizip-ng
-+  PkgConfig::minizip-ng
++  PkgConfig::minizip
    pugixml
 -  ZLIB::ZLIB
-+  PkgConfig::zlib-ng
++  PkgConfig::zlib
  )
  
  if(MSVC)
-diff --git a/Source/Core/DiscIO/CompressedBlob.cpp b/Source/Core/DiscIO/CompressedBlob.cpp
-index 139a1e6d17..12ed85c875 100644
---- a/Source/Core/DiscIO/CompressedBlob.cpp
-+++ b/Source/Core/DiscIO/CompressedBlob.cpp
-@@ -11,7 +11,7 @@
- #include <utility>
- #include <vector>
- 
--#include <zlib.h>
-+#include <zlib-ng.h>
- 
- #ifdef _WIN32
- #include <windows.h>
-@@ -129,7 +129,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
-   }
-   else
-   {
--    z_stream z = {};
-+    zng_stream z = {};
-     z.next_in = m_zlib_buffer.data();
-     z.avail_in = comp_block_size;
-     if (z.avail_in > m_header.block_size)
-@@ -138,8 +138,8 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
-     }
-     z.next_out = out_ptr;
-     z.avail_out = m_header.block_size;
--    inflateInit(&z);
--    int status = inflate(&z, Z_FULL_FLUSH);
-+    zng_inflateInit(&z);
-+    int status = zng_inflate(&z, Z_FULL_FLUSH);
-     u32 uncomp_size = m_header.block_size - z.avail_out;
-     if (status != Z_STREAM_END)
-     {
-@@ -147,7 +147,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
-       // to be sure, don't use compressed isos :P
-       ERROR_LOG_FMT(DISCIO, "Failure reading block {} - out of data and not at end.", block_num);
-     }
--    inflateEnd(&z);
-+    zng_inflateEnd(&z);
-     if (uncomp_size != m_header.block_size)
-     {
-       ERROR_LOG_FMT(DISCIO, "Wrong block size");
-@@ -160,7 +160,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
- struct CompressThreadState
- {
-   CompressThreadState() : z{} {}
--  ~CompressThreadState() { deflateEnd(&z); }
-+  ~CompressThreadState() { zng_deflateEnd(&z); }
- 
-   // z_stream will stop working if it changes address, so this object must not be moved
-   CompressThreadState(const CompressThreadState&) = delete;
-@@ -169,7 +169,7 @@ struct CompressThreadState
-   CompressThreadState& operator=(CompressThreadState&&) = delete;
- 
-   std::vector<u8> compressed_buffer;
--  z_stream z;
-+  zng_stream z;
- };
- 
- struct CompressParameters
-@@ -189,7 +189,7 @@ struct OutputParameters
- 
- static ConversionResultCode SetUpCompressThreadState(CompressThreadState* state)
- {
--  return deflateInit(&state->z, 9) == Z_OK ? ConversionResultCode::Success :
-+  return zng_deflateInit(&state->z, 9) == Z_OK ? ConversionResultCode::Success :
-                                              ConversionResultCode::InternalError;
- }
- 
-@@ -200,7 +200,7 @@ static ConversionResult<OutputParameters> Compress(CompressThreadState* state,
- {
-   state->compressed_buffer.resize(block_size);
- 
--  int retval = deflateReset(&state->z);
-+  int retval = zng_deflateReset(&state->z);
-   state->z.next_in = parameters.data.data();
-   state->z.avail_in = block_size;
-   state->z.next_out = state->compressed_buffer.data();
-@@ -212,7 +212,7 @@ static ConversionResult<OutputParameters> Compress(CompressThreadState* state,
-     return ConversionResultCode::InternalError;
-   }
- 
--  const int status = deflate(&state->z, Z_FINISH);
-+  const int status = zng_deflate(&state->z, Z_FINISH);
- 
-   state->compressed_buffer.resize(block_size - state->z.avail_out);
- 
-diff --git a/Source/Core/UpdaterCommon/CMakeLists.txt b/Source/Core/UpdaterCommon/CMakeLists.txt
-index c026cd577d..edb1b92e87 100644
---- a/Source/Core/UpdaterCommon/CMakeLists.txt
-+++ b/Source/Core/UpdaterCommon/CMakeLists.txt
-@@ -7,8 +7,8 @@ add_library(updatercommon
- target_link_libraries(updatercommon PRIVATE
-   uicommon
-   mbedtls
--  ZLIB::ZLIB
-   ed25519
-+  PkgConfig::zlib-ng
+diff --git a/Source/Core/UICommon/CMakeLists.txt b/Source/Core/UICommon/CMakeLists.txt
+index f2ffbd0821..1585bd4587 100644
+--- a/Source/Core/UICommon/CMakeLists.txt
++++ b/Source/Core/UICommon/CMakeLists.txt
+@@ -33,7 +33,7 @@ PUBLIC
    cpp-optparse
- )
- 
-diff --git a/Source/Core/UpdaterCommon/UpdaterCommon.cpp b/Source/Core/UpdaterCommon/UpdaterCommon.cpp
-index 6fdb9630a0..9ad57b6ba6 100644
---- a/Source/Core/UpdaterCommon/UpdaterCommon.cpp
-+++ b/Source/Core/UpdaterCommon/UpdaterCommon.cpp
-@@ -11,7 +11,7 @@
- #include <ed25519.h>
- #include <mbedtls/base64.h>
- #include <mbedtls/sha256.h>
--#include <zlib.h>
-+#include <zlib-ng.h>
- 
- #include "Common/CommonFuncs.h"
- #include "Common/CommonPaths.h"
+   minizip-ng
+   pugixml
+-
++  PkgConfig::minizip
+ PRIVATE
+   fmt::fmt
+   $<$<BOOL:APPLE>:${IOK_LIBRARY}>
 -- 
-2.39.0
+2.39.2
 

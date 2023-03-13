@@ -1,7 +1,7 @@
-From fba3ad6039e5e9d9bafaa91b0b0acadd4ae51432 Mon Sep 17 00:00:00 2001
+From 0aad62630594861e4a281a52a2cf03f7b460d5ce Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 24 Dec 2022 09:13:05 +0100
-Subject: [PATCH] shared xxhash
+Date: Sat, 25 Feb 2023 09:42:24 +0100
+Subject: [PATCH] system xxhash
 
 ---
  CMakeLists.txt                                  | 3 ++-
@@ -10,10 +10,10 @@ Subject: [PATCH] shared xxhash
  3 files changed, 4 insertions(+), 3 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 13830bad70..2660baf593 100644
+index 2530c1a0ef..4595b6e4a9 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -745,7 +745,8 @@ else()
+@@ -742,7 +742,8 @@ else()
    add_subdirectory(Externals/enet)
  endif()
  
@@ -24,7 +24,7 @@ index 13830bad70..2660baf593 100644
    add_subdirectory(Externals/xxhash)
  endif()
 diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-index 5fd6aa1ed7..3f827829c0 100644
+index 7abf9a038b..abfe895884 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 +++ b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 @@ -45,7 +45,7 @@ PUBLIC
@@ -37,18 +37,18 @@ index 5fd6aa1ed7..3f827829c0 100644
  
  # Only include the Vulkan headers when building the Vulkan backend
 diff --git a/Source/Core/VideoCommon/CMakeLists.txt b/Source/Core/VideoCommon/CMakeLists.txt
-index a7a52c5e40..333fad6523 100644
+index 2737d5a514..9183096a49 100644
 --- a/Source/Core/VideoCommon/CMakeLists.txt
 +++ b/Source/Core/VideoCommon/CMakeLists.txt
-@@ -168,7 +168,7 @@ PUBLIC
+@@ -185,7 +185,7 @@ PUBLIC
  PRIVATE
    fmt::fmt
-   spng
+   ${spng_target}
 -  xxhash
 +  PkgConfig::xxhash
    imgui
    implot
    glslang
 -- 
-2.39.0
+2.39.2
 

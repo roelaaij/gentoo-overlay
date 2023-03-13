@@ -1,6 +1,6 @@
-From d3708b30740563fd2babeb7f651083de8704ff72 Mon Sep 17 00:00:00 2001
+From d98f109113cd16d640ed57cf29c009e2d360d8aa Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sun, 21 Aug 2022 20:11:31 +0200
+Date: Sat, 25 Feb 2023 09:54:13 +0100
 Subject: [PATCH] system libspng
 
 ---
@@ -8,18 +8,18 @@ Subject: [PATCH] system libspng
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e6daf29220..5338f39c24 100644
+index 2530c1a0ef..1bdb3d03d1 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -811,7 +811,7 @@ else()
+@@ -803,7 +803,7 @@ else()
    set(LZO lzo2)
  endif()
  
--add_subdirectory(Externals/libspng)
-+pkg_check_modules(spng libspng)
- 
- # Using static FreeSurround from Externals
- # There is no system FreeSurround library.
+-pkg_check_modules(pc_spng IMPORTED_TARGET spng)
++pkg_check_modules(pc_spng IMPORTED_TARGET libspng)
+ if (pc_spng_FOUND AND TARGET PkgConfig::pc_spng)
+   message(STATUS "Using the system libspng")
+   set(spng_target PkgConfig::pc_spng)
 -- 
-2.37.2
+2.39.2
 

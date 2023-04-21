@@ -80,7 +80,6 @@ PATCHES=( "${FILESDIR}/libcommon-glad-static.patch"
 		  "${FILESDIR}/more-system-libs.patch"
 		  "${FILESDIR}/system-glslang.patch"
 		  "${FILESDIR}/system-fast-float.patch"
-		  "${FILESDIR}/auto-noderef.patch"
 		  "${FILESDIR}/${PN}-fix-no-achievements.patch"
 		)
 
@@ -141,10 +140,9 @@ src_install() {
 	insinto /usr/share/${PN}
 	doins -r "${BUILD_DIR}"/bin/resources
 
-	dodoc README.md bin/docs/{Debugger.pdf,GameIndex.pdf,PCSX2_FAQ.pdf,debugger.txt}
-	newman bin/docs/PCSX2.1 ${PN}.1
+	dodoc README.md pcsx2/Docs/{Debugger.md,GameIndex.md,PCSX2_FAQ.md}
 
-	newicon linux_various/PCSX2.xpm ${PN}.xpm
+	newicon bin/resources/icons/AppIconLarge.png ${PN}.png
 	make_desktop_entry ${PN} ${PN^^}
 }
 

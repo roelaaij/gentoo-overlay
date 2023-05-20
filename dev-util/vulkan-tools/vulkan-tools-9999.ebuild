@@ -67,6 +67,7 @@ multilib_src_configure() {
 		-DBUILD_WSI_XCB_SUPPORT=$(usex X)
 		-DBUILD_WSI_XLIB_SUPPORT=$(usex X)
 		-DVULKAN_HEADERS_INSTALL_DIR="${ESYSROOT}/usr"
+		-DTOOLS_CODEGEN=ON
 	)
 
 	use cube && mycmakeargs+=(
@@ -78,7 +79,7 @@ multilib_src_configure() {
 }
 
 multilib_src_compile() {
-	cmake_build VulkanTools_generated_source
+	cmake_build tools_codegen
 	cmake_src_compile
 }
 

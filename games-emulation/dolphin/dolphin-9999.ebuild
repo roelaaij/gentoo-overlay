@@ -166,7 +166,8 @@ src_configure() {
 		-DUSE_DISCORD_PRESENCE=$(usex discord-presence)
 		-DUSE_SHARED_ENET=ON
 		-DUSE_UPNP=$(usex upnp)
-
+		# TODO
+		-DUSE_RETRO_ACHIEVEMENTS=OFF
 		# Undo cmake.eclass's defaults.
 		# All dolphin's libraries are private
 		# and rely on circular dependency resolution.

@@ -1,6 +1,6 @@
-From deb0cdc7d6d22c9b2ba7c97d5b0a9d8a1a86459a Mon Sep 17 00:00:00 2001
+From 152bfa60540c28b2a306fc8fdeb9cb0431bb4597 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 24 Dec 2022 13:23:44 +0100
+Date: Sat, 20 May 2023 19:18:59 +0200
 Subject: [PATCH] shared glslang
 
 ---
@@ -12,30 +12,33 @@ Subject: [PATCH] shared glslang
  5 files changed, 21 insertions(+), 19 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c8c494bfdb..6eaabfe9d7 100644
+index dcb7f1b94a..90a27a22eb 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -694,8 +694,16 @@ else()
+@@ -715,11 +715,19 @@ else()
  endif()
  add_subdirectory(Externals/imgui)
  add_subdirectory(Externals/implot)
 -add_subdirectory(Externals/glslang)
--add_subdirectory(Externals/spirv_cross)
 +
 +find_package(glslang REQUIRED CONFIG)
 +if(glslang_FOUND)
 +  message(STATUS "Using shared glslang ${glslang_VERSION}")
 +endif()
 +
-+find_package(spirv_cross_core REQUIRED)
-+find_package(spirv_cross_glsl REQUIRED)
-+find_package(spirv_cross_hlsl REQUIRED)
-+find_package(spirv_cross_cpp REQUIRED)
+ # SPIRV-Cross is used on Windows for GLSL to HLSL conversion for the Direct3D 11 and Direct3D 12
+ # video backends, and on Apple devices for the Metal video backend.
+ if(WIN32 OR APPLE)
+-  add_subdirectory(Externals/spirv_cross)
++  find_package(spirv_cross_core REQUIRED)
++  find_package(spirv_cross_glsl REQUIRED)
++  find_package(spirv_cross_hlsl REQUIRED)
++  find_package(spirv_cross_cpp REQUIRED)
+ endif()
  
  if(ENABLE_VULKAN)
-   add_definitions(-DHAS_VULKAN)
 diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-index 5fd6aa1ed7..5d886ce454 100644
+index 7abf9a038b..d1dd3f859c 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 +++ b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 @@ -39,7 +39,9 @@ add_library(videovulkan
@@ -50,10 +53,10 @@ index 5fd6aa1ed7..5d886ce454 100644
  
  PRIVATE
 diff --git a/Source/Core/VideoCommon/CMakeLists.txt b/Source/Core/VideoCommon/CMakeLists.txt
-index a7a52c5e40..c79ab8b3b7 100644
+index 40c9cd3ded..dd7c175989 100644
 --- a/Source/Core/VideoCommon/CMakeLists.txt
 +++ b/Source/Core/VideoCommon/CMakeLists.txt
-@@ -171,7 +171,9 @@ PRIVATE
+@@ -189,7 +189,9 @@ PRIVATE
    xxhash
    imgui
    implot
@@ -64,7 +67,7 @@ index a7a52c5e40..c79ab8b3b7 100644
  )
  
  if(_M_X86)
-@@ -214,16 +216,6 @@ if(FFmpeg_FOUND)
+@@ -231,16 +233,6 @@ if(FFmpeg_FOUND)
    endif()
  endif()
  
@@ -121,5 +124,5 @@ index fe75ea0f99..55fe4416f3 100644
  #include "Common/CommonTypes.h"
  #include "VideoCommon/VideoCommon.h"
 -- 
-2.39.0
+2.40.1
 

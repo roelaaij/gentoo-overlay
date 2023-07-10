@@ -58,6 +58,6 @@ multilib_src_configure() {
 }
 
 multilib_src_compile() {
-	eninja vvl_codegen || die
+	cmake_build vvl_codegen
 	cmake_src_compile
 }

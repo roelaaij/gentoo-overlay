@@ -1,25 +1,25 @@
-From d98f109113cd16d640ed57cf29c009e2d360d8aa Mon Sep 17 00:00:00 2001
+From 536b2577ad83b1e42bcc728cac11e11f45a973a3 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 25 Feb 2023 09:54:13 +0100
-Subject: [PATCH] system libspng
+Date: Sun, 9 Jul 2023 22:31:48 +0200
+Subject: [PATCH 3/3] system libspng
 
 ---
  CMakeLists.txt | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2530c1a0ef..1bdb3d03d1 100644
+index 8815e8f7fd..edcf03c7e9 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -803,7 +803,7 @@ else()
-   set(LZO lzo2)
- endif()
+@@ -683,7 +683,7 @@ dolphin_find_optional_system_library_pkgconfig(MINIZIP minizip-ng>=3.0.0 minizip
  
--pkg_check_modules(pc_spng IMPORTED_TARGET spng)
-+pkg_check_modules(pc_spng IMPORTED_TARGET libspng)
- if (pc_spng_FOUND AND TARGET PkgConfig::pc_spng)
-   message(STATUS "Using the system libspng")
-   set(spng_target PkgConfig::pc_spng)
+ dolphin_find_optional_system_library(LZO Externals/LZO)
+ 
+-dolphin_find_optional_system_library_pkgconfig(SPNG spng spng::spng Externals/libspng)
++dolphin_find_optional_system_library_pkgconfig(SPNG libspng spng::spng Externals/libspng)
+ 
+ # Using static FreeSurround from Externals
+ # There is no system FreeSurround library.
 -- 
-2.39.2
+2.41.0
 

@@ -114,10 +114,8 @@ declare -A KEEP_BUNDLED=(
 	[VulkanMemoryAllocator]=MIT
 )
 
-PATCHES=( "${FILESDIR}/0001-system-zlib-ng-and-minizip-ng.patch"
-		  "${FILESDIR}/0002-shared-xxhash.patch"
-		  "${FILESDIR}/0003-shared-glslang.patch"
-		  "${FILESDIR}/0004-system-libspng.patch" )
+PATCHES=( "${FILESDIR}/0002-shared-xxhash.patch"
+		  "${FILESDIR}/0003-shared-glslang.patch" )
 
 src_prepare() {
 	if use mgba && [[ ${PV} != *9999 ]]; then

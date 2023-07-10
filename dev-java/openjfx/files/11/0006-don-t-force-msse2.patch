@@ -1,0 +1,50 @@
+From 8c39784aee5a247f40982f0b5c043c3612b4e3fd Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@nikhef.nl>
+Date: Sun, 9 Jul 2023 21:35:43 +0200
+Subject: [PATCH 6/7] don't force msse2
+
+---
+ .../src/main/native/gstreamer/projects/linux/avplugin/Makefile   | 1 -
+ .../src/main/native/gstreamer/projects/linux/fxplugins/Makefile  | 1 -
+ .../src/main/native/jfxmedia/projects/linux/Makefile             | 1 -
+ 3 files changed, 3 deletions(-)
+
+diff --git a/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile b/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
+index ad4afb48a9..f297bdb447 100644
+--- a/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
++++ b/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
+@@ -24,7 +24,6 @@ CFLAGS := -fPIC                   \
+          -fstack-protector       \
+          -Werror=implicit-function-declaration \
+          -Werror=trampolines     \
+-         -msse2                  \
+          -fbuiltin               \
+          -DHAVE_STDINT_H         \
+          -DLINUX                 \
+diff --git a/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile b/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
+index 0926982ead..fdea2781bf 100644
+--- a/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
++++ b/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
+@@ -22,7 +22,6 @@ CFLAGS := -fPIC                   \
+          -Werror=implicit-function-declaration \
+          -Werror=trampolines     \
+          -Werror=deprecated-declarations \
+-         -msse2                  \
+          -fbuiltin               \
+          -DHAVE_STDINT_H         \
+          -DLINUX                 \
+diff --git a/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile b/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
+index a6e04e3173..d0a4f56b42 100644
+--- a/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
++++ b/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
+@@ -71,7 +71,6 @@ ifdef HOST_COMPILE
+                   -Wformat-security \
+                   -fstack-protector \
+                   -Werror=trampolines \
+-		  -msse2 \
+ 	          -DGSTREAMER_LITE
+ 
+ 	PACKAGES_INCLUDES := $(shell pkg-config --cflags glib-2.0)
+-- 
+2.41.0
+

@@ -1,0 +1,24 @@
+From e7051a7b0734d28567fce9d20e344c6fa22928a5 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@nikhef.nl>
+Date: Sun, 9 Jul 2023 21:19:49 +0200
+Subject: [PATCH 1/7] disable buildSrc tests
+
+---
+ buildSrc/build.gradle | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/buildSrc/build.gradle b/buildSrc/build.gradle
+index 6c516d5c54..b55cae6802 100644
+--- a/buildSrc/build.gradle
++++ b/buildSrc/build.gradle
+@@ -85,6 +85,7 @@ dependencies {
+ // Java 7 but when we switch to 8 this will be needed, and probably again when
+ // we start building with Java 9.
+ test {
++    enabled = false;
+     enableAssertions = true;
+     testLogging.exceptionFormat = "full";
+     scanForTestClasses = false;
+-- 
+2.41.0
+

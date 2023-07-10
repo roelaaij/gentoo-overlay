@@ -1,0 +1,26 @@
+From c57cbad10861d81e847b2d433b4d3f8f413aac22 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@nikhef.nl>
+Date: Sun, 9 Jul 2023 21:20:26 +0200
+Subject: [PATCH 2/7] glibc compatibility
+
+---
+ .../native/Source/ThirdParty/libxslt/src/libxslt/xsltlocale.h  | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/modules/javafx.web/src/main/native/Source/ThirdParty/libxslt/src/libxslt/xsltlocale.h b/modules/javafx.web/src/main/native/Source/ThirdParty/libxslt/src/libxslt/xsltlocale.h
+index 497c330aee..b0176580b5 100644
+--- a/modules/javafx.web/src/main/native/Source/ThirdParty/libxslt/src/libxslt/xsltlocale.h
++++ b/modules/javafx.web/src/main/native/Source/ThirdParty/libxslt/src/libxslt/xsltlocale.h
+@@ -25,9 +25,6 @@
+ #ifdef HAVE_LOCALE_H
+ #include <locale.h>
+ #endif
+-#ifdef HAVE_XLOCALE_H
+-#include <xlocale.h>
+-#endif
+ 
+ typedef locale_t xsltLocale;
+ typedef xmlChar xsltLocaleChar;
+-- 
+2.41.0
+

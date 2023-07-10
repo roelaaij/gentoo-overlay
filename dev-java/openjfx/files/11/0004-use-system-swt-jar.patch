@@ -1,0 +1,24 @@
+From b0345c2d50b2408f81d8759095705eeee7663689 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@nikhef.nl>
+Date: Sun, 9 Jul 2023 21:28:40 +0200
+Subject: [PATCH 4/7] use system swt jar
+
+---
+ build.gradle | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/build.gradle b/build.gradle
+index 82dc7a7fa9..b9507f907f 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -2599,7 +2599,7 @@ project(":swt") {
+     commonModuleSetup(project, [ 'base', 'graphics' ])
+
+     dependencies {
+-        implementation name: SWT_FILE_NAME
++        implementation files("__gentoo_swt_jar__")
+     }
+
+     classes {
+--
+2.41.0

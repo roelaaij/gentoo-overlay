@@ -1,0 +1,234 @@
+From ea39e3e7ffa149b7c527a5ce01d49cb8ba88a1dd Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@nikhef.nl>
+Date: Sun, 9 Jul 2023 21:27:27 +0200
+Subject: [PATCH 3/7] respect user cflags
+
+---
+ buildSrc/linux.gradle                          |  7 ++++++-
+ .../gstreamer/projects/linux/avplugin/Makefile | 16 ++++++----------
+ .../projects/linux/fxplugins/Makefile          | 17 ++++++-----------
+ .../projects/linux/gstreamer-lite/Makefile     | 14 +++++---------
+ .../native/jfxmedia/projects/linux/Makefile    | 18 +++++++-----------
+ 5 files changed, 30 insertions(+), 42 deletions(-)
+
+diff --git a/buildSrc/linux.gradle b/buildSrc/linux.gradle
+index 835cf75940..98f7470f4c 100644
+--- a/buildSrc/linux.gradle
++++ b/buildSrc/linux.gradle
+@@ -44,8 +44,11 @@ LINUX.library = { name -> return (IS_STATIC_BUILD ? "lib${name}.a" : "lib${name}
+ def commonFlags = [
+         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
+         "-fstack-protector",
++        "-Wno-error=cast-function-type",
+         "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=trampolines"] // warning flags
+ 
++commonFlags.addAll(System.getenv("CFLAGS").trim().split(" "))
++
+ if (!IS_64) {
+     commonFlags += "-m32"
+ }
+@@ -72,6 +75,8 @@ def staticLinkFlags = [].flatten()
+ 
+ def linkFlags = IS_STATIC_BUILD ? staticLinkFlags : dynamicLinkFlags;
+ 
++linkFlags.addAll(System.getenv("LDFLAGS").trim().split(" "))
++
+ if (IS_DEBUG_NATIVE) {
+     linkFlags += "-g"
+ }
+@@ -305,7 +310,7 @@ LINUX.iio.nativeSource = [
+ LINUX.iio.compiler = compiler
+ LINUX.iio.ccFlags = [cFlags, "-fvisibility=hidden"].flatten()
+ LINUX.iio.linker = IS_STATIC_BUILD ? "ld" : linker
+-LINUX.iio.linkFlags = [linkFlags].flatten()
++LINUX.iio.linkFlags = [linkFlags, "-ljpeg"].flatten()
+ LINUX.iio.lib = "javafx_iio"
+ 
+ LINUX.prismES2 = [:]
+diff --git a/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile b/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
+index 7ae5fd983d..ad4afb48a9 100644
+--- a/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
++++ b/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
+@@ -17,7 +17,7 @@ TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
+ OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin
+ endif
+ 
+-CFLAGS = -fPIC                   \
++CFLAGS := -fPIC                   \
+          -Wformat                \
+          -Wextra                 \
+          -Wformat-security       \
+@@ -32,13 +32,8 @@ CFLAGS = -fPIC                   \
+          -DGSTREAMER_LITE \
+          -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_48 \
+          -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
+-         -ffunction-sections -fdata-sections
+-
+-ifeq ($(BUILD_TYPE), Release)
+-    CFLAGS += -Os
+-else
+-    CFLAGS += -g -Wall
+-endif
++         -ffunction-sections -fdata-sections \
++         ${CFLAGS}
+ 
+ PACKAGES_INCLUDES := $(shell pkg-config --cflags glib-2.0)
+ PACKAGES_LIBS     := $(shell pkg-config --libs glib-2.0 gobject-2.0)
+@@ -49,11 +44,12 @@ INCLUDES= -I../../../plugins                          \
+           -I../../../gstreamer-lite/gstreamer/libs    \
+           $(PACKAGES_INCLUDES)
+ 
+-LDFLAGS = -L$(BUILD_DIR)    \
++LDFLAGS := -L$(BUILD_DIR)    \
+           -lgstreamer-lite  \
+            $(PACKAGES_LIBS) \
+           -z relro          \
+-          -static-libgcc -static-libstdc++ -Wl,--gc-sections
++          -static-libgcc -static-libstdc++ -Wl,--gc-sections \
++          ${LDFLAGS}
+ 
+ ifneq ($(strip $(LIBAV_DIR)),)
+ INCLUDES += -I$(LIBAV_DIR)/include
+diff --git a/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile b/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
+index 38bff2b27b..0926982ead 100644
+--- a/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
++++ b/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
+@@ -14,7 +14,7 @@ DIRLIST = progressbuffer       \
+ 
+ TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
+ 
+-CFLAGS = -fPIC                   \
++CFLAGS := -fPIC                   \
+          -Wformat                \
+          -Wextra                 \
+          -Wformat-security       \
+@@ -34,14 +34,8 @@ CFLAGS = -fPIC                   \
+          -DGSTREAMER_LITE \
+          -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_48 \
+          -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
+-         -ffunction-sections -fdata-sections
+-
+-ifeq ($(BUILD_TYPE), Release)
+-    CFLAGS += -Os
+-else
+-    CFLAGS += -g -Wall
+-endif
+-
++         -ffunction-sections -fdata-sections \
++         ${CFLAGS}
+ 
+ INCLUDES = -I$(SRCBASE_DIR) \
+ 	   $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST)) \
+@@ -51,9 +45,10 @@ INCLUDES = -I$(SRCBASE_DIR) \
+ PACKAGES_INCLUDES := $(shell pkg-config --cflags glib-2.0)
+ PACKAGES_LIBS := $(shell pkg-config --libs glib-2.0 gobject-2.0)
+ 
+-LDFLAGS = -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) \
++LDFLAGS := -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) \
+           -z relro \
+-          -static-libgcc -static-libstdc++ -Wl,--gc-sections
++          -static-libgcc -static-libstdc++ -Wl,--gc-sections \
++          ${LDFLAGS}
+ 
+ ifeq ($(ARCH), x32)
+     CFLAGS += -m32
+diff --git a/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile b/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile
+index a9f8bc226b..77271ccb89 100644
+--- a/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile
++++ b/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile
+@@ -37,7 +37,7 @@ DIRLIST = gstreamer/gst \
+ 
+ TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
+ 
+-CFLAGS =-fPIC                   \
++CFLAGS :=-fPIC                   \
+         -Wformat                \
+         -Wextra                 \
+         -Wformat-security       \
+@@ -56,12 +56,7 @@ CFLAGS =-fPIC                   \
+         -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_48 \
+         -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
+         -ffunction-sections -fdata-sections
+-
+-ifeq ($(BUILD_TYPE), Release)
+-    CFLAGS += -Os
+-else
+-    CFLAGS += -g -Wall
+-endif
++         ${CFLAGS}
+ 
+ INCLUDES = -I$(BASE_DIR)/plugins                          \
+ 	   -I$(SRCBASE_DIR)/projects/build/linux/common   \
+@@ -79,9 +74,10 @@ INCLUDES = -I$(BASE_DIR)/plugins                          \
+ PACKAGES_INCLUDES := $(shell pkg-config --cflags alsa glib-2.0)
+ PACKAGES_LIBS := $(shell pkg-config --libs alsa glib-2.0 gobject-2.0 gmodule-2.0 gthread-2.0)
+ 
+-LDFLAGS = -L$(BUILD_DIR) -lm $(PACKAGES_LIBS) \
++LDFLAGS := -L$(BUILD_DIR) -lm $(PACKAGES_LIBS) \
+           -z relro \
+-          -static-libgcc -static-libstdc++ -Wl,--gc-sections
++          -static-libgcc -static-libstdc++ -Wl,--gc-sections \
++          ${LDFLAGS}
+ 
+ ifeq ($(ARCH), x32)
+     CFLAGS += -m32
+diff --git a/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile b/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
+index b86c5725d4..a6e04e3173 100644
+--- a/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
++++ b/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
+@@ -42,7 +42,7 @@ DIRLIST = jni                \
+ 
+ TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
+ 
+-CFLAGS = -DTARGET_OS_LINUX=1     \
++CFLAGS := -DTARGET_OS_LINUX=1     \
+          -D_GNU_SOURCE           \
+          -DGST_REMOVE_DEPRECATED \
+          -DGST_DISABLE_GST_DEBUG \
+@@ -54,7 +54,8 @@ CFLAGS = -DTARGET_OS_LINUX=1     \
+          -DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_48 \
+          -DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_48 \
+          -Werror=deprecated-declarations \
+-         -ffunction-sections -fdata-sections
++         -ffunction-sections -fdata-sections \
++         ${CFLAGS}
+ 
+ CPPFLAGS = -fno-rtti -ffunction-sections -fdata-sections
+ 
+@@ -84,21 +85,16 @@ ifdef HOST_COMPILE
+ 	           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs \
+ 		  $(PACKAGES_INCLUDES)
+ 
+-	LDFLAGS = -Wl,-rpath,\$$ORIGIN -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) \
++	LDFLAGS := -Wl,-rpath-link,\$$ORIGIN -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) \
+             -z relro \
+-            -static-libgcc -static-libstdc++ -Wl,--gc-sections
++            -static-libgcc -static-libstdc++ -Wl,--gc-sections \
++            ${LDFLAGS}
+ else
+ 	CFLAGS += $(EXTRA_CFLAGS)
+ 	INCLUDES = $(BASE_INCLUDES)
+ 	LDFLAGS = -Wl,-rpath,\$$ORIGIN -L$(BUILD_DIR) $(EXTRA_LDFLAGS)
+ endif
+ 
+-ifeq ($(BUILD_TYPE), Release)
+-	CFLAGS += -Os
+-else
+-	CFLAGS += -g -Wall -D_DEBUG
+-endif
+-
+ ifeq ($(ARCH), x32)
+     CFLAGS += -m32
+     LDFLAGS += -m32
+@@ -145,7 +141,7 @@ CPP_SOURCES = \
+ C_SOURCES = Utils/ColorConverter.c
+ 
+ 
+-OBJECTS  = $(patsubst %.cpp,$(OBJBASE_DIR)/%.o,$(CPP_SOURCES)) $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES)) 
++OBJECTS  = $(patsubst %.cpp,$(OBJBASE_DIR)/%.o,$(CPP_SOURCES)) $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES))
+ DEPFILES = $(patsubst %.cpp,$(OBJBASE_DIR)/%.d,$(CPP_SOURCES))
+ 
+ OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
+-- 
+2.41.0
+

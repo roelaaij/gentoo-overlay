@@ -38,8 +38,6 @@ DEPEND="${RDEPEND}
 	)
 "
 
-PATCHES="${FILESDIR}/${PN}-1.3.239-build-shared-libs.patch"
-
 multilib_src_configure() {
 	local mycmakeargs=(
 		-DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
@@ -51,7 +49,15 @@ multilib_src_configure() {
 		-DBUILD_WSI_XCB_SUPPORT=$(usex X)
 		-DBUILD_WSI_XLIB_SUPPORT=$(usex X)
 		-DBUILD_TESTS=OFF
-		-DVulkanRegistry_DIR="${ESYSROOT}/usr/share/vulkan/registry"
+		-DVULKAN_HEADERS_REGISTRY_DIRECTORY="${ESYSROOT}/usr/share/vulkan/registry"
+		-DSPIRV_HEADERS_INSTALL_DIR="${ESYSROOT}/usr"
+		-DVVL_CODEGEN=ON
+		-DPython3_EXECUTABLE="${PYTHON}"
 	)
 	cmake_src_configure
+}
+
+multilib_src_compile() {
+	eninja vvl_codegen || die
+	cmake_src_compile
 }

@@ -115,7 +115,8 @@ declare -A KEEP_BUNDLED=(
 )
 
 PATCHES=( "${FILESDIR}/0002-shared-xxhash.patch"
-		  "${FILESDIR}/0003-shared-glslang.patch" )
+		  "${FILESDIR}/0003-shared-glslang.patch"
+		  "${FILESDIR}/0004-system-libspng.patch")
 
 src_prepare() {
 	if use mgba && [[ ${PV} != *9999 ]]; then

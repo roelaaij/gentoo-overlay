@@ -1,17 +1,22 @@
-From 536b2577ad83b1e42bcc728cac11e11f45a973a3 Mon Sep 17 00:00:00 2001
+From c5d4419a34e8bd5593d777992a2035995a753332 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sun, 9 Jul 2023 22:31:48 +0200
-Subject: [PATCH 3/3] system libspng
+Date: Mon, 7 Aug 2023 16:16:46 +0200
+Subject: [PATCH] more system libs
 
 ---
- CMakeLists.txt | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ CMakeLists.txt | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 8815e8f7fd..edcf03c7e9 100644
+index ee44d04458..0c8bad9eb3 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -683,7 +683,7 @@ dolphin_find_optional_system_library_pkgconfig(MINIZIP minizip-ng>=3.0.0 minizip
+@@ -678,11 +678,11 @@ dolphin_find_optional_system_library_pkgconfig(ZSTD libzstd>=1.4.0 zstd::zstd Ex
+ 
+ dolphin_find_optional_system_library_pkgconfig(ZLIB zlib-ng ZLIB::ZLIB Externals/zlib-ng)
+ 
+-dolphin_find_optional_system_library_pkgconfig(MINIZIP minizip>=3.0.0 minizip::minizip Externals/minizip)
++dolphin_find_optional_system_library_pkgconfig(MINIZIP minizip-ng>=3.0.0 minizip::minizip Externals/minizip)
  
  dolphin_find_optional_system_library(LZO Externals/LZO)
  

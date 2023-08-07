@@ -31,6 +31,7 @@ DEPEND="${RDEPEND}
 	>=dev-cpp/robin-hood-hashing-3.11.5
 	~dev-util/glslang-${PV}:=[${MULTILIB_USEDEP}]
 	~dev-util/vulkan-headers-${PV}
+	~dev-util/vulkan-utility-libraries-${PV}
 	wayland? ( dev-libs/wayland:=[${MULTILIB_USEDEP}] )
 	X? (
 		x11-libs/libX11:=[${MULTILIB_USEDEP}]

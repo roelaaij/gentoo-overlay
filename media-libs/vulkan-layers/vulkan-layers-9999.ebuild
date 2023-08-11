@@ -31,7 +31,7 @@ DEPEND="${RDEPEND}
 	>=dev-cpp/robin-hood-hashing-3.11.5
 	~dev-util/glslang-${PV}:=[${MULTILIB_USEDEP}]
 	~dev-util/vulkan-headers-${PV}
-	~dev-util/vulkan-utility-libraries-${PV}
+	~media-libs/vulkan-utility-libraries-${PV}
 	wayland? ( dev-libs/wayland:=[${MULTILIB_USEDEP}] )
 	X? (
 		x11-libs/libX11:=[${MULTILIB_USEDEP}]
@@ -44,13 +44,13 @@ multilib_src_configure() {
 		-DCMAKE_C_FLAGS="${CFLAGS} -DNDEBUG"
 		-DCMAKE_CXX_FLAGS="${CXXFLAGS} -DNDEBUG"
 		-DCMAKE_SKIP_RPATH=ON
-		-DBUILD_LAYER_SUPPORT_FILES=ON
+		-DBUILD_LAYER_SUPPORT_FILES=OFF
 		-DBUILD_WERROR=OFF
 		-DBUILD_WSI_WAYLAND_SUPPORT=$(usex wayland)
 		-DBUILD_WSI_XCB_SUPPORT=$(usex X)
 		-DBUILD_WSI_XLIB_SUPPORT=$(usex X)
 		-DBUILD_TESTS=OFF
-		-DVULKAN_HEADERS_REGISTRY_DIRECTORY="${ESYSROOT}/usr/share/vulkan/registry"
+		-DVULKAN_HEADERS_INSTALL_DIR="${ESYSROOT}/usr"
 		-DSPIRV_HEADERS_INSTALL_DIR="${ESYSROOT}/usr"
 		-DVVL_CODEGEN=ON
 		-DPython3_EXECUTABLE="${PYTHON}"
@@ -61,4 +61,8 @@ multilib_src_configure() {
 multilib_src_compile() {
 	cmake_build vvl_codegen
 	cmake_src_compile
+}
+
+multilib_src_install_all() {
+	find "${ED}" -type f -name \*.a -delete || die
 }

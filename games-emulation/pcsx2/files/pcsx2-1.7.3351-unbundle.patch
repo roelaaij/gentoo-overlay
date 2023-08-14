@@ -1,14 +1,6 @@
 Adjust to unbundle a few extras.
 
 zstd changes only needed because of https://bugs.gentoo.org/872254
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -54,3 +54,4 @@
- 	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
--	add_subdirectory(3rdparty/gtest EXCLUDE_FROM_ALL)
-+	find_package(GTest REQUIRED)
-+	alias_library(gtest_main GTest::gtest_main)
- 	add_subdirectory(tests/ctest)
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
 @@ -177,3 +177,3 @@

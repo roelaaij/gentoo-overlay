@@ -1,10 +1,10 @@
 # Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 MY_PN=Vulkan-Tools
-PYTHON_COMPAT=( python3_{8..11} )
+PYTHON_COMPAT=( python3_{9..12} )
 inherit cmake-multilib python-any-r1
 
 if [[ ${PV} == *9999* ]]; then
@@ -22,7 +22,7 @@ HOMEPAGE="https://github.com/KhronosGroup/Vulkan-Tools"
 
 LICENSE="Apache-2.0"
 SLOT="0"
-IUSE="cube wayland +X"
+IUSE="cube wayland +X generate"
 
 # Cube demo only supports one window system at a time
 REQUIRED_USE="cube? ( ^^ ( X wayland ) )"
@@ -68,7 +68,10 @@ multilib_src_configure() {
 		-DBUILD_WSI_XLIB_SUPPORT=$(usex X)
 		-DVULKAN_HEADERS_INSTALL_DIR="${ESYSROOT}/usr"
 		-DVULKAN_HEADERS_REGISTRY_DIRECTORY="${ESYSROOT}/usr/share/vulkan/registry"
-		-DTOOLS_CODEGEN=ON
+		-DTOOLS_CODEGEN=$(usex generate)
+	)
+
+	use generate && mycmakeargs+=(
 		-DPython3_EXECUTABLE="${PYTHON}"
 	)
 
@@ -81,7 +84,7 @@ multilib_src_configure() {
 }
 
 multilib_src_compile() {
-	cmake_build tools_codegen
+	use generate && cmake_build tools_codegen
 	cmake_src_compile
 }
 

@@ -1,10 +1,10 @@
 # Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=7
+EAPI=8
 
 MY_PN=Vulkan-ValidationLayers
-PYTHON_COMPAT=( python3_{8..11} )
+PYTHON_COMPAT=( python3_{9..12} )
 inherit cmake-multilib python-any-r1
 
 if [[ ${PV} == *9999* ]]; then
@@ -22,7 +22,7 @@ HOMEPAGE="https://github.com/KhronosGroup/Vulkan-ValidationLayers"
 
 LICENSE="Apache-2.0"
 SLOT="0"
-IUSE="wayland X"
+IUSE="wayland X generate"
 
 BDEPEND=">=dev-util/cmake-3.10.2"
 RDEPEND="~dev-util/spirv-tools-99999999:=[${MULTILIB_USEDEP}]"
@@ -52,14 +52,19 @@ multilib_src_configure() {
 		-DBUILD_TESTS=OFF
 		-DVULKAN_HEADERS_INSTALL_DIR="${ESYSROOT}/usr"
 		-DSPIRV_HEADERS_INSTALL_DIR="${ESYSROOT}/usr"
-		-DVVL_CODEGEN=ON
-		-DPython3_EXECUTABLE="${PYTHON}"
+		-DVVL_CODEGEN=$(usex generate)
 	)
+	if [ use generate ]; then
+		mycmakeargs+=(
+			-DPython3_EXECUTABLE="${PYTHON}"
+		)
+	fi
+
 	cmake_src_configure
 }
 
 multilib_src_compile() {
-	cmake_build vvl_codegen
+	use generate && cmake_build vvl_codegen
 	cmake_src_compile
 }
 

@@ -1,4 +1,4 @@
-# Copyright 1999-2022 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
@@ -32,6 +32,7 @@ RESTRICT="test"
 multilib_src_configure() {
 	local mycmakeargs=(
 		-DENABLE_PCH=OFF
+		-DALLOW_EXTERNAL_SPIRV_TOOLS=ON
 	)
 	cmake_src_configure
 }

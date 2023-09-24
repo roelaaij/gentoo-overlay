@@ -35,12 +35,12 @@ LICENSE="
 	GPL-3+ Apache-2.0 BSD BSD-2 BSD-4 Boost-1.0 CC0-1.0 GPL-2+
 	ISC LGPL-2.1+ LGPL-3+ MIT OFL-1.1 ZLIB public-domain"
 SLOT="0"
-IUSE="alsa cpu_flags_x86_sse4_1 dbus jack pulseaudio sndio test vulkan wayland"
+IUSE="alsa cpu_flags_x86_sse4_1 lto test vulkan wayland"
 REQUIRED_USE="cpu_flags_x86_sse4_1" # dies at runtime if no support
 RESTRICT="!test? ( test )"
 
 # dlopen: ffmpeg, qtsvg, vulkan-loader, wayland
-RDEPEND="
+COMMON_DEPEND="
 	app-arch/xz-utils
 	app-arch/zstd:=
 	dev-cpp/rapidyaml:=
@@ -48,6 +48,7 @@ RDEPEND="
 	dev-libs/libchdr
 	dev-libs/libfmt:=
 	dev-libs/libzip:=[zstd]
+	dev-cpp/simpleini
 	dev-qt/qtbase:6[gui,network,widgets]
 	dev-qt/qtsvg:6
 	media-libs/libglvnd
@@ -60,25 +61,27 @@ RDEPEND="
 	sys-libs/zlib:=
 	virtual/libudev:=
 	x11-libs/libXrandr
-	alsa? ( media-libs/alsa-lib )
-	dbus? ( sys-apps/dbus )
-	jack? ( virtual/jack )
-	pulseaudio? ( media-libs/libpulse )
-	sndio? ( media-sound/sndio:= )
 	vulkan? ( media-libs/vulkan-loader )
 	wayland? ( dev-libs/wayland )"
+RDEPEND="
+	${COMMON_DEPEND}
+	>=games-emulation/pcsx2_patches-0_p20230917
+"
 DEPEND="
-	${RDEPEND}
+	${COMMON_DEPEND}
 	x11-base/xorg-proto
 	test? ( dev-cpp/gtest )"
-BDEPEND="dev-qt/qttools:6[linguist]"
-
-FILECAPS=(
-	-m 0755 "CAP_NET_RAW+eip CAP_NET_ADMIN+eip" usr/bin/pcsx2
-)
+BDEPEND="
+	dev-qt/qttools:6[linguist]
+	wayland? (
+		dev-util/wayland-scanner
+		kde-frameworks/extra-cmake-modules
+	)
+"
 
 PATCHES=(
-	"${FILESDIR}"/${PN}-1.7.3351-unbundle.patch
+	"${FILESDIR}"/${PN}-unbundle.patch
+	"${FILESDIR}"/${PN}-system-glslang.patch
 	"${FILESDIR}"/${PN}-1.7.3468-cubeb-automagic.patch
 	"${FILESDIR}"/${PN}-1.7.3773-lto.patch
 	"${FILESDIR}"/${PN}-1.7.4667-flags.patch
@@ -97,12 +100,6 @@ src_unpack() {
 			3rdparty/rapidyaml/rapidyaml
 			3rdparty/rapidyaml/rapidyaml/extern/c4core
 			3rdparty/rapidyaml/rapidyaml/ext/c4core/src/c4/ext/fast_float
-
-			# glslang can be troublesome to unbundle (bug #831217),
-			# also keep vulkan-headers to stay in sync
-			$(usev vulkan '
-				3rdparty/glslang/glslang
-				3rdparty/vulkan-headers')
 		)
 
 		git-r3_src_unpack
@@ -138,8 +135,8 @@ src_prepare() {
 		local keep=(
 			# TODO?: rapidjson and xbyak are packaged and could be unbundlable
 			# w/ patch, and discord-rpc be optional w/ dependency on rapidjson
-			cpuinfo cubeb demangler discord-rpc glad imgui include jpgd lzma
-			rapidjson rapidyaml rcheevos simpleini xbyak zydis
+			demangler discord-rpc glad imgui include jpgd
+			rapidyaml rcheevos xbyak zydis
 			$(usev vulkan 'glslang vulkan-headers')
 		)
 		find 3rdparty -mindepth 1 -maxdepth 1 -type d \
@@ -151,15 +148,10 @@ src_configure() {
 	if use vulkan; then
 		# for bundled glslang (bug #858374)
 		append-flags -fno-strict-aliasing
-
-		# odr violations in pcsx2's vulkan code, disabling as a safety for now
-		# (vulkan support tend to receive major changes, is more on WIP side)
-		filter-lto
 	fi
 
 	local mycmakeargs=(
 		-DBUILD_SHARED_LIBS=no
-		-DDBUS_API=$(usex dbus)
 		-DDISABLE_BUILD_DATE=yes
 		-DENABLE_TESTS=$(usex test)
 		-DUSE_LINKED_FFMPEG=yes
@@ -167,11 +159,6 @@ src_configure() {
 		-DUSE_VULKAN=$(usex vulkan)
 		-DWAYLAND_API=$(usex wayland)
 		-DX11_API=yes # fails if X libs are missing even if disabled
-
-		# note that the current upstream is somewhat hostile to using system
-		# libs, system installs, or any modifications and may disregard any
-		# bugs that is not reproducible with the appimage using bundled libs
-		-DUSE_SYSTEM_LIBS=yes
 
 		# sse4.1 is the bare minimum required, -m is required at build time
 		# (see PCSX2Base.h) and it dies if no support at runtime (AppInit.cpp)
@@ -181,12 +168,7 @@ src_configure() {
 		# not packaged due to bug #885471, but still disable for no automagic
 		-DCMAKE_DISABLE_FIND_PACKAGE_Libbacktrace=yes
 
-		# bundled cubeb flags, see media-libs/cubeb and cubeb-automagic.patch
-		-DCHECK_ALSA=$(usex alsa)
-		-DCHECK_JACK=$(usex jack)
-		-DCHECK_PULSE=$(usex pulseaudio)
-		-DCHECK_SNDIO=$(usex sndio)
-		-DLAZY_LOAD_LIBS=no
+		-DLTO_PCSX2_CORE=$(usex lto)
 	)
 
 	cmake_src_configure
@@ -197,19 +179,22 @@ src_test() {
 }
 
 src_install() {
-	newbin "${BUILD_DIR}"/bin/pcsx2-qt ${PN}
+	insinto /usr/lib/${PN}
+	doins -r "${BUILD_DIR}"/bin/.
 
-	insinto /usr/share/${PN}
-	doins -r "${BUILD_DIR}"/bin/resources
-
-	dodoc README.md bin/docs/{Debugger.pdf,GameIndex.pdf,debugger.txt}
+	fperms +x /usr/lib/${PN}/pcsx2-qt
+	dosym -r /usr/lib/${PN}/pcsx2-qt /usr/bin/${PN}
 
 	newicon bin/resources/icons/AppIconLarge.png ${PN}.png
 	make_desktop_entry ${PN} ${PN^^}
+
+	dodoc README.md bin/docs/{Debugger.pdf,GameIndex.pdf,debugger.txt}
+
+	use !test || rm "${ED}"/usr/lib/${PN}/*_test || die
 }
 
 pkg_postinst() {
-	fcaps_pkg_postinst
+	fcaps -m 0755 cap_net_admin,cap_net_raw=eip usr/lib/${PN}/pcsx2-qt
 
 	local replacing=
 	if [[ ${REPLACING_VERSIONS##* } ]]; then
@@ -228,22 +213,5 @@ pkg_postinst() {
 		elog "it is now a 64bit build using Qt6. Just-in-case it is recommended to"
 		elog "backup your configs, save states, and memory cards before use."
 		elog "The executable was also renamed from 'PCSX2' to 'pcsx2'."
-	fi
-
-	if [[ ${replacing} == @(|old) && ${PV} != 9999 ]]; then
-		elog
-		elog "${PN}-1.7.x is a development branch where .x increments every changes."
-		elog "Stable 1.6.0 is getting old and lacks many notable features (e.g. native"
-		elog "64bit builds). Given it may be a long time before there is a new stable,"
-		elog "Gentoo will carry and update 1.7.x roughly every months."
-		elog
-		elog "Please report an issue if feel a picked version needs to be updated ahead"
-		elog "of time or masked (notably for handling regressions)."
-	fi
-
-	if [[ ${replacing} == wx ]]; then
-		ewarn
-		ewarn "Note that wxGTK support been dropped upstream since >=${PN}-1.7.3773,"
-		ewarn "and so USE=qt6 is gone and Qt6 is now always used."
 	fi
 }

@@ -1,0 +1,66 @@
+From 1a2991ae525c69bb1be72b4935ec66bbaaa01a7d Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Sat, 23 Sep 2023 12:16:50 +0200
+Subject: [PATCH 2/2] system glslang
+
+---
+ cmake/SearchForStuff.cmake                  | 4 ++--
+ pcsx2/CMakeLists.txt                        | 2 +-
+ pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp | 6 +++---
+ 3 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
+index 79202786f..5bc98fe13 100644
+--- a/cmake/SearchForStuff.cmake
++++ b/cmake/SearchForStuff.cmake
+@@ -159,8 +159,8 @@ if(USE_OPENGL)
+ endif()
+ 
+ if(USE_VULKAN)
+-	add_subdirectory(3rdparty/glslang EXCLUDE_FROM_ALL)
+-	add_subdirectory(3rdparty/vulkan-headers EXCLUDE_FROM_ALL)
++  find_package(glslang REQUIRED)
++  find_package(VulkanHeaders REQUIRED)
+ endif()
+ 
+ find_package(cubeb REQUIRED)
+diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
+index a4e995c10..6351e9d63 100644
+--- a/pcsx2/CMakeLists.txt
++++ b/pcsx2/CMakeLists.txt
+@@ -651,7 +651,7 @@ if(USE_VULKAN)
+ 		GS/Renderers/Vulkan/VKStreamBuffer.h
+ 		GS/Renderers/Vulkan/VKSwapChain.h
+ 	)
+-	target_link_libraries(PCSX2_FLAGS INTERFACE Vulkan-Headers glslang)
++	target_link_libraries(PCSX2_FLAGS INTERFACE Vulkan::Headers glslang::glslang glslang::glslang-default-resource-limits glslang::SPIRV)
+ endif()
+ 
+ set(pcsx2GSMetalShaders
+diff --git a/pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp b/pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp
+index 9ecb06a4c..10eca34a9 100644
+--- a/pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp
++++ b/pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp
+@@ -30,8 +30,8 @@
+ #include "common/Path.h"
+ 
+ // glslang includes
+-#include "SPIRV/GlslangToSpv.h"
+-#include "StandAlone/ResourceLimits.h"
++#include "glslang/SPIRV/GlslangToSpv.h"
++#include "glslang/Public/ResourceLimits.h"
+ #include "glslang/Public/ShaderLang.h"
+ 
+ #include "fmt/format.h"
+@@ -179,7 +179,7 @@ std::optional<VKShaderCache::SPIRVCodeVector> VKShaderCache::CompileShaderToSPV(
+ 		}
+ 	};
+ 
+-	if (!shader->parse(&glslang::DefaultTBuiltInResource, default_version, profile, false, true, messages, includer))
++	if (!shader->parse(GetDefaultResources(), default_version, profile, false, true, messages, includer))
+ 	{
+ 		DumpBadShader("Failed to parse shader");
+ 		return std::nullopt;
+-- 
+2.42.0
+

@@ -1,6 +1,6 @@
-From 1a2991ae525c69bb1be72b4935ec66bbaaa01a7d Mon Sep 17 00:00:00 2001
+From 201413719ce288effb2383fa3eb6f132753311a0 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 23 Sep 2023 12:16:50 +0200
+Date: Wed, 18 Oct 2023 16:24:18 +0200
 Subject: [PATCH 2/2] system glslang
 
 ---
@@ -10,10 +10,10 @@ Subject: [PATCH 2/2] system glslang
  3 files changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index 79202786f..5bc98fe13 100644
+index 46b634d2c..200714aee 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
-@@ -159,8 +159,8 @@ if(USE_OPENGL)
+@@ -152,8 +152,8 @@ if(USE_OPENGL)
  endif()
  
  if(USE_VULKAN)
@@ -25,10 +25,10 @@ index 79202786f..5bc98fe13 100644
  
  find_package(cubeb REQUIRED)
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index a4e995c10..6351e9d63 100644
+index e3f763d26..2838954f8 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
-@@ -651,7 +651,7 @@ if(USE_VULKAN)
+@@ -649,7 +649,7 @@ if(USE_VULKAN)
  		GS/Renderers/Vulkan/VKStreamBuffer.h
  		GS/Renderers/Vulkan/VKSwapChain.h
  	)

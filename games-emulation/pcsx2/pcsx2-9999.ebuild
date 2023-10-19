@@ -45,7 +45,6 @@ COMMON_DEPEND="
 	app-arch/zstd:=
 	dev-cpp/rapidyaml:=
 	dev-libs/libaio
-	dev-libs/libchdr
 	dev-libs/libfmt:=
 	dev-libs/libzip:=[zstd]
 	dev-cpp/simpleini
@@ -93,6 +92,10 @@ src_unpack() {
 		local EGIT_SUBMODULES=(
 			# has no build system and is not really setup for unbundling
 			3rdparty/rcheevos/rcheevos
+
+			# not in tree
+			3rdparty/lzma
+			3rdparty/libchdr
 
 			# system rapidyaml is still used, but this uses another part
 			# of the source directly (fast_float) and so allow the submodule

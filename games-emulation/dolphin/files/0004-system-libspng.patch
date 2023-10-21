@@ -1,17 +1,17 @@
-From c5d4419a34e8bd5593d777992a2035995a753332 Mon Sep 17 00:00:00 2001
+From d84d5874c9355efad151e292184b9cfd91b8b9e0 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Mon, 7 Aug 2023 16:16:46 +0200
-Subject: [PATCH] more system libs
+Date: Fri, 20 Oct 2023 21:05:07 +0200
+Subject: [PATCH] system libspng
 
 ---
- CMakeLists.txt | 15 +++++++++++++--
- 1 file changed, 13 insertions(+), 2 deletions(-)
+ CMakeLists.txt | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index ee44d04458..0c8bad9eb3 100644
+index b1eede22aa..6bd547e0c0 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -678,11 +678,11 @@ dolphin_find_optional_system_library_pkgconfig(ZSTD libzstd>=1.4.0 zstd::zstd Ex
+@@ -678,13 +678,13 @@ dolphin_find_optional_system_library_pkgconfig(ZSTD libzstd>=1.4.0 zstd::zstd Ex
  
  dolphin_find_optional_system_library_pkgconfig(ZLIB zlib-ng ZLIB::ZLIB Externals/zlib-ng)
  
@@ -20,11 +20,13 @@ index ee44d04458..0c8bad9eb3 100644
  
  dolphin_find_optional_system_library(LZO Externals/LZO)
  
+ dolphin_find_optional_system_library_pkgconfig(lz4 liblz4>=1.8 LZ4::LZ4 Externals/lz4)
+ 
 -dolphin_find_optional_system_library_pkgconfig(SPNG spng spng::spng Externals/libspng)
 +dolphin_find_optional_system_library_pkgconfig(SPNG libspng spng::spng Externals/libspng)
  
  # Using static FreeSurround from Externals
  # There is no system FreeSurround library.
 -- 
-2.41.0
+2.42.0
 

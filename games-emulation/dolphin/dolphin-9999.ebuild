@@ -163,7 +163,6 @@ src_configure() {
 		-DFASTLOG=$(usex log)
 		-DOPROFILING=$(usex profile)
 		-DUSE_DISCORD_PRESENCE=$(usex discord-presence)
-		-DUSE_SHARED_ENET=ON
 		-DUSE_UPNP=$(usex upnp)
 		# TODO
 		-DUSE_RETRO_ACHIEVEMENTS=OFF

@@ -1,0 +1,47 @@
+From 089e7795be5e9c5a69fca572a4bbb872752a9116 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Mon, 30 Oct 2023 08:10:06 +0100
+Subject: [PATCH] system spirv-tools
+
+---
+ SPIRV/CMakeLists.txt      | 3 ---
+ StandAlone/CMakeLists.txt | 9 ---------
+ 2 files changed, 12 deletions(-)
+
+diff --git a/SPIRV/CMakeLists.txt b/SPIRV/CMakeLists.txt
+index a80e74ed0..15217995a 100644
+--- a/SPIRV/CMakeLists.txt
++++ b/SPIRV/CMakeLists.txt
+@@ -104,9 +104,6 @@ if(ENABLE_OPT)
+         PRIVATE ${spirv-tools_SOURCE_DIR}/source
+     )
+     target_link_libraries(SPIRV PRIVATE MachineIndependent SPIRV-Tools-opt)
+-    target_include_directories(SPIRV PUBLIC
+-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../External>
+-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/External>)
+ else()
+     target_link_libraries(SPIRV PRIVATE MachineIndependent)
+ endif()
+diff --git a/StandAlone/CMakeLists.txt b/StandAlone/CMakeLists.txt
+index 8f37e54cb..185b1e253 100644
+--- a/StandAlone/CMakeLists.txt
++++ b/StandAlone/CMakeLists.txt
+@@ -72,15 +72,6 @@ elseif(UNIX)
+ endif()
+ 
+ target_link_libraries(glslang-standalone ${LIBRARIES})
+-target_include_directories(glslang-standalone PUBLIC
+-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../External>
+-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/External>)
+-
+-if(ENABLE_OPT)
+-    target_include_directories(glslang-standalone
+-        PRIVATE ${spirv-tools_SOURCE_DIR}/include
+-    )
+-endif()
+ 
+ if(ENABLE_SPVREMAPPER)
+     set(REMAPPER_SOURCES spirv-remap.cpp)
+-- 
+2.42.0
+

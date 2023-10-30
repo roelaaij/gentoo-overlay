@@ -50,7 +50,7 @@ index 9ea7af6bb..46b634d2c 100644
  add_subdirectory(3rdparty/discord-rpc EXCLUDE_FROM_ALL)
 
 +pkg_check_modules(cpuinfo REQUIRED libcpuinfo)
-+pkg_check_modules(libwebp REQUIRED libwebp)
++pkg_check_modules(webp REQUIRED IMPORTED_TARGET libwebp)
 +find_package(libzip REQUIRED)
 +find_package(RapidJSON REQUIRED)
 +add_library(rapidjson INTERFACE)
@@ -80,7 +80,7 @@ index 9c423b8a4..71619666b 100644
  	PNG::PNG
  	jpgd
 -	WebP::libwebp
-+	libwebp
++	PkgConfig::webp
  )
 
  target_link_libraries(common PUBLIC

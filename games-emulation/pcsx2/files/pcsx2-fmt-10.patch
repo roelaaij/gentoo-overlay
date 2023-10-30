@@ -1,0 +1,18 @@
+diff --git a/common/SmallString.h b/common/SmallString.h
+index 1366ed8c2..3635e76c4 100644
+--- a/common/SmallString.h
++++ b/common/SmallString.h
+@@ -301,6 +301,13 @@ private:
+ typedef SmallStackString<64> TinyString;
+ typedef SmallStackString<256> SmallString;
+ 
++#if FMT_VERSION >= 100000
++template<u32 L>
++auto format_as(SmallStackString<L> s) {
++  return s.view();
++}
++#endif
++
+ template <typename... T>
+ __fi void SmallStringBase::append_fmt(fmt::format_string<T...> fmt, T&&... args)
+ {

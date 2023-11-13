@@ -3,9 +3,9 @@
 
 EAPI=8
 
-PYTHON_COMPAT=( python3_{10,11} )
+PYTHON_COMPAT=( python3_{10,11,12} )
 
-inherit cmake-multilib python-any-r1 git-r3
+inherit cmake-multilib multibuild python-any-r1 git-r3
 
 DESCRIPTION="Collection of tools, libraries and tests for shader compilation"
 HOMEPAGE="https://github.com/google/shaderc"
@@ -14,15 +14,15 @@ EGIT_REPO_URI="https://github.com/google/shaderc.git"
 LICENSE="Apache-2.0"
 SLOT="0"
 KEYWORDS=""
-IUSE="doc spvc test"
+IUSE="doc test"
 
 RDEPEND="
 	~dev-util/glslang-9999[${MULTILIB_USEDEP}]
-	~dev-util/spirv-tools-9999[${MULTILIB_USEDEP}]
+	~dev-util/spirv-tools-99999999[${MULTILIB_USEDEP}]
 "
 DEPEND="${RDEPEND}
 	${PYTHON_DEPS}
-	~dev-util/spirv-headers-9999
+	~dev-util/spirv-headers-99999999
 	~dev-util/spirv-cross-9999
 	doc? ( dev-ruby/asciidoctor )
 	test? (
@@ -34,7 +34,10 @@ DEPEND="${RDEPEND}
 # https://github.com/google/shaderc/issues/470
 RESTRICT=test
 
-PATCHES=( "${FILESDIR}/${P}-fix-glslang-link-order.patch" )
+PATCHES=(
+	"${FILESDIR}/${P}-fix-glslang-link-order.patch"
+	"${FILESDIR}"/${PN}-2020.4-fix-build.patch
+)
 
 python_check_deps() {
 	if use test; then
@@ -61,28 +64,27 @@ src_prepare() {
 		"$(best_version dev-util/glslang)\n"
 	EOF
 
-	cmake-utils_src_prepare
+	cmake_src_prepare
 }
 
 multilib_src_configure() {
 	local mycmakeargs=(
-		-Dglslang_SOURCE_DIR="${EROOT}/usr/include/glslang"
-		-DSHADERC_ENABLE_SPVC="$(usex spvc)"
+		-DSHADERC_ENABLE_WERROR_COMPILE="false"
 		-DSHADERC_SKIP_TESTS="$(usex !test)"
 	)
-	cmake-utils_src_configure
+	cmake_src_configure
 }
 
 multilib_src_compile() {
 	if multilib_is_native_abi && use doc; then
-		cmake-utils_src_make glslc_doc_README
+		cmake_src_compile glslc_doc_README
 	fi
-	cmake-utils_src_compile
+	cmake_src_compile
 }
 
 multilib_src_install() {
 	if multilib_is_native_abi; then
 		use doc && local HTML_DOCS=( "${BUILD_DIR}/glslc/README.html" )
 	fi
-	cmake-utils_src_install
+	cmake_src_install
 }

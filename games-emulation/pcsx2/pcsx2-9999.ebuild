@@ -81,7 +81,7 @@ BDEPEND="
 PATCHES=(
 	"${FILESDIR}"/${PN}-unbundle.patch
 	"${FILESDIR}"/${PN}-system-glslang.patch
-	"${FILESDIR}"/${PN}-1.7.3468-cubeb-automagic.patch
+	"${FILESDIR}"/${P}-cubeb-automagic.patch
 	"${FILESDIR}"/${PN}-1.7.3773-lto.patch
 	"${FILESDIR}"/${PN}-1.7.4667-flags.patch
 	"${FILESDIR}"/${PN}-1.7.4795-rapidyaml-0.5.patch

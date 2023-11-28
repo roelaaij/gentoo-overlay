@@ -1,21 +1,21 @@
-From 089e7795be5e9c5a69fca572a4bbb872752a9116 Mon Sep 17 00:00:00 2001
+From 379be61a171f713a1ddb0cd556b36d7663ff6d41 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Mon, 30 Oct 2023 08:10:06 +0100
+Date: Mon, 27 Nov 2023 11:09:37 +0100
 Subject: [PATCH] system spirv-tools
 
 ---
  SPIRV/CMakeLists.txt      | 3 ---
- StandAlone/CMakeLists.txt | 9 ---------
- 2 files changed, 12 deletions(-)
+ StandAlone/CMakeLists.txt | 3 ---
+ 2 files changed, 6 deletions(-)
 
 diff --git a/SPIRV/CMakeLists.txt b/SPIRV/CMakeLists.txt
-index a80e74ed0..15217995a 100644
+index da59967ec..a45d45d89 100644
 --- a/SPIRV/CMakeLists.txt
 +++ b/SPIRV/CMakeLists.txt
-@@ -104,9 +104,6 @@ if(ENABLE_OPT)
-         PRIVATE ${spirv-tools_SOURCE_DIR}/source
-     )
-     target_link_libraries(SPIRV PRIVATE MachineIndependent SPIRV-Tools-opt)
+@@ -107,9 +107,6 @@ endif()
+ 
+ if(ENABLE_OPT)
+     target_link_libraries(SPIRV PRIVATE MachineIndependent PUBLIC SPIRV-Tools-opt)
 -    target_include_directories(SPIRV PUBLIC
 -        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../External>
 -        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/External>)
@@ -23,25 +23,19 @@ index a80e74ed0..15217995a 100644
      target_link_libraries(SPIRV PRIVATE MachineIndependent)
  endif()
 diff --git a/StandAlone/CMakeLists.txt b/StandAlone/CMakeLists.txt
-index 8f37e54cb..185b1e253 100644
+index 124742a9e..55b2bb661 100644
 --- a/StandAlone/CMakeLists.txt
 +++ b/StandAlone/CMakeLists.txt
-@@ -72,15 +72,6 @@ elseif(UNIX)
+@@ -72,9 +72,6 @@ elseif(UNIX)
  endif()
  
  target_link_libraries(glslang-standalone ${LIBRARIES})
 -target_include_directories(glslang-standalone PUBLIC
 -    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../External>
 -    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/External>)
--
--if(ENABLE_OPT)
--    target_include_directories(glslang-standalone
--        PRIVATE ${spirv-tools_SOURCE_DIR}/include
--    )
--endif()
  
  if(ENABLE_SPVREMAPPER)
      set(REMAPPER_SOURCES spirv-remap.cpp)
 -- 
-2.42.0
+2.42.1
 

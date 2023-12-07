@@ -35,7 +35,6 @@ DEPEND="${RDEPEND}
 RESTRICT=test
 
 PATCHES=(
-	"${FILESDIR}/${P}-fix-glslang-link-order.patch"
 	"${FILESDIR}"/${PN}-2020.4-fix-build.patch
 )
 

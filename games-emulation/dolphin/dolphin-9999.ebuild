@@ -47,7 +47,7 @@ RDEPEND="
 	media-libs/libpng:=
 	media-libs/libsfml
 	media-libs/mesa[egl(+)]
-	net-libs/enet:1.3
+	>net-libs/enet-1.3.17:1.3
 	net-libs/mbedtls:=
 	net-misc/curl:=
 	sys-libs/readline:=
@@ -114,7 +114,7 @@ declare -A KEEP_BUNDLED=(
 	[VulkanMemoryAllocator]=MIT
 )
 
-PATCHES=( "${FILESDIR}/0002-shared-xxhash.patch"
+PATCHES=( "${FILESDIR}/0001-fix-enet-version.patch"
 		  "${FILESDIR}/0003-shared-glslang.patch"
 		  "${FILESDIR}/0004-system-libspng.patch")
 

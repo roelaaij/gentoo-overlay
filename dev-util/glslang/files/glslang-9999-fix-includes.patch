@@ -1,0 +1,24 @@
+From 47312455097cc3f5e37198a8f0bd1f92f5aff5d3 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Sat, 23 Dec 2023 23:55:46 +0100
+Subject: [PATCH] Fix includes
+
+---
+ glslang/Include/Common.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/glslang/Include/Common.h b/glslang/Include/Common.h
+index af7dfe625..8d6eba421 100644
+--- a/glslang/Include/Common.h
++++ b/glslang/Include/Common.h
+@@ -48,6 +48,7 @@
+ #include <cstdio>
+ #include <cstdlib>
+ #include <list>
++#include <array>
+ #include <map>
+ #include <set>
+ #include <string>
+-- 
+2.43.0
+

@@ -19,7 +19,7 @@ fi
 DESCRIPTION="Khronos reference front-end for GLSL and ESSL, and sample SPIR-V generator"
 HOMEPAGE="https://www.khronos.org/opengles/sdk/tools/Reference-Compiler/ https://github.com/KhronosGroup/glslang"
 
-# PATCHES=( "${FILESDIR}/${P}-system-spirv-tools.patch" )
+PATCHES=( "${FILESDIR}/${P}-fix-includes.patch" )
 
 LICENSE="BSD"
 SLOT="0/1"

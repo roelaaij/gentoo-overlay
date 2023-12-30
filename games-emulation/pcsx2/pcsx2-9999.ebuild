@@ -35,7 +35,7 @@ LICENSE="
 	GPL-3+ Apache-2.0 BSD BSD-2 BSD-4 Boost-1.0 CC0-1.0 GPL-2+
 	ISC LGPL-2.1+ LGPL-3+ MIT OFL-1.1 ZLIB public-domain"
 SLOT="0"
-IUSE="alsa cpu_flags_x86_sse4_1 lto test vulkan wayland"
+IUSE="alsa cpu_flags_x86_sse4_1 jack pulseaudio sndio lto test vulkan wayland"
 REQUIRED_USE="cpu_flags_x86_sse4_1" # dies at runtime if no support
 RESTRICT="!test? ( test )"
 
@@ -48,11 +48,11 @@ COMMON_DEPEND="
 	dev-libs/libfmt:=
 	dev-libs/libzip:=[zstd]
 	dev-cpp/simpleini
-	dev-qt/qtbase:6[gui,network,widgets]
-	dev-qt/qtsvg:6
+	>=dev-qt/qtbase-6.6.0:6[gui,network,widgets]
+	>=dev-qt/qtsvg-6.6.0:6
 	media-libs/libglvnd
 	media-libs/libpng:=
-	>=media-libs/libsdl2-2.0.22[haptic,joystick]
+	>=media-libs/libsdl2-2.28.4[haptic,joystick]
 	media-libs/libsoundtouch:=
 	media-video/ffmpeg:=
 	net-libs/libpcap
@@ -60,6 +60,10 @@ COMMON_DEPEND="
 	sys-libs/zlib:=
 	virtual/libudev:=
 	x11-libs/libXrandr
+	alsa? ( media-libs/alsa-lib )
+	jack? ( virtual/jack )
+	pulseaudio? ( media-libs/libpulse )
+	sndio? ( media-sound/sndio:= )
 	vulkan? ( media-libs/vulkan-loader )
 	wayland? ( dev-libs/wayland )"
 RDEPEND="
@@ -71,7 +75,7 @@ DEPEND="
 	x11-base/xorg-proto
 	test? ( dev-cpp/gtest )"
 BDEPEND="
-	dev-qt/qttools:6[linguist]
+	>=dev-qt/qttools-6.6.0:6[linguist]
 	wayland? (
 		dev-util/wayland-scanner
 		kde-frameworks/extra-cmake-modules

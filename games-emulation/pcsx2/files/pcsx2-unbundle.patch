@@ -1,92 +1,131 @@
-From 494ebf2f95510de6ec671020fce80a0346ed4a0c Mon Sep 17 00:00:00 2001
+From 5ab51cc3a7e9ebd3a6198b28c16413047f62571f Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Fri, 29 Dec 2023 17:52:39 +0100
+Date: Tue, 2 Jan 2024 10:44:52 +0100
 Subject: [PATCH] pcsx2 unbundle
 
 ---
- cmake/SearchForStuff.cmake | 31 +++++++++++++++++--------------
- common/CMakeLists.txt      |  2 +-
- pcsx2/CMakeLists.txt       |  6 ++++--
- 3 files changed, 22 insertions(+), 17 deletions(-)
+ cmake/SearchForStuff.cmake | 47 ++++++++++++++++++++++++++++----------
+ pcsx2/CMakeLists.txt       |  4 +++-
+ 2 files changed, 38 insertions(+), 13 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index f81fe46ff..8015f0a46 100644
+index a9f82c361..06fde8a69 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
-@@ -117,12 +117,16 @@ endif()
- # Prevent fmt from being built with exceptions, or being thrown at call sites.
- set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_EXCEPTIONS=0")
+@@ -4,16 +4,31 @@
+ if(EXISTS ${PROJECT_SOURCE_DIR}/.git)
+ 	find_package(Git)
+ endif()
++
++# Prevent fmt from being built with exceptions, or being thrown at call sites.
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_EXCEPTIONS=0")
++
+ if (WIN32)
+ 	# We bundle everything on Windows
+ 	add_subdirectory(3rdparty/zlib EXCLUDE_FROM_ALL)
+ 	add_subdirectory(3rdparty/libpng EXCLUDE_FROM_ALL)
+ 	add_subdirectory(3rdparty/libwebp EXCLUDE_FROM_ALL)
++	add_subdirectory(3rdparty/simpleini EXCLUDE_FROM_ALL)
++	add_subdirectory(3rdparty/cpuinfo EXCLUDE_FROM_ALL)
++	disable_compiler_warnings_for_target(cpuinfo)
+ 	add_subdirectory(3rdparty/xz EXCLUDE_FROM_ALL)
+ 	add_subdirectory(3rdparty/zstd EXCLUDE_FROM_ALL)
+ 	add_subdirectory(3rdparty/lz4 EXCLUDE_FROM_ALL)
+ 	add_subdirectory(3rdparty/D3D12MemAlloc EXCLUDE_FROM_ALL)
+ 	add_subdirectory(3rdparty/winpixeventruntime EXCLUDE_FROM_ALL)
++	add_subdirectory(3rdparty/libzip EXCLUDE_FROM_ALL)
++	add_subdirectory(3rdparty/rapidjson EXCLUDE_FROM_ALL)
++	add_subdirectory(3rdparty/rapidyaml/rapidyaml EXCLUDE_FROM_ALL)
++	add_subdirectory(3rdparty/soundtouch EXCLUDE_FROM_ALL)
++	add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
++	disable_compiler_warnings_for_target(cubeb)
++	disable_compiler_warnings_for_target(speex)
++	add_subdirectory(3rdparty/fmt/fmt EXCLUDE_FROM_ALL)
+ 	set(FFMPEG_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/3rdparty/ffmpeg/include")
+ 	find_package(Vtune)
  
--add_subdirectory(3rdparty/fmt/fmt EXCLUDE_FROM_ALL)
+@@ -53,6 +68,10 @@ else()
+ 	find_package(Zstd REQUIRED)
+ 	find_package(LZ4 REQUIRED)
+ 	find_package(WebP REQUIRED)
++	find_package(libzip REQUIRED)
++	find_package(RapidJSON REQUIRED)
++	add_library(rapidjson INTERFACE)
++	find_package(fmt REQUIRED)
+ 
+ 	## Use CheckLib package to find module
+ 	include(CheckLib)
+@@ -81,8 +100,24 @@ else()
+ 		endif()
+ 
+ 		find_package(Libbacktrace)
++		find_package(ryml REQUIRED)
+ 		find_package(PkgConfig REQUIRED)
+ 		pkg_check_modules(DBUS REQUIRED dbus-1)
++		pkg_check_modules(cpuinfo REQUIRED libcpuinfo)
++		pkg_check_modules(soundtouch REQUIRED IMPORTED_TARGET soundtouch)
++		add_library(SoundTouch::SoundTouch ALIAS PkgConfig::soundtouch)
++		find_package(cubeb REQUIRED)
++	else()
++		add_subdirectory(3rdparty/cpuinfo EXCLUDE_FROM_ALL)
++		disable_compiler_warnings_for_target(cpuinfo)
++		add_subdirectory(3rdparty/libzip EXCLUDE_FROM_ALL)
++		add_subdirectory(3rdparty/rapidjson EXCLUDE_FROM_ALL)
++		add_subdirectory(3rdparty/rapidyaml/rapidyaml EXCLUDE_FROM_ALL)
++		add_subdirectory(3rdparty/soundtouch EXCLUDE_FROM_ALL)
++		add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
++		disable_compiler_warnings_for_target(cubeb)
++		disable_compiler_warnings_for_target(speex)
++		add_subdirectory(3rdparty/fmt/fmt EXCLUDE_FROM_ALL)
+ 	endif()
+ endif(WIN32)
+ 
+@@ -100,11 +135,9 @@ if(ENABLE_TESTS)
+ 	endif()
+ endif()
+ 
 -add_subdirectory(3rdparty/rapidyaml/rapidyaml EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/lzma EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/libchdr EXCLUDE_FROM_ALL)
  disable_compiler_warnings_for_target(libchdr)
 -add_subdirectory(3rdparty/soundtouch EXCLUDE_FROM_ALL)
-+
-+find_package(fmt REQUIRED)
-+
-+find_package(ryml REQUIRED)
-+
-+pkg_check_modules(soundtouch REQUIRED IMPORTED_TARGET soundtouch)
-+add_library(SoundTouch::SoundTouch ALIAS PkgConfig::soundtouch)
  
  # rapidyaml includes fast_float as a submodule, saves us pulling it in directly.
  # Normally, we'd just pull in the cmake project, and link to it, but... it seems to enable
-@@ -133,18 +137,19 @@ add_library(fast_float INTERFACE)
- target_include_directories(fast_float INTERFACE 3rdparty/rapidyaml/rapidyaml/ext/c4core/src/c4/ext/fast_float/include)
- 
- add_subdirectory(3rdparty/jpgd EXCLUDE_FROM_ALL)
--add_subdirectory(3rdparty/libwebp EXCLUDE_FROM_ALL)
--add_subdirectory(3rdparty/simpleini EXCLUDE_FROM_ALL)
- add_subdirectory(3rdparty/imgui EXCLUDE_FROM_ALL)
--add_subdirectory(3rdparty/cpuinfo EXCLUDE_FROM_ALL)
--disable_compiler_warnings_for_target(cpuinfo)
+@@ -120,9 +153,7 @@ add_subdirectory(3rdparty/imgui EXCLUDE_FROM_ALL)
+ add_subdirectory(3rdparty/cpuinfo EXCLUDE_FROM_ALL)
+ disable_compiler_warnings_for_target(cpuinfo)
  add_subdirectory(3rdparty/zydis EXCLUDE_FROM_ALL)
--add_subdirectory(3rdparty/zstd EXCLUDE_FROM_ALL)
 -add_subdirectory(3rdparty/libzip EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/rcheevos EXCLUDE_FROM_ALL)
 -add_subdirectory(3rdparty/rapidjson EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/discord-rpc EXCLUDE_FROM_ALL)
--add_subdirectory(3rdparty/lz4 EXCLUDE_FROM_ALL)
-+
-+pkg_check_modules(cpuinfo REQUIRED libcpuinfo)
-+pkg_check_modules(webp REQUIRED IMPORTED_TARGET libwebp)
-+find_package(libzip REQUIRED)
-+find_package(RapidJSON REQUIRED)
-+add_library(rapidjson INTERFACE)
-+pkg_check_modules(zstd REQUIRED IMPORTED_TARGET libzstd>=1.4.5)
-+add_library(Zstd::Zstd ALIAS PkgConfig::zstd)
-+find_package(lz4 REQUIRED)
  
  if(USE_OPENGL)
- 	add_subdirectory(3rdparty/glad EXCLUDE_FROM_ALL)
-@@ -155,9 +160,7 @@ if(USE_VULKAN)
+@@ -134,10 +165,6 @@ if(USE_VULKAN)
  	add_subdirectory(3rdparty/vulkan-headers EXCLUDE_FROM_ALL)
  endif()
  
 -add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
 -disable_compiler_warnings_for_target(cubeb)
 -disable_compiler_warnings_for_target(speex)
-+find_package(cubeb REQUIRED)
- 
+-
  # Find the Qt components that we need.
  find_package(Qt6 6.6.0 COMPONENTS CoreTools Core GuiTools Gui WidgetsTools Widgets LinguistTools REQUIRED)
-diff --git a/common/CMakeLists.txt b/common/CMakeLists.txt
-index a096a8d1c..926be7c4f 100644
---- a/common/CMakeLists.txt
-+++ b/common/CMakeLists.txt
-@@ -188,7 +188,7 @@ target_link_libraries(common PRIVATE
- 	${LIBC_LIBRARIES}
- 	PNG::PNG
- 	jpgd
--	WebP::libwebp
-+	PkgConfig::webp
- )
  
- target_link_libraries(common PUBLIC
+@@ -148,10 +175,6 @@ endif()
+ # Demangler for the debugger
+ add_subdirectory(3rdparty/demangler EXCLUDE_FROM_ALL)
+ 
+-# Prevent fmt from being built with exceptions, or being thrown at call sites.
+-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_EXCEPTIONS=0")
+-add_subdirectory(3rdparty/fmt/fmt EXCLUDE_FROM_ALL)
+-
+ # Deliberately at the end. We don't want to set the flag on third-party projects.
+ if(MSVC)
+ 	# Don't warn about "deprecated" POSIX functions.
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index 0ce7660b9..862b117f2 100644
+index 21b8ad1c0..126a29a42 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
 @@ -13,6 +13,9 @@ target_compile_features(PCSX2_FLAGS INTERFACE cxx_std_17)
@@ -99,16 +138,7 @@ index 0ce7660b9..862b117f2 100644
  # Check that people use the good file
  if(NOT TOP_CMAKE_WAS_SOURCED)
  	message(FATAL_ERROR "
-@@ -1127,7 +1130,7 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
- 	discord-rpc
- 	SDL2::SDL2
- 	ZLIB::ZLIB
--	LZ4::LZ4
-+	LZ4::lz4_shared
- 	SoundTouch::SoundTouch
- 	PNG::PNG
- 	LibLZMA::LibLZMA
-@@ -1137,7 +1140,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
+@@ -1121,7 +1124,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
  
  target_link_libraries(PCSX2_FLAGS INTERFACE
  	demangler

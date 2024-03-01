@@ -1,22 +1,22 @@
-From 152bfa60540c28b2a306fc8fdeb9cb0431bb4597 Mon Sep 17 00:00:00 2001
+From 8b0cb1701bb29ba6a9f178bafc4118954f14c65f Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 20 May 2023 19:18:59 +0200
+Date: Fri, 1 Mar 2024 11:11:03 +0100
 Subject: [PATCH] shared glslang
 
 ---
  CMakeLists.txt                                  | 12 ++++++++++--
  Source/Core/VideoBackends/Vulkan/CMakeLists.txt |  4 +++-
  Source/Core/VideoCommon/CMakeLists.txt          | 14 +++-----------
- Source/Core/VideoCommon/Spirv.cpp               |  8 ++++----
+ Source/Core/VideoCommon/Spirv.cpp               | 12 ++++++------
  Source/Core/VideoCommon/Spirv.h                 |  2 +-
- 5 files changed, 21 insertions(+), 19 deletions(-)
+ 5 files changed, 23 insertions(+), 21 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index dcb7f1b94a..90a27a22eb 100644
+index 869862eb75..e106a96972 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -715,11 +715,19 @@ else()
- endif()
+@@ -632,11 +632,19 @@ dolphin_find_optional_system_library(fmt Externals/fmt 10.1)
+ 
  add_subdirectory(Externals/imgui)
  add_subdirectory(Externals/implot)
 -add_subdirectory(Externals/glslang)
@@ -35,10 +35,10 @@ index dcb7f1b94a..90a27a22eb 100644
 +  find_package(spirv_cross_hlsl REQUIRED)
 +  find_package(spirv_cross_cpp REQUIRED)
  endif()
+ add_subdirectory(Externals/tinygltf)
  
- if(ENABLE_VULKAN)
 diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-index 7abf9a038b..d1dd3f859c 100644
+index ec9e1b51cb..b800920f0b 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 +++ b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 @@ -39,7 +39,9 @@ add_library(videovulkan
@@ -53,10 +53,10 @@ index 7abf9a038b..d1dd3f859c 100644
  
  PRIVATE
 diff --git a/Source/Core/VideoCommon/CMakeLists.txt b/Source/Core/VideoCommon/CMakeLists.txt
-index 40c9cd3ded..dd7c175989 100644
+index 89ec66d048..30925d45a0 100644
 --- a/Source/Core/VideoCommon/CMakeLists.txt
 +++ b/Source/Core/VideoCommon/CMakeLists.txt
-@@ -189,7 +189,9 @@ PRIVATE
+@@ -217,7 +217,9 @@ PRIVATE
    xxhash
    imgui
    implot
@@ -64,10 +64,10 @@ index 40c9cd3ded..dd7c175989 100644
 +  glslang::glslang
 +  glslang::SPIRV
 +  glslang::glslang-default-resource-limits
+   tinygltf
  )
  
- if(_M_X86)
-@@ -231,16 +233,6 @@ if(FFmpeg_FOUND)
+@@ -260,16 +262,6 @@ if(FFmpeg_FOUND)
    endif()
  endif()
  
@@ -84,19 +84,6 @@ index 40c9cd3ded..dd7c175989 100644
  if(MSVC)
    # Add precompiled header
    target_link_libraries(videocommon PRIVATE use_pch)
-diff --git a/Source/Core/VideoCommon/Spirv.h b/Source/Core/VideoCommon/Spirv.h
-index fe75ea0f99..55fe4416f3 100644
---- a/Source/Core/VideoCommon/Spirv.h
-+++ b/Source/Core/VideoCommon/Spirv.h
-@@ -8,7 +8,7 @@
- #include <string_view>
- #include <vector>
- 
--#include "ShaderLang.h"
-+#include "glslang/Public/ShaderLang.h"
- 
- #include "Common/CommonTypes.h"
- #include "VideoCommon/VideoCommon.h"
 diff --git a/Source/Core/VideoCommon/Spirv.cpp b/Source/Core/VideoCommon/Spirv.cpp
 index 6fee98b536..f30a222878 100644
 --- a/Source/Core/VideoCommon/Spirv.cpp
@@ -134,3 +121,19 @@ index 6fee98b536..f30a222878 100644
  
      options.generateDebugInfo = true;
      options.disableOptimizer = true;
+diff --git a/Source/Core/VideoCommon/Spirv.h b/Source/Core/VideoCommon/Spirv.h
+index fe75ea0f99..55fe4416f3 100644
+--- a/Source/Core/VideoCommon/Spirv.h
++++ b/Source/Core/VideoCommon/Spirv.h
+@@ -8,7 +8,7 @@
+ #include <string_view>
+ #include <vector>
+ 
+-#include "ShaderLang.h"
++#include "glslang/Public/ShaderLang.h"
+ 
+ #include "Common/CommonTypes.h"
+ #include "VideoCommon/VideoCommon.h"
+-- 
+2.44.0
+

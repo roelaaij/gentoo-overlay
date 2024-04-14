@@ -1,4 +1,4 @@
-# Copyright 1999-2023 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -18,11 +18,11 @@ IUSE="doc test"
 
 RDEPEND="
 	~dev-util/glslang-9999[${MULTILIB_USEDEP}]
-	~dev-util/spirv-tools-99999999[${MULTILIB_USEDEP}]
+	~dev-util/spirv-tools-9999[${MULTILIB_USEDEP}]
 "
 DEPEND="${RDEPEND}
 	${PYTHON_DEPS}
-	~dev-util/spirv-headers-99999999
+	~dev-util/spirv-headers-9999
 	~dev-util/spirv-cross-9999
 	doc? ( dev-ruby/asciidoctor )
 	test? (

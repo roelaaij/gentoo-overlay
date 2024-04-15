@@ -1,0 +1,54 @@
+From 60ee5a9edb6ec371b05006c854a99958548fbbf1 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Sun, 14 Apr 2024 21:23:06 +0200
+Subject: [PATCH] system-vulkan
+
+---
+ cmake/SearchForStuff.cmake                  | 2 +-
+ pcsx2/CMakeLists.txt                        | 2 +-
+ pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp | 3 ---
+ 3 files changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
+index e76055641..9afbe7ac9 100644
+--- a/cmake/SearchForStuff.cmake
++++ b/cmake/SearchForStuff.cmake
+@@ -115,7 +115,7 @@ if(USE_OPENGL)
+ endif()
+ 
+ if(USE_VULKAN)
+-	add_subdirectory(3rdparty/vulkan-headers EXCLUDE_FROM_ALL)
++    find_package(VulkanHeaders REQUIRED)
+ endif()
+ 
+ add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
+diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
+index 8094db334..fe6c7080c 100644
+--- a/pcsx2/CMakeLists.txt
++++ b/pcsx2/CMakeLists.txt
+@@ -626,7 +626,7 @@ if(USE_VULKAN)
+ 		GS/Renderers/Vulkan/VKStreamBuffer.h
+ 		GS/Renderers/Vulkan/VKSwapChain.h
+ 	)
+-	target_link_libraries(PCSX2_FLAGS INTERFACE Vulkan-Headers Shaderc::shaderc_shared)
++	target_link_libraries(PCSX2_FLAGS INTERFACE Vulkan::Headers Shaderc::shaderc_shared)
+ endif()
+ 
+ set(pcsx2GSMetalShaders
+diff --git a/pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp b/pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp
+index 905092ee6..7de20694d 100644
+--- a/pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp
++++ b/pcsx2/GS/Renderers/Vulkan/VKShaderCache.cpp
+@@ -112,9 +112,6 @@ std::optional<VKShaderCache::SPIRVCodeVector> VKShaderCache::CompileShaderToSPV(
+ 	if (debug)
+ 	{
+ 		options.SetGenerateDebugInfo();
+-		if (GSDeviceVK::GetInstance()->GetOptionalExtensions().vk_khr_shader_non_semantic_info)
+-			options.SetEmitNonSemanticDebugInfo();
+-
+ 		options.SetOptimizationLevel(shaderc_optimization_level_zero);
+ 	}
+ 	else
+-- 
+2.44.0
+

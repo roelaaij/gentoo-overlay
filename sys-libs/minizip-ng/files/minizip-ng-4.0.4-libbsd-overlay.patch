@@ -2,7 +2,7 @@ https://bugs.gentoo.org/889266
 https://gitlab.freedesktop.org/libbsd/libbsd/-/issues/15
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -542,10 +542,10 @@ else()
+@@ -538,10 +538,10 @@ else()
  
                      if(HAVE_LIBBSD_ARC4RANDOM_BUF)
                          list(APPEND MINIZIP_DEF -DHAVE_LIBBSD -DHAVE_ARC4RANDOM_BUF)

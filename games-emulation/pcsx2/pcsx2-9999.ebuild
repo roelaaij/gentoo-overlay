@@ -84,6 +84,7 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-1.7.4667-flags.patch
 	"${FILESDIR}"/${PN}-1.7.4795-rapidyaml-0.5.patch
 	"${FILESDIR}"/${PN}-fmt-10.patch
+	"${FILESDIR}"/${PN}-fix-build.patch
 )
 
 src_unpack() {

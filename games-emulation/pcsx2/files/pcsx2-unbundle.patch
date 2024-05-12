@@ -1,6 +1,6 @@
-From d829072703fda8122ab701ac4d6e8b9dff9553a6 Mon Sep 17 00:00:00 2001
+From 9eef0c0cfa26119fa7a274eb5f9f547eaa255ce7 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sun, 14 Apr 2024 15:58:47 +0200
+Date: Sat, 11 May 2024 14:24:13 +0200
 Subject: [PATCH] pcsx2 unbundle
 
 ---
@@ -9,7 +9,7 @@ Subject: [PATCH] pcsx2 unbundle
  2 files changed, 26 insertions(+), 13 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index e76055641..6806c97bf 100644
+index ceac56aed..df2717f9e 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
 @@ -24,6 +24,9 @@ if(USE_VULKAN)
@@ -71,9 +71,9 @@ index e76055641..6806c97bf 100644
  add_subdirectory(3rdparty/rcheevos EXCLUDE_FROM_ALL)
 -add_subdirectory(3rdparty/rapidjson EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/discord-rpc EXCLUDE_FROM_ALL)
+ add_subdirectory(3rdparty/freesurround EXCLUDE_FROM_ALL)
  
- if(USE_OPENGL)
-@@ -118,10 +137,6 @@ if(USE_VULKAN)
+@@ -119,10 +138,6 @@ if(USE_VULKAN)
  	add_subdirectory(3rdparty/vulkan-headers EXCLUDE_FROM_ALL)
  endif()
  
@@ -84,7 +84,7 @@ index e76055641..6806c97bf 100644
  # Find the Qt components that we need.
  find_package(Qt6 6.6.2 COMPONENTS CoreTools Core GuiTools Gui WidgetsTools Widgets LinguistTools REQUIRED)
  
-@@ -132,10 +147,6 @@ endif()
+@@ -133,10 +148,6 @@ endif()
  # Demangler for the debugger
  add_subdirectory(3rdparty/demangler EXCLUDE_FROM_ALL)
  
@@ -96,7 +96,7 @@ index e76055641..6806c97bf 100644
  if(MSVC)
  	# Don't warn about "deprecated" POSIX functions.
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index 8094db334..b1bc71617 100644
+index 572b94ab4..d1b7bfbd1 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
 @@ -13,6 +13,9 @@ target_compile_features(PCSX2_FLAGS INTERFACE cxx_std_17)
@@ -109,14 +109,14 @@ index 8094db334..b1bc71617 100644
  # Check that people use the good file
  if(NOT TOP_CMAKE_WAS_SOURCED)
  	message(FATAL_ERROR "
-@@ -1117,7 +1120,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
- 
- target_link_libraries(PCSX2_FLAGS INTERFACE
+@@ -1103,7 +1106,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
+ 	rcheevos
+ 	discord-rpc
  	demangler
 -	simpleini
- )
- 
- if(WIN32)
+ 	freesurround
+ 	SDL2::SDL2
+ 	ZLIB::ZLIB
 -- 
-2.44.0
+2.45.0
 

@@ -1,0 +1,58 @@
+From 85e8fbceb1b446abbabbde8f1a2c5a2ff5986d76 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Sat, 11 May 2024 16:03:12 +0200
+Subject: [PATCH] pcsx2 fix build
+
+---
+ pcsx2/Host/CubebAudioStream.cpp | 2 +-
+ pcsx2/INISettingsInterface.cpp  | 8 +++++++-
+ pcsx2/SPU2/defs.h               | 1 +
+ 3 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/pcsx2/Host/CubebAudioStream.cpp b/pcsx2/Host/CubebAudioStream.cpp
+index 0e2758b73..ec1b8d3a6 100644
+--- a/pcsx2/Host/CubebAudioStream.cpp
++++ b/pcsx2/Host/CubebAudioStream.cpp
+@@ -288,7 +288,7 @@ std::vector<std::pair<std::string, std::string>> AudioStream::GetCubebDriverName
+ 	std::vector<std::pair<std::string, std::string>> names;
+ 	names.emplace_back(std::string(), TRANSLATE_STR("AudioStream", "Default"));
+ 
+-	const char** cubeb_names = cubeb_get_backend_names();
++	const auto cubeb_names = cubeb_get_backend_names();
+ 	for (u32 i = 0; cubeb_names[i] != nullptr; i++)
+ 		names.emplace_back(cubeb_names[i], cubeb_names[i]);
+ 
+diff --git a/pcsx2/INISettingsInterface.cpp b/pcsx2/INISettingsInterface.cpp
+index 2184ac3cc..df71424ff 100644
+--- a/pcsx2/INISettingsInterface.cpp
++++ b/pcsx2/INISettingsInterface.cpp
+@@ -136,7 +136,13 @@ void INISettingsInterface::Clear()
+ 
+ bool INISettingsInterface::IsEmpty()
+ {
+-	return (m_ini.GetKeyCount() == 0);
++  using Entry = CSimpleIniA::Entry;
++  std::list<Entry> sections, keys;
++  m_ini.GetAllSections(sections);
++  return std::find_if(sections.begin(), sections.end(), [&keys, this] (const auto entry) {
++    m_ini.GetAllKeys(entry.pItem, keys);
++    return !keys.empty();
++  }) == sections.end();
+ }
+ 
+ bool INISettingsInterface::GetIntValue(const char* section, const char* key, int* value) const
+diff --git a/pcsx2/SPU2/defs.h b/pcsx2/SPU2/defs.h
+index adbf67d42..18974d32c 100644
+--- a/pcsx2/SPU2/defs.h
++++ b/pcsx2/SPU2/defs.h
+@@ -6,6 +6,7 @@
+ #include "GS/MultiISA.h"
+ 
+ #include <array>
++#include <algorithm>
+ 
+ // --------------------------------------------------------------------------------------
+ //  SPU2 Register Table LUT
+-- 
+2.45.0
+

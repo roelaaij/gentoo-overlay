@@ -33,6 +33,7 @@ COMMON_DEPEND="
 	app-arch/zstd:=
 	dev-libs/libaio
 	dev-libs/libfmt:=
+	>=dev-libs/libbacktrace-20240503
 	dev-qt/qtbase:6[concurrent,gui,widgets]
 	dev-qt/qtsvg:6
 	media-libs/freetype
@@ -55,6 +56,7 @@ COMMON_DEPEND="
 	vulkan? (
 		media-libs/shaderc
 		media-libs/vulkan-loader
+		dev-libs/vulkan-memory-allocator
 	)
 	wayland? ( dev-libs/wayland )
 "
@@ -84,6 +86,7 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-1.7.4667-flags.patch
 	"${FILESDIR}"/${PN}-fmt-10.patch
 	"${FILESDIR}"/${PN}-fix-build.patch
+	"${FILESDIR}"/${PN}-1.7.5835-vanilla-shaderc.patch
 )
 
 src_unpack() {
@@ -158,10 +161,6 @@ src_configure() {
 		-DUSE_VULKAN=$(usex vulkan)
 		-DWAYLAND_API=$(usex wayland)
 		-DX11_API=yes # X libs are currently hard-required either way
-
-		# not packaged due to bug #885471, but still disable for no automagic
-		-DCMAKE_DISABLE_FIND_PACKAGE_Libbacktrace=yes
-
 		-DLTO_PCSX2_CORE=$(usex lto)
 	)
 

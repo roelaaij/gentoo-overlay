@@ -1,15 +1,17 @@
-From 674bc70f7ef27293a903caa5c53bd707ede4eb3d Mon Sep 17 00:00:00 2001
+From 7eb3360af38e36ca2751afcf3e8a4b1157d2a64f Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Thu, 13 Jun 2024 21:07:51 +0200
+Date: Tue, 18 Jun 2024 15:09:20 +0200
 Subject: [PATCH] pcsx2 unbundle
 
 ---
- cmake/SearchForStuff.cmake | 24 ++++++++++++------------
- pcsx2/CMakeLists.txt       |  4 +++-
- 2 files changed, 15 insertions(+), 13 deletions(-)
+ cmake/SearchForStuff.cmake      | 25 +++++++++++++------------
+ pcsx2/CMakeLists.txt            |  4 +++-
+ pcsx2/Host/CubebAudioStream.cpp |  2 +-
+ pcsx2/INISettingsInterface.cpp  |  9 ++++++++-
+ 4 files changed, 25 insertions(+), 15 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index c57f7ad3c..edea19bde 100644
+index c2e43f83a..b2054f2b3 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
 @@ -24,6 +24,9 @@ if(USE_VULKAN)
@@ -22,13 +24,12 @@ index c57f7ad3c..edea19bde 100644
  # Platform-specific dependencies.
  if (WIN32)
  	add_subdirectory(3rdparty/D3D12MemAlloc EXCLUDE_FROM_ALL)
-@@ -66,27 +69,32 @@ else()
- 		endif()
- 
+@@ -68,24 +71,29 @@ else()
  		find_package(Libbacktrace REQUIRED)
-+		find_package(ryml REQUIRED)
  		find_package(PkgConfig REQUIRED)
  		pkg_check_modules(DBUS REQUIRED dbus-1)
++		find_package(ryml REQUIRED)
++		add_library(rapidyaml::rapidyaml ALIAS ryml::ryml)
 +		pkg_check_modules(cpuinfo REQUIRED libcpuinfo)
 +		pkg_check_modules(soundtouch REQUIRED IMPORTED_TARGET soundtouch)
 +		add_library(SoundTouch::SoundTouch ALIAS PkgConfig::soundtouch)
@@ -48,31 +49,29 @@ index c57f7ad3c..edea19bde 100644
  add_subdirectory(3rdparty/libchdr EXCLUDE_FROM_ALL)
  disable_compiler_warnings_for_target(libchdr)
 -add_subdirectory(3rdparty/soundtouch EXCLUDE_FROM_ALL)
- add_subdirectory(3rdparty/simpleini EXCLUDE_FROM_ALL)
+-add_subdirectory(3rdparty/simpleini EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/imgui EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/cpuinfo EXCLUDE_FROM_ALL)
  disable_compiler_warnings_for_target(cpuinfo)
- add_subdirectory(3rdparty/zydis EXCLUDE_FROM_ALL)
 -add_subdirectory(3rdparty/libzip EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/rcheevos EXCLUDE_FROM_ALL)
 -add_subdirectory(3rdparty/rapidjson EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/discord-rpc EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/freesurround EXCLUDE_FROM_ALL)
  
-@@ -98,10 +106,6 @@ if(USE_VULKAN)
+@@ -97,9 +105,6 @@ if(USE_VULKAN)
  	add_subdirectory(3rdparty/vulkan EXCLUDE_FROM_ALL)
  endif()
  
 -add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
 -disable_compiler_warnings_for_target(cubeb)
 -disable_compiler_warnings_for_target(speex)
--
+ 
  # Find the Qt components that we need.
  # Should be 6.7.1, but held back on 6.7.0 because of Flatpak.
- find_package(Qt6 6.7.0 COMPONENTS CoreTools Core GuiTools Gui WidgetsTools Widgets LinguistTools REQUIRED)
-@@ -113,10 +117,6 @@ endif()
- # Demangler for the debugger
- add_subdirectory(3rdparty/demangler EXCLUDE_FROM_ALL)
+@@ -119,10 +124,6 @@ elseif(_M_ARM64)
+ 	add_subdirectory(3rdparty/vixl EXCLUDE_FROM_ALL)
+ endif()
  
 -# Prevent fmt from being built with exceptions, or being thrown at call sites.
 -set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_EXCEPTIONS=0")
@@ -82,7 +81,7 @@ index c57f7ad3c..edea19bde 100644
  if(MSVC)
  	# Don't warn about "deprecated" POSIX functions.
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index adf277550..40cb732f6 100644
+index 224a6556a..704ffae03 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
 @@ -13,6 +13,9 @@ target_compile_features(PCSX2_FLAGS INTERFACE cxx_std_17)
@@ -95,7 +94,7 @@ index adf277550..40cb732f6 100644
  # Check that people use the good file
  if(NOT TOP_CMAKE_WAS_SOURCED)
  	message(FATAL_ERROR "
-@@ -1096,7 +1099,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
+@@ -1128,7 +1131,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
  	rcheevos
  	discord-rpc
  	demangler
@@ -103,6 +102,39 @@ index adf277550..40cb732f6 100644
  	freesurround
  	SDL2::SDL2
  	ZLIB::ZLIB
+diff --git a/pcsx2/Host/CubebAudioStream.cpp b/pcsx2/Host/CubebAudioStream.cpp
+index 0e2758b73..9d1db2a92 100644
+--- a/pcsx2/Host/CubebAudioStream.cpp
++++ b/pcsx2/Host/CubebAudioStream.cpp
+@@ -288,7 +288,7 @@ std::vector<std::pair<std::string, std::string>> AudioStream::GetCubebDriverName
+ 	std::vector<std::pair<std::string, std::string>> names;
+ 	names.emplace_back(std::string(), TRANSLATE_STR("AudioStream", "Default"));
+ 
+-	const char** cubeb_names = cubeb_get_backend_names();
++	const char* const* cubeb_names = cubeb_get_backend_names();
+ 	for (u32 i = 0; cubeb_names[i] != nullptr; i++)
+ 		names.emplace_back(cubeb_names[i], cubeb_names[i]);
+ 
+diff --git a/pcsx2/INISettingsInterface.cpp b/pcsx2/INISettingsInterface.cpp
+index 2184ac3cc..5fae9daeb 100644
+--- a/pcsx2/INISettingsInterface.cpp
++++ b/pcsx2/INISettingsInterface.cpp
+@@ -136,7 +136,14 @@ void INISettingsInterface::Clear()
+ 
+ bool INISettingsInterface::IsEmpty()
+ {
+-	return (m_ini.GetKeyCount() == 0);
++  CSimpleIniA::TNamesDepend sections, keys;
++  m_ini.GetAllSections(sections);
++  return (sections.empty() ||
++          std::all_of(sections.begin(), sections.end(),
++                      [this, &keys] (auto const& section) {
++                        m_ini.GetAllKeys(section.pItem, keys);
++                        return keys.empty();
++                      } ) );
+ }
+ 
+ bool INISettingsInterface::GetIntValue(const char* section, const char* key, int* value) const
 -- 
 2.45.2
 

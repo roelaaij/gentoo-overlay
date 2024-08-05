@@ -3,9 +3,9 @@
 
 EAPI=8
 
-DISTUTILS_USE_PEP517=setuptools
+DISTUTILS_USE_PEP517=flit
 PYTHON_COMPAT=( python3_{10..13} pypy3 )
-
+GENERATOR_V=2023.0.1
 inherit distutils-r1
 
 DESCRIPTION="Language Server Protocol types code generator & packages"
@@ -14,7 +14,7 @@ HOMEPAGE="
 	https://pypi.org/project/lsprotocol
 "
 SRC_URI="
-	https://github.com/microsoft/lsprotocol/archive/refs/tags/${PV}.tar.gz
+	https://github.com/microsoft/lsprotocol/archive/refs/tags/${GENERATOR_V}.tar.gz
 		-> ${P}.gh.tar.gz
 "
 
@@ -25,19 +25,9 @@ KEYWORDS="~amd64 ~arm64 ~riscv"
 RDEPEND="
 	dev-python/attrs[${PYTHON_USEDEP}]
 	dev-python/cattrs[${PYTHON_USEDEP}]
-	dev-python/jsonschema[${PYTHON_USEDEP}]
-	$(python_gen_cond_dep '
-			dev-python/importlib-resources[${PYTHON_USEDEP}]
-	' 3.{10..11})
-"
-BDEPEND="
-	test? (
-		>=dev-python/pytest-7.4.3[${PYTHON_USEDEP}]
-		dev-python/pyhamcrest[${PYTHON_USEDEP}]
-	)
 "
 
-distutils_enable_tests pytest
+S=${WORKDIR}/${PN}-${GENERATOR_V}/packages/python
 
 src_prepare() {
 	# poetry nonsense

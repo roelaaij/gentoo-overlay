@@ -147,7 +147,6 @@ declare -A KEEP_BUNDLED=(
 )
 
 PATCHES=(
-	"${FILESDIR}"/dolphin-2407-libfmt-11-fix.patch
 	"${FILESDIR}"/dolphin-2407-minizip.patch
 	"${FILESDIR}"/0003-shared-glslang.patch
 	"${FILESDIR}"/0001-system-minizip-ng.patch

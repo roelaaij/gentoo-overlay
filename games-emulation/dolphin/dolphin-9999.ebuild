@@ -150,6 +150,7 @@ PATCHES=(
 	"${FILESDIR}"/dolphin-2407-minizip.patch
 	"${FILESDIR}"/0003-shared-glslang.patch
 	"${FILESDIR}"/0001-system-minizip-ng.patch
+	"${FILESDIR}"/0001-fix-disabled-achievements.patch
 )
 
 add_bundled_licenses() {

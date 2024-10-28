@@ -1,0 +1,11 @@
+--- a/CMakeLists.txt	2024-10-28 10:19:18.651204705 +0100
++++ b/CMakeLists.txt	2024-10-28 10:23:09.611635243 +0100
+@@ -99,7 +99,7 @@
+ include(CheckLanguage)
+ include(CMakeDependentOption)
+ check_language(HIP)
+-cmake_dependent_option(USE_HIPCXX "Use CMake HIP language support" OFF CMAKE_HIP_COMPILER OFF)
++option(USE_HIPCXX "Use CMake HIP language support" OFF)
+ if(USE_HIPCXX)
+   enable_language(HIP)
+ else()

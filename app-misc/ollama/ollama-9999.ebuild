@@ -3,7 +3,7 @@
 
 EAPI=8
 ROCM_VERSION=6.1.2
-inherit git-r3 go-module rocm
+inherit git-r3 go-module rocm cuda
 
 DESCRIPTION="Get up and running with Llama 3, Mistral, Gemma, and other language models."
 HOMEPAGE="https://ollama.com"
@@ -44,6 +44,10 @@ src_unpack() {
 	go-module_live_vendor
 }
 
+src_prepare() {
+	sed -E "s|/usr/local/cuda-[12]{2}|/opt/cuda|g" llama/llama.go
+}
+
 src_compile() {
 	VERSION=$(
 		git describe --tags --first-parent --abbrev=7 --long --dirty --always \
@@ -55,7 +59,18 @@ src_compile() {
 		export AMDGPU_TARGETS="$(get_amdgpu_flags)"
 		einfo "AMDGPU ${AMDGPU_TARGETS}"
 	fi
-	ego generate ./...
+
+	if use nvidia; then
+		export NVCC_CCBIN="$(cuda_gccdir)"
+		CUDA_MAKE_ARGS=(
+			CUDA_PATH=/opt/cuda
+			CUDA_12=1
+			CUDA_ARCHITECTURES=${CUDA_COMPUTE_CAPABILITIES##.}
+			GPU_PATH_ROOT_LINUX=/opt/cuda
+		)
+	fi
+
+	emake ${CUDA_MAKE_ARGS[@]}
 	ego build .
 }
 

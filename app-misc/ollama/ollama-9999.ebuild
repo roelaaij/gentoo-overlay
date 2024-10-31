@@ -29,6 +29,10 @@ BDEPEND="
 	)
 "
 
+PATCHES=(
+	${FILESDIR}/fix-rocm.patch
+)
+
 pkg_pretend() {
 	if use amd; then
 		ewarn "WARNING: AMD & Nvidia support in this ebuild are experimental"
@@ -45,7 +49,9 @@ src_unpack() {
 }
 
 src_prepare() {
-	sed -E "s|/usr/local/cuda-[12]{2}|/opt/cuda|g" llama/llama.go
+	sed -iE "s|/usr/local/cuda-[12]{2}|/opt/cuda|g" llama/llama.go
+	cuda_src_prepare
+	default
 }
 
 src_compile() {
@@ -56,21 +62,27 @@ src_compile() {
 	)
 	export GOFLAGS="'-ldflags=-w -s \"-X=github.com/ollama/ollama/version.Version=${VERSION}\"'"
 	if use amd; then
-		export AMDGPU_TARGETS="$(get_amdgpu_flags)"
-		einfo "AMDGPU ${AMDGPU_TARGETS}"
-	fi
-
-	if use nvidia; then
-		export NVCC_CCBIN="$(cuda_gccdir)"
-		CUDA_MAKE_ARGS=(
-			CUDA_PATH=/opt/cuda
-			CUDA_12=1
-			CUDA_ARCHITECTURES=${CUDA_COMPUTE_CAPABILITIES##.}
-			GPU_PATH_ROOT_LINUX=/opt/cuda
+		AMDGPU_TARGETS="$(get_amdgpu_flags)"
+		ROCM_MAKE_ARGS=(
+			HIP_PATH=${EPREFIX}/usr
+			HIP_LIB_DIR=${EPREFIX}/usr/lib64
+			HIP_ARCHS_COMMON="${AMDGPU_TARGETS//;/ }" HIP_ARCHS_LINUX=
 		)
 	fi
 
-	emake ${CUDA_MAKE_ARGS[@]}
+	if use nvidia; then
+		NVCC_CCBIN="$(cuda_gccdir)"
+		export NVCC_CCBIN
+		einfo "NVCC_CCBIN ${NVCC_CCBIN}"
+		CUDA_MAKE_ARGS=(
+			CUDA_PATH=${EPREFIX}/opt/cuda
+			CUDA_12=1
+			CUDA_ARCHITECTURES=${CUDA_COMPUTE_CAPABILITIES//./}
+			GPU_PATH_ROOT_LINUX=${EPREFIX}/opt/cuda
+		)
+	fi
+
+	emake ${CUDA_MAKE_ARGS[@]} ${ROCM_MAKE_ARGS[@]}
 	ego build .
 }
 

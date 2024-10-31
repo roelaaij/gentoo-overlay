@@ -1,46 +1,21 @@
-From f494823465acee8059842b09ea513dd6cf08c0db Mon Sep 17 00:00:00 2001
-From: Roel Aaij <roel.aaij@gmail.com>
-Date: Mon, 21 Oct 2024 00:41:54 +0200
-Subject: [PATCH] fix rocm
-
----
- llm/generate/gen_linux.sh | 10 +++++-----
- 1 file changed, 5 insertions(+), 5 deletions(-)
-
-diff --git a/llm/generate/gen_linux.sh b/llm/generate/gen_linux.sh
-index cacaaf4b..c45b1221 100755
---- a/llm/generate/gen_linux.sh
-+++ b/llm/generate/gen_linux.sh
-@@ -247,11 +247,11 @@ fi
- 
- if [ -z "${OLLAMA_SKIP_ROCM_GENERATE}" -a -d "${ROCM_PATH}" ]; then
-     echo "ROCm libraries detected - building dynamic ROCm library"
--    if [ -f ${ROCM_PATH}/lib/librocblas.so.*.*.????? ]; then
--        ROCM_VARIANT=_v$(ls ${ROCM_PATH}/lib/librocblas.so.*.*.????? | cut -f5 -d. || true)
-+    if [ -f ${ROCM_PATH}/lib64/librocblas.so.*.*.????? ]; then
-+        ROCM_VARIANT=_v$(ls ${ROCM_PATH}/lib64/librocblas.so.*.*.????? | cut -f5 -d. || true)
-     fi
-     init_vars
--    CMAKE_DEFS="${COMMON_CMAKE_DEFS} ${CMAKE_DEFS} -DGGML_HIPBLAS=on -DCMAKE_C_COMPILER=$ROCM_PATH/llvm/bin/clang -DCMAKE_CXX_COMPILER=$ROCM_PATH/llvm/bin/clang++ -DAMDGPU_TARGETS=$(amdGPUs) -DGPU_TARGETS=$(amdGPUs)"
-+    CMAKE_DEFS="${COMMON_CMAKE_DEFS} ${CMAKE_DEFS} -DGGML_HIPBLAS=on -DAMDGPU_TARGETS=$(amdGPUs) -DGPU_TARGETS=$(amdGPUs)"
-     # Users building from source can tune the exact flags we pass to cmake for configuring llama.cpp
-     if [ -n "${OLLAMA_CUSTOM_ROCM_DEFS}" ]; then
-         echo "OLLAMA_CUSTOM_ROCM_DEFS=\"${OLLAMA_CUSTOM_ROCM_DEFS}\""
-@@ -264,12 +264,12 @@ if [ -z "${OLLAMA_SKIP_ROCM_GENERATE}" -a -d "${ROCM_PATH}" ]; then
-     ROCM_DIST_DIR="${DIST_BASE}/../linux-${GOARCH}-rocm/lib/ollama"
-     # TODO figure out how to disable runpath (rpath)
-     # export CMAKE_HIP_FLAGS="-fno-rtlib-add-rpath" # doesn't work
--    export LLAMA_SERVER_LDFLAGS="-L${ROCM_PATH}/lib -L/opt/amdgpu/lib/x86_64-linux-gnu/ -lhipblas -lrocblas -lamdhip64 -lrocsolver -lamd_comgr -lhsa-runtime64 -lrocsparse -ldrm -ldrm_amdgpu"
-+    export LLAMA_SERVER_LDFLAGS="-L${ROCM_PATH}/lib64 -lhipblas -lrocblas -lamdhip64 -lrocsolver -lamd_comgr -lhsa-runtime64 -lrocsparse -ldrm -ldrm_amdgpu"
-     build
- 
-     # copy the ROCM dependencies
-     mkdir -p "${ROCM_DIST_DIR}"
--    for dep in $(ldd "${BUILD_DIR}/bin/ollama_llama_server" | grep "=>" | cut -f2 -d= | cut -f2 -d' ' | grep -v "${GOARCH}/rocm${ROCM_VARIANT}" | grep -e rocm -e amdgpu -e libtinfo -e libnuma -e libelf ); do
-+    for dep in $(ldd "${BUILD_DIR}/bin/ollama_llama_server" | grep "=>" | cut -f2 -d= | cut -f2 -d' ' | grep -v "${GOARCH}/rocm${ROCM_VARIANT}" | grep -e roc -e hip -e amd -e libtinfo -e libnuma -e libelf ); do
-         cp -a "${dep}"* "${ROCM_DIST_DIR}"
-         if [ $(readlink -f "${dep}") != "${dep}" ] ; then
-             cp $(readlink -f "${dep}") "${ROCM_DIST_DIR}"
--- 
-2.47.0
-
+diff --git a/llama/make/Makefile.rocm b/llama/make/Makefile.rocm
+index 947c43a6..8fca060e 100644
+--- a/llama/make/Makefile.rocm
++++ b/llama/make/Makefile.rocm
+@@ -14,7 +14,7 @@ ifeq ($(OS),windows)
+ 	GPU_COMPILER_WIN := $(HIP_PATH)/bin/hipcc.bin.exe
+ 	GPU_COMPILER:=$(GPU_COMPILER_WIN)
+ else ifeq ($(OS),linux)
+-	GPU_LIB_DIR_LINUX := $(HIP_PATH)/lib
++	GPU_LIB_DIR_LINUX := $(HIP_LIB_DIR)
+ 	GPU_COMPILER_LINUX := $(shell X=$$(which hipcc 2>/dev/null) && echo $$X)
+ 	GPU_COMPILER:=$(GPU_COMPILER_LINUX)
+ 	ROCM_TRANSITIVE_LIBS_INITIAL = $(sort $(shell ldd $(GPU_LIBS) | grep "=>" | cut -f2 -d= | cut -f2 -d' '  | grep -e rocm -e amdgpu -e libtinfo -e libnuma -e libelf))
+@@ -58,7 +58,6 @@ endif
+ GPU_COMPILER_CUFLAGS = \
+ 	$(GPU_COMPILER_FPIC) \
+ 	$(addprefix -m,$(GPU_RUNNER_CPU_FLAGS)) \
+-	-parallel-jobs=2 \
+ 	-c \
+ 	-O3 \
+ 	-DGGML_USE_CUDA \

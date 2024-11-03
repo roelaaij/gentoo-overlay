@@ -1,24 +1,24 @@
-From f1a7c6eb8513837723a7082ecb7cf09b31e48d1b Mon Sep 17 00:00:00 2001
+From f3b1ede78d0e31378e892844ade24b3150b3359f Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 18 May 2024 15:09:12 +0200
-Subject: [PATCH] fix
+Date: Wed, 30 Oct 2024 21:17:38 +0100
+Subject: [PATCH] fix build
 
 ---
- pcsx2/CDVD/ThreadedFileReader.cpp | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ pcsx2/DebugTools/SymbolGuardian.h | 1 +
+ 1 file changed, 1 insertion(+)
 
-diff --git a/pcsx2/CDVD/ThreadedFileReader.cpp b/pcsx2/CDVD/ThreadedFileReader.cpp
-index 3471b4f08..e301001a0 100644
---- a/pcsx2/CDVD/ThreadedFileReader.cpp
-+++ b/pcsx2/CDVD/ThreadedFileReader.cpp
-@@ -1,6 +1,6 @@
- // SPDX-FileCopyrightText: 2002-2023 PCSX2 Dev Team
- // SPDX-License-Identifier: LGPL-3.0+
--
-+#include <string.h>
- #include "ThreadedFileReader.h"
+diff --git a/pcsx2/DebugTools/SymbolGuardian.h b/pcsx2/DebugTools/SymbolGuardian.h
+index 67bfd129c..81e2bfd71 100644
+--- a/pcsx2/DebugTools/SymbolGuardian.h
++++ b/pcsx2/DebugTools/SymbolGuardian.h
+@@ -4,6 +4,7 @@
+ #pragma once
  
- #include "common/Threading.h"
+ #include <atomic>
++#include <mutex>
+ #include <thread>
+ #include <functional>
+ #include <shared_mutex>
 -- 
-2.45.1
+2.47.0
 

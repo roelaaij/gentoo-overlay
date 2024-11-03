@@ -31,6 +31,7 @@ BDEPEND="
 
 PATCHES=(
 	${FILESDIR}/fix-rocm.patch
+	${FILESDIR}/fix-compilers.patch
 )
 
 pkg_pretend() {

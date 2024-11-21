@@ -1,20 +1,26 @@
-From 22937c8a83eb27be1458724d9185697a48b0d093 Mon Sep 17 00:00:00 2001
+From 07deab1d518d94e0aa9298c1469f5a63910589ab Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 17 Aug 2024 23:45:42 +0200
+Date: Thu, 21 Nov 2024 12:54:23 +0100
 Subject: [PATCH] system minizip-ng
 
 ---
- CMakeLists.txt                        |  2 +-
+ CMakeLists.txt                        |  6 ++++--
  Source/Core/Common/Hash.cpp           |  8 ++++----
  Source/Core/DiscIO/CompressedBlob.cpp | 20 ++++++++++----------
- 3 files changed, 15 insertions(+), 15 deletions(-)
+ 3 files changed, 18 insertions(+), 16 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 7ca6679f28..82bb9c9b73 100644
+index 636d5473e3..2d3d270b06 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -675,7 +675,7 @@ dolphin_find_optional_system_library_pkgconfig(ZSTD libzstd>=1.4.0 zstd::zstd Ex
- dolphin_find_optional_system_library_pkgconfig(ZLIB zlib-ng ZLIB::ZLIB Externals/zlib-ng)
+@@ -672,10 +672,12 @@ dolphin_make_imported_target_if_missing(LibLZMA::LibLZMA LIBLZMA)
+ 
+ dolphin_find_optional_system_library_pkgconfig(ZSTD libzstd>=1.4.0 zstd::zstd Externals/zstd)
+ 
+-add_subdirectory(Externals/zlib-ng)
++dolphin_find_optional_system_library_pkgconfig(ZLIBNG
++  "zlib-ng>=2.1.5" ZLIB::ZLIB Externals/zlib-ng
++)
  
  dolphin_find_optional_system_library_pkgconfig(MINIZIP
 -  "minizip>=4.0.4" minizip::minizip Externals/minizip-ng
@@ -60,7 +66,7 @@ index 8cb697b695..9b7472bc22 100644
  
  u32 ComputeCRC32(const u8* data, size_t len)
 diff --git a/Source/Core/DiscIO/CompressedBlob.cpp b/Source/Core/DiscIO/CompressedBlob.cpp
-index 629cedfe7c..5b98cde6d2 100644
+index fccb3928d1..44a6b10863 100644
 --- a/Source/Core/DiscIO/CompressedBlob.cpp
 +++ b/Source/Core/DiscIO/CompressedBlob.cpp
 @@ -11,7 +11,7 @@
@@ -147,5 +153,5 @@ index 629cedfe7c..5b98cde6d2 100644
    state->compressed_buffer.resize(block_size - state->z.avail_out);
  
 -- 
-2.45.2
+2.47.0
 

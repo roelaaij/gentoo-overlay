@@ -1,0 +1,38 @@
+`--rocm-device-lib-path` is needed to execute the tests because they are not
+installed to system yet
+===================================================================
+Index: ROCm-Device-Libs-rocm-6.0.0/test/compile/RunConstantFoldTest.cmake
+===================================================================
+--- a/test/compile/RunConstantFoldTest.cmake
++++ b/test/compile/RunConstantFoldTest.cmake
+@@ -16,6 +16,7 @@ execute_process(COMMAND
+   -target amdgcn-amd-amdhsa -mcpu=${TEST_CPU}
+   -Xclang -finclude-default-header
+   --rocm-path=${BINARY_DIR}
++  --rocm-device-lib-path=${AMDGCN_BITCODES}
+   -mllvm -amdgpu-simplify-libcall=0
+   -o ${OUTPUT_FILE} ${INPUT_FILE}
+   RESULT_VARIABLE CLANG_RESULT
+Index: ROCm-Device-Libs-rocm-6.0.0/test/compile/RunCompileTest.cmake
+===================================================================
+--- a/test/compile/RunCompileTest.cmake
++++ b/test/compile/RunCompileTest.cmake
+@@ -16,6 +16,7 @@ execute_process(COMMAND
+   -target amdgcn-amd-amdhsa -mcpu=${TEST_CPU}
+   -Xclang -finclude-default-header
+   --rocm-path=${BINARY_DIR}
++  --rocm-device-lib-path=${AMDGCN_BITCODES}
+   -mllvm -amdgpu-simplify-libcall=0
+   -o ${OUTPUT_FILE} ${INPUT_FILE}
+   RESULT_VARIABLE CLANG_RESULT
+===================================================================
+--- a/test/compile/CMakeLists.txt	2024-11-25 10:24:40.631293847 +0100
++++ b/test/compile/CMakeLists.txt	2024-11-25 10:24:35.241323727 +0100
+@@ -40,6 +40,7 @@
+      -DFILECHECK_BIN=${FILECHECK_BIN}
+      -DOUTPUT_FILE=output.${test_name}.${test_cpu}.s
+      -DINPUT_FILE=${file_name}
++     -DAMDGCN_BITCODES=${PROJECT_BINARY_DIR}/lib/amdgcn/bitcode
+      -DTEST_CPU=${test_cpu}
+      -DCOMPILE_FLAGS=${COMPILE_TEST_COMPILE_FLAGS}
+      -DEXTRA_CHECK_PREFIX=${COMPILE_TEST_EXTRA_CHECK_PREFIXES}

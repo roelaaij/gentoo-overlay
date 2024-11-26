@@ -1,0 +1,91 @@
+--- a/src/comgr-compiler.cpp	2024-11-25 14:45:16.290991154 +0100
++++ b/src/comgr-compiler.cpp	2024-11-25 14:48:24.539671572 +0100
+@@ -384,16 +384,14 @@
+   assert(MRI && "Unable to create target register info!");
+ 
+   llvm::MCTargetOptions MCOptions;
++  MCOptions.CompressDebugSections = Opts.CompressDebugSections;
++  MCOptions.MCSaveTempLabels = Opts.SaveTemporaryLabels;
++  MCOptions.X86RelaxRelocations = Opts.RelaxELFRelocations;
++
+   std::unique_ptr<MCAsmInfo> MAI(
+       TheTarget->createMCAsmInfo(*MRI, Opts.Triple, MCOptions));
+   assert(MAI && "Unable to create target asm info!");
+ 
+-  // Ensure MCAsmInfo initialization occurs before any use, otherwise sections
+-  // may be created with a combination of default and explicit settings.
+-  MAI->setCompressDebugSections(Opts.CompressDebugSections);
+-
+-  MAI->setRelaxELFRelocations(Opts.RelaxELFRelocations);
+-
+   bool IsBinary = Opts.OutputType == AssemblerInvocation::FT_Obj;
+   std::unique_ptr<raw_fd_ostream> FDOS = getOutputStream(Opts, Diags, IsBinary);
+   if (!FDOS) {
+@@ -428,9 +426,6 @@
+   }
+ 
+   MOFI->initMCObjectFileInfo(Ctx, PIC);
+-  if (Opts.SaveTemporaryLabels) {
+-    Ctx.setAllowTemporaryLabels(false);
+-  }
+   if (Opts.GenDwarfForAssembly) {
+     Ctx.setGenDwarfForAssembly(true);
+   }
+@@ -467,9 +462,7 @@
+     }
+     auto FOut = std::make_unique<formatted_raw_ostream>(*Out);
+     Str.reset(TheTarget->createAsmStreamer(
+-        Ctx, std::move(FOut), /*asmverbose*/ true,
+-        /*useDwarfDirectory*/ true, IP, std::move(MCE), std::move(MAB),
+-        Opts.ShowInst));
++        Ctx, std::move(FOut), IP, std::move(MCE), std::move(MAB)));
+   } else if (Opts.OutputType == AssemblerInvocation::FT_Null) {
+     Str.reset(createNullStreamer(Ctx));
+   } else {
+@@ -482,13 +475,13 @@
+ 
+     MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, Ctx);
+     MCTargetOptions Options;
++    Options.MCRelaxAll = Opts.RelaxAll;
++    Options.MCIncrementalLinkerCompatible = Opts.IncrementalLinkerCompatible;
+     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, Options);
+     Triple T(Opts.Triple);
+     Str.reset(TheTarget->createMCObjectStreamer(
+         T, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
+-        MAB->createObjectWriter(*Out), std::unique_ptr<MCCodeEmitter>(CE), *STI,
+-        Opts.RelaxAll, Opts.IncrementalLinkerCompatible,
+-        /*DWARFMustBeAtTheEnd*/ true));
++        MAB->createObjectWriter(*Out), std::unique_ptr<MCCodeEmitter>(CE), *STI));
+     Str.get()->initSections(Opts.NoExecStack, *STI);
+   }
+ 
+--- a/src/comgr.cpp	2024-11-25 14:51:20.428382062 +0100
++++ b/src/comgr.cpp	2024-11-25 11:20:16.469220374 +0100
+@@ -51,6 +51,7 @@
+ #include "llvm/Object/ObjectFile.h"
+ #include "llvm/Support/TargetSelect.h"
+ #include "llvm/IR/Constants.h"
++#include "llvm/IR/Module.h"
+ #include <fstream>
+ #include <mutex>
+ #include <string>
+@@ -2126,7 +2127,7 @@
+         }
+         StringRef SecName = std::move(SecNameOrError.get());
+ 
+-        if (SecName.equals(StringRef(".rodata")))
++        if (SecName.compare(StringRef(".rodata")) == 0)
+           rodataShdr = Shdr;
+       }
+     }
+--- a/src/comgr-symbol.cpp	2024-11-25 14:53:55.337246412 +0100
++++ b/src/comgr-symbol.cpp	2024-11-25 14:54:39.506922592 +0100
+@@ -146,7 +146,7 @@
+         return NULL;
+       }
+       StringRef SymName = *SymNameOrErr;
+-      if (SymName.equals(Sname)) {
++      if (SymName.compare(Sname) == 0) {
+ #if DEBUG
+         outs() << "Found! " << sname.data() << "\n";
+ #endif

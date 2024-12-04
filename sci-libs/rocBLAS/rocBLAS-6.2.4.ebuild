@@ -6,7 +6,7 @@ EAPI=8
 DOCS_BUILDER="doxygen"
 DOCS_DIR="docs/.doxygen"
 DOCS_DEPEND="media-gfx/graphviz"
-LLVM_COMPAT=( 19 )
+LLVM_COMPAT=( 18 )
 ROCM_VERSION=${PV}
 
 inherit cmake docs edo multiprocessing rocm llvm-r1
@@ -52,6 +52,7 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-5.4.2-add-missing-header.patch
 	"${FILESDIR}"/${PN}-5.4.2-link-cblas.patch
 	"${FILESDIR}"/${PN}-6.0.2-expand-isa-compatibility.patch
+	"${FILESDIR}"/${PN}-6.2.4-add-gfx1103.patch
 	)
 
 src_prepare() {

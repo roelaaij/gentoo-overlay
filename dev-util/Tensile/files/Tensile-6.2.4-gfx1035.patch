@@ -1,0 +1,97 @@
+From 4ea2cbbb8454440cb6042f72ef7d08f1fa018714 Mon Sep 17 00:00:00 2001
+From: Tom Rix <Tom.Rix@amd.com>
+Date: Thu, 7 Nov 2024 08:43:42 -0800
+Subject: [PATCH] Add gfx1035
+
+---
+ Tensile/AsmCaps.py                         | 44 ++++++++++++++++++++++
+ Tensile/Common.py                          |  2 +-
+ Tensile/Source/lib/source/ocl/OclUtils.cpp |  4 ++
+ 3 files changed, 49 insertions(+), 1 deletion(-)
+
+diff --git a/Tensile/AsmCaps.py b/Tensile/AsmCaps.py
+index d88a11acb031..6c83f1e40dbc 100644
+--- a/Tensile/AsmCaps.py
++++ b/Tensile/AsmCaps.py
+@@ -639,6 +639,50 @@ CACHED_ASM_CAPS = \
+               'v_mov_b64': False,
+               'v_pk_fma_f16': True,
+               'v_pk_fmac_f16': False},
++ (10, 3, 5): {'HasAddLshl': True,
++              'HasAtomicAdd': False,
++              'HasDirectToLdsDest': False,
++              'HasDirectToLdsNoDest': True,
++              'HasExplicitCO': True,
++              'HasExplicitNC': True,
++              'HasGLCModifier': True,
++              'HasNTModifier': False,
++              'HasLshlOr': True,
++              'HasMFMA': False,
++              'HasMFMA_b8': False,
++              'HasMFMA_bf16_1k': False,
++              'HasMFMA_bf16_original': False,
++              'HasMFMA_constSrc': False,
++              'HasMFMA_f64': False,
++              'HasMFMA_f8': False,
++              'HasMFMA_i8_908': False,
++              'HasMFMA_i8_940': False,
++              'HasMFMA_vgpr': False,
++              'HasMFMA_xf32': False,
++              'HasSMulHi': True,
++              'HasWMMA': False,
++              'KernargPreloading': False,
++              'MaxLgkmcnt': 15,
++              'MaxVmcnt': 63,
++              'SupportedISA': True,
++              'SupportedSource': True,
++              'VOP3v_dot4_i32_i8': True,
++              'v_dot2_f32_f16': True,
++              'v_dot2c_f32_f16': True,
++              'v_dot4_i32_i8': False,
++              'v_dot4c_i32_i8': True,
++              'v_fma_f16': True,
++              'v_fma_f32': True,
++              'v_fma_f64': True,
++              'v_fma_mix_f32': True,
++              'v_fmac_f16': False,
++              'v_fmac_f32': True,
++              'v_mac_f16': False,
++              'v_mac_f32': False,
++              'v_mad_mix_f32': False,
++              'v_mov_b64': False,
++              'v_pk_fma_f16': True,
++              'v_pk_fmac_f16': False},
+  (11, 0, 0): {'HasAddLshl': True,
+               'HasAtomicAdd': True,
+               'HasDirectToLdsDest': False,
+diff --git a/Tensile/Common.py b/Tensile/Common.py
+index bb64a4fd913c..fdcb7b2df9d3 100644
+--- a/Tensile/Common.py
++++ b/Tensile/Common.py
+@@ -227,7 +227,7 @@ globalParameters["MaxFileName"] = 64              # If a file name would be long
+ globalParameters["SupportedISA"] = [(8,0,3),
+                                     (9,0,0), (9,0,6), (9,0,8), (9,0,10),
+                                     (9,4,0), (9,4,1), (9,4,2),
+-                                    (10,1,0), (10,1,1), (10,1,2), (10,3,0), (10,3,1),
++                                    (10,1,0), (10,1,1), (10,1,2), (10,3,0), (10,3,1), (10,3,5),
+                                     (11,0,0), (11,0,1), (11,0,2), (11,0,3),
+                                     (11,5,1)] # assembly kernels writer supports these architectures
+ 
+diff --git a/Tensile/Source/lib/source/ocl/OclUtils.cpp b/Tensile/Source/lib/source/ocl/OclUtils.cpp
+index eb5a14eccfb1..5242dc77abdf 100644
+--- a/Tensile/Source/lib/source/ocl/OclUtils.cpp
++++ b/Tensile/Source/lib/source/ocl/OclUtils.cpp
+@@ -176,6 +176,10 @@ namespace Tensile
+             {
+                 return AMDGPU::Processor::gfx1030;
+             }
++            else if(deviceString.find("gfx1035") != std::string::npos)
++            {
++                return AMDGPU::Processor::gfx1035;
++            }
+             else if(deviceString.find("gfx1100") != std::string::npos)
+             {
+                 return AMDGPU::Processor::gfx1100;
+-- 
+2.47.0
+

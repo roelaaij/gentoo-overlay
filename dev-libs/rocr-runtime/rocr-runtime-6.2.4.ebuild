@@ -3,7 +3,7 @@
 
 EAPI=8
 
-LLVM_COMPAT=( 19 )
+LLVM_COMPAT=( 18 )
 
 inherit cmake flag-o-matic llvm-r1
 

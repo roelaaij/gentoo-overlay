@@ -3,7 +3,7 @@
 
 EAPI=8
 
-LLVM_COMPAT=( 19 )
+LLVM_COMPAT=( 18 )
 
 inherit cmake llvm-r1 prefix
 
@@ -29,7 +29,6 @@ PATCHES=(
 	"${FILESDIR}/${PN}-6.1.0-enforce-oop-compiler.patch"
 	"${FILESDIR}/${PN}-6.1.0-fix-comgr-default-flags.patch"
 	"${FILESDIR}/${PN}-6.1.0-dont-add-nogpulib.patch"
-	"${FILESDIR}/${PN}-6.2.4-llvm-19-compat.patch"
 )
 
 RDEPEND=">=dev-libs/rocm-device-libs-${PV}

@@ -74,6 +74,7 @@ src_configure() {
 		-DBUILD_CLIENTS_TESTS="$(usex test)"
 		-DBUILD_CLIENTS_BENCHMARKS="$(usex benchmark)"
 		-DBUILD_WITH_PIP=OFF
+		-DLINK_BLIS=OFF
 	)
 
 	if usex video_cards_amdgpu; then

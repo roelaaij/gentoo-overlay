@@ -18,11 +18,12 @@ LLVM_COMPAT=( {15..18} )
 
 inherit cmake flag-o-matic llvm-r1 python-r1 toolchain-funcs
 
-MY_PN="pyside-setup-everywhere-src"
+MY_PN="pyside-pyside-setup"
 
 DESCRIPTION="Python binding generator for C++ libraries"
 HOMEPAGE="https://wiki.qt.io/PySide6"
-SRC_URI="https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-${PV}-src/${MY_PN}-${PV}.tar.xz"
+
+SRC_URI="https://github.com/qtproject/pyside-pyside-setup/archive/refs/tags/v${PV}.tar.gz -> ${MY_PN}-${PV}.tar.gz"
 S="${WORKDIR}/${MY_PN}-${PV}/sources/shiboken6"
 
 # The "sources/shiboken6/libshiboken" directory is triple-licensed under the

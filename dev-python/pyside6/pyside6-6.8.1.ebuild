@@ -26,11 +26,11 @@ inherit cmake llvm-r1 python-r1 virtualx
 # be conditionally patched to avoid these tests. An issue should be filed with
 # upstream requesting a CLI-settable variable to control this.
 
-MY_PN="pyside-setup-everywhere-src"
+MY_PN="pyside-pyside-setup"
 
 DESCRIPTION="Python bindings for the Qt framework"
 HOMEPAGE="https://wiki.qt.io/PySide6"
-SRC_URI="https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-${PV}-src/${MY_PN}-${PV}.tar.xz"
+SRC_URI="https://github.com/qtproject/pyside-pyside-setup/archive/refs/tags/v${PV}.tar.gz -> ${MY_PN}-${PV}.tar.gz"
 S="${WORKDIR}/${MY_PN}-${PV}/sources/pyside6"
 
 # See "sources/pyside6/PySide6/licensecomment.txt" for licensing details.

@@ -84,7 +84,7 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-system-vulkan.patch
 	"${FILESDIR}"/${PN}-1.7.3773-lto.patch
 	"${FILESDIR}"/${PN}-1.7.4667-flags.patch
-	"${FILESDIR}"/${PN}-fmt-10.patch
+	"${FILESDIR}"/${PN}-fmt-11.patch
 	"${FILESDIR}"/${PN}-fix-build.patch
 )
 

@@ -16,14 +16,14 @@ IUSE="debug test"
 RESTRICT="!test? ( test )"
 
 DEPEND="
-	~sys-devel/llvm-${PV}[debug=]
+	~llvm-core/llvm-${PV}[debug=]
 	sys-libs/zlib:=
 "
 RDEPEND="
 	${DEPEND}
 "
 BDEPEND="
-	sys-devel/llvm:${LLVM_MAJOR}
+	llvm-core/llvm:${LLVM_MAJOR}
 	test? (
 		$(python_gen_any_dep ">=dev-python/lit-${PV}[\${PYTHON_USEDEP}]")
 	)
@@ -86,7 +86,7 @@ src_configure() {
 
 		-DLLVM_ENABLE_PROJECTS="bolt"
 		-DBOLT_TARGETS_TO_BUILD="${LLVM_TARGETS// /;}"
-		-DBOLT_ENABLE_RUNTIME=OFF
+		-DBOLT_ENABLE_RUNTIME=ON
 		-DLLVM_INCLUDE_BENCHMARKS=OFF
 
 		-DPython3_EXECUTABLE="${PYTHON}"

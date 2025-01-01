@@ -8,10 +8,10 @@ HOMEPAGE="https://github.com/NVIDIA/cudnn-frontend"
 SRC_URI="https://github.com/NVIDIA/cudnn-frontend/archive/refs/tags/v${PV}.tar.gz -> ${P}.tar.gz"
 
 LICENSE="MIT"
-SLOT="0/9"
+SLOT="0/8"
 KEYWORDS="~amd64"
 
-RDEPEND="=dev-libs/cudnn-9*"
+RDEPEND=">=dev-libs/cudnn-8.5.0"
 DEPEND="${RDEPEND}"
 
 src_install() {

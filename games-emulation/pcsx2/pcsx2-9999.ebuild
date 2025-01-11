@@ -1,4 +1,4 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -72,7 +72,7 @@ DEPEND="
 "
 BDEPEND="
 	dev-qt/qttools:6[linguist]
-	clang? ( sys-devel/clang:* )
+	clang? ( llvm-core/clang:* )
 	wayland? (
 		dev-util/wayland-scanner
 		kde-frameworks/extra-cmake-modules

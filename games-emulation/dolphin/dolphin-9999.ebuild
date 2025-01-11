@@ -1,4 +1,4 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -98,7 +98,7 @@ RDEPEND="
 		dev-qt/qtbase:6[gui,widgets]
 		dev-qt/qtsvg:6
 	)
-	llvm? ( $(llvm_gen_dep 'sys-devel/llvm:${LLVM_SLOT}=') )
+	llvm? ( $(llvm_gen_dep 'llvm-core/llvm:${LLVM_SLOT}=') )
 	profile? ( dev-util/oprofile )
 	pulseaudio? ( media-libs/libpulse )
 	sdl? ( >=media-libs/libsdl2-2.30.6 )

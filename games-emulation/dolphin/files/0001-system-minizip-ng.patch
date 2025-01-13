@@ -1,16 +1,19 @@
-From 07deab1d518d94e0aa9298c1469f5a63910589ab Mon Sep 17 00:00:00 2001
+From fd6441c70f426aaf1c853d21acae93b1a8746e4a Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Thu, 21 Nov 2024 12:54:23 +0100
+Date: Mon, 13 Jan 2025 10:20:57 +0100
 Subject: [PATCH] system minizip-ng
 
 ---
- CMakeLists.txt                        |  6 ++++--
- Source/Core/Common/Hash.cpp           |  8 ++++----
- Source/Core/DiscIO/CompressedBlob.cpp | 20 ++++++++++----------
- 3 files changed, 18 insertions(+), 16 deletions(-)
+ CMakeLists.txt                                |  6 ++++--
+ Source/Core/Common/Hash.cpp                   |  8 ++++----
+ Source/Core/Common/MinizipUtil.h              |  3 +--
+ Source/Core/DiscIO/CompressedBlob.cpp         | 20 +++++++++----------
+ Source/Core/DiscIO/VolumeVerifier.cpp         |  1 -
+ .../UICommon/ResourcePack/ResourcePack.cpp    |  2 +-
+ 6 files changed, 20 insertions(+), 20 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 636d5473e3..2d3d270b06 100644
+index 819ea04409..6c688ce7ff 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -672,10 +672,12 @@ dolphin_make_imported_target_if_missing(LibLZMA::LibLZMA LIBLZMA)
@@ -19,12 +22,12 @@ index 636d5473e3..2d3d270b06 100644
  
 -add_subdirectory(Externals/zlib-ng)
 +dolphin_find_optional_system_library_pkgconfig(ZLIBNG
-+  "zlib-ng>=2.1.5" ZLIB::ZLIB Externals/zlib-ng
++  "zlib-ng>=2.2.3" ZLIB::ZLIB Externals/zlib-ng
 +)
  
  dolphin_find_optional_system_library_pkgconfig(MINIZIP
 -  "minizip>=4.0.4" minizip::minizip Externals/minizip-ng
-+  "minizip-ng>=4.0.4" minizip::minizip Externals/minizip-ng
++  "minizip-ng>=4.0.8" minizip::minizip Externals/minizip-ng
  )
  
  dolphin_find_optional_system_library(LZO Externals/LZO)
@@ -65,6 +68,20 @@ index 8cb697b695..9b7472bc22 100644
  }
  
  u32 ComputeCRC32(const u8* data, size_t len)
+diff --git a/Source/Core/Common/MinizipUtil.h b/Source/Core/Common/MinizipUtil.h
+index 87c6231fa0..f4cf0c63a3 100644
+--- a/Source/Core/Common/MinizipUtil.h
++++ b/Source/Core/Common/MinizipUtil.h
+@@ -4,8 +4,7 @@
+ #pragma once
+ 
+ #include <algorithm>
+-
+-#include <mz_compat.h>
++#include <unzip.h>
+ 
+ #include "Common/CommonTypes.h"
+ #include "Common/ScopeGuard.h"
 diff --git a/Source/Core/DiscIO/CompressedBlob.cpp b/Source/Core/DiscIO/CompressedBlob.cpp
 index fccb3928d1..44a6b10863 100644
 --- a/Source/Core/DiscIO/CompressedBlob.cpp
@@ -152,6 +169,31 @@ index fccb3928d1..44a6b10863 100644
  
    state->compressed_buffer.resize(block_size - state->z.avail_out);
  
+diff --git a/Source/Core/DiscIO/VolumeVerifier.cpp b/Source/Core/DiscIO/VolumeVerifier.cpp
+index a4725cbbe2..88e29de96e 100644
+--- a/Source/Core/DiscIO/VolumeVerifier.cpp
++++ b/Source/Core/DiscIO/VolumeVerifier.cpp
+@@ -13,7 +13,6 @@
+ #include <unordered_set>
+ 
+ #include <mbedtls/md5.h>
+-#include <mz_compat.h>
+ #include <pugixml.hpp>
+ 
+ #include "Common/Align.h"
+diff --git a/Source/Core/UICommon/ResourcePack/ResourcePack.cpp b/Source/Core/UICommon/ResourcePack/ResourcePack.cpp
+index 117c3cc31c..33ebf6f92a 100644
+--- a/Source/Core/UICommon/ResourcePack/ResourcePack.cpp
++++ b/Source/Core/UICommon/ResourcePack/ResourcePack.cpp
+@@ -6,7 +6,7 @@
+ #include <algorithm>
+ #include <memory>
+ 
+-#include <mz_compat.h>
++#include <mz.h>
+ #include <mz_os.h>
+ 
+ #include "Common/CommonPaths.h"
 -- 
-2.47.0
+2.47.1
 

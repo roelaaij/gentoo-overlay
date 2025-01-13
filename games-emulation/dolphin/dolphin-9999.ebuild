@@ -15,10 +15,7 @@ if [[ ${PV} == *9999 ]]; then
 		Externals/mGBA/mgba
 		Externals/implot/implot
 		Externals/tinygltf/tinygltf
-		Externals/Vulkan-Headers
 		Externals/VulkanMemoryAllocator
-		Externals/zlib-ng/zlib-ng
-		Externals/minizip-ng/minizip-ng
 	)
 else
 	MGBA_COMMIT=8739b22fbc90fdf0b4f6612ef9c0520f0ba44a51

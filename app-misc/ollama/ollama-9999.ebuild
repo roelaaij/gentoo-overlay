@@ -1,4 +1,4 @@
-# Copyright 2024 Gentoo Authors
+# Copyright 2024-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -29,10 +29,9 @@ BDEPEND="
 	)
 "
 
-PATCHES=(
-	${FILESDIR}/fix-rocm.patch
-	${FILESDIR}/fix-compilers.patch
-)
+# PATCHES=(
+# 	${FILESDIR}/fix-compilers.patch
+# )
 
 pkg_pretend() {
 	if use amd; then

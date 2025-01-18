@@ -1,4 +1,4 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -29,8 +29,8 @@ RESTRICT="!test? ( test )"
 DEPEND="
 	$(llvm_gen_dep '
 		sys-libs/compiler-rt:${LLVM_SLOT}=
-		sys-devel/llvm:${LLVM_SLOT}=
-		sys-devel/clang:${LLVM_SLOT}=
+		llvm-core/llvm:${LLVM_SLOT}=
+		llvm-core/clang:${LLVM_SLOT}=
 	')
 "
 RDEPEND="${DEPEND}

@@ -1,4 +1,4 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -24,7 +24,7 @@ SLOT="0/$(ver_cut 1-2)"
 RDEPEND="sys-process/numactl
 	x11-libs/libdrm[video_cards_amdgpu]"
 DEPEND="${RDEPEND}
-	test? ( sys-devel/llvm
+	test? ( llvm-core/llvm
 	dev-cpp/gtest )"
 
 IUSE="test"

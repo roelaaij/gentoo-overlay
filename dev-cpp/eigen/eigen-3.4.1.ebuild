@@ -1,4 +1,4 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -133,7 +133,7 @@ DEPEND="
 				dev-util/nvidia-cuda-toolkit
 			)
 			clang? (
-				sys-devel/clang[llvm_targets_NVPTX]
+				llvm-core/clang[llvm_targets_NVPTX]
 				openmp? ( sys-libs/libomp[llvm_targets_NVPTX,offload] )
 			)
 		)

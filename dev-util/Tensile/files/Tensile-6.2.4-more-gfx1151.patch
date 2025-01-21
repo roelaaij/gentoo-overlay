@@ -112,6 +112,13 @@ index 8ee6d21769f0..ff04c56a1025 100644
              else
              {
                  return static_cast<AMDGPU::Processor>(0);
--- 
-2.47.0
-
+--- a/Tensile/Source/lib/include/Tensile/Serialization/Predicates.hpp	2025-01-20 09:32:51.431005663 +0100
++++ b/Tensile/Source/lib/include/Tensile/Serialization/Predicates.hpp	2025-01-21 09:51:25.263113083 +0100
+@@ -232,6 +232,7 @@
+                 iot::enumCase(io, value, "gfx1100", AMDGPU::Processor::gfx1100);
+                 iot::enumCase(io, value, "gfx1101", AMDGPU::Processor::gfx1101);
+                 iot::enumCase(io, value, "gfx1102", AMDGPU::Processor::gfx1102);
++                iot::enumCase(io, value, "gfx1151", AMDGPU::Processor::gfx1151);
+             }
+         };
+ 

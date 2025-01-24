@@ -13,6 +13,18 @@ SLOT="0"
 
 IUSE="nvidia amd"
 
+CPU_FLAGS=(
+		avx
+		avx2
+		avx512f
+		avx512vbmi
+		avx512_vnni
+		avx512_bf16
+)
+
+CPU_FEATURES=$(printf "cpu_flags_x86_%s " "${CPU_FLAGS[@]}")
+IUSE+=" ${CPU_FEATURES[*]%:*}"
+
 RDEPEND="
 	acct-group/ollama
 	acct-user/ollama
@@ -29,9 +41,9 @@ BDEPEND="
 	)
 "
 
-# PATCHES=(
-# 	${FILESDIR}/fix-compilers.patch
-# )
+PATCHES=(
+	${FILESDIR}/amd-igpu.patch
+)
 
 pkg_pretend() {
 	if use amd; then
@@ -75,14 +87,29 @@ src_compile() {
 		export NVCC_CCBIN
 		einfo "NVCC_CCBIN ${NVCC_CCBIN}"
 		CUDA_MAKE_ARGS=(
-			CUDA_PATH=${EPREFIX}/opt/cuda
-			CUDA_12=1
+			CUDA_12_PATH=${EPREFIX}/opt/cuda
 			CUDA_ARCHITECTURES=${CUDA_COMPUTE_CAPABILITIES//./}
 			GPU_PATH_ROOT_LINUX=${EPREFIX}/opt/cuda
 		)
 	fi
 
-	emake ${CUDA_MAKE_ARGS[@]} ${ROCM_MAKE_ARGS[@]}
+	for i in "${CPU_FLAGS[@]}" ; do
+		if [[ ${ABI} == amd64 || ${ABI} == x86 ]]; then
+			# These are merged into one flag internally
+			case "${i}" in
+				avx512f)
+					value="avx512"
+					;;
+				*)
+					value=${i/_/}
+					;;
+			esac
+			use "cpu_flags_x86_${i}" && CUSTOM_CPU_FLAGS="${CUSTOM_CPU_FLAGS:+$CUSTOM_CPU_FLAGS,}$value"
+		fi
+	done
+
+	emake "${CUSTOM_CPU_FLAGS:+CUSTOM_CPU_FLAGS=${CUSTOM_CPU_FLAGS}}" ${CUDA_MAKE_ARGS[@]} ${ROCM_MAKE_ARGS[@]}
+
 	ego build .
 }
 

@@ -42,7 +42,8 @@ BDEPEND="
 "
 
 PATCHES=(
-	${FILESDIR}/amd-igpu.patch
+	${FILESDIR}/${PN}-amd-igpu.patch
+	${FILESDIR}/${PN}-runners-libexec.patch
 )
 
 pkg_pretend() {
@@ -115,6 +116,16 @@ src_compile() {
 
 src_install() {
 	dobin ollama
+
+	# Install runners and runner libraries
+	for runner_type in `ls llama/build/linux-${ABI}/runners`
+	do
+		exeinto ${EPREFIX}/usr/libexec/ollama/runners/${runner_type}
+		doexe llama/build/linux-${ABI}/runners/${runner_type}/ollama_llama_server
+		insinto ${EPREFIX}/usr/libexec/ollama/runners/${runner_type}
+		doins llama/build/linux-${ABI}/runners/${runner_type}/libggml_*.so
+	done
+
 	doinitd "${FILESDIR}"/ollama
 }
 

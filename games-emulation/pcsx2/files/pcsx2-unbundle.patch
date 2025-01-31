@@ -1,6 +1,6 @@
-From d99ff0f61791d1e29856a080bc6f186d5134dd3b Mon Sep 17 00:00:00 2001
+From 59d75e1e81f4ad65365f64c8232f4ef6597912e9 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Fri, 30 Aug 2024 11:39:21 +0200
+Date: Fri, 31 Jan 2025 14:24:58 +0100
 Subject: [PATCH] pcsx2 unbundle
 
 ---
@@ -11,7 +11,7 @@ Subject: [PATCH] pcsx2 unbundle
  4 files changed, 25 insertions(+), 15 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index 5445e998f..280abf86d 100644
+index 12306df68..5d92a4dd9 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
 @@ -24,6 +24,9 @@ if(USE_VULKAN)
@@ -19,7 +19,7 @@ index 5445e998f..280abf86d 100644
  endif()
  
 +# Prevent fmt from being built with exceptions, or being thrown at call sites.
-+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_EXCEPTIONS=0")
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_USE_EXCEPTIONS=0 -DFMT_USE_RTTI=0")
 +
  # Platform-specific dependencies.
  if (WIN32)
@@ -68,20 +68,20 @@ index 5445e998f..280abf86d 100644
 -disable_compiler_warnings_for_target(speex)
  
  # Find the Qt components that we need.
- # Should be 6.7.1, but held back on 6.7.0 because of Flatpak.
-@@ -125,10 +130,6 @@ elseif(_M_ARM64)
+ find_package(Qt6 6.7.2 COMPONENTS CoreTools Core GuiTools Gui WidgetsTools Widgets LinguistTools REQUIRED)
+@@ -124,10 +129,6 @@ elseif(_M_ARM64)
  	add_subdirectory(3rdparty/vixl EXCLUDE_FROM_ALL)
  endif()
  
 -# Prevent fmt from being built with exceptions, or being thrown at call sites.
--set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_EXCEPTIONS=0")
+-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_USE_EXCEPTIONS=0 -DFMT_USE_RTTI=0")
 -add_subdirectory(3rdparty/fmt EXCLUDE_FROM_ALL)
 -
  # Deliberately at the end. We don't want to set the flag on third-party projects.
  if(MSVC)
  	# Don't warn about "deprecated" POSIX functions.
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index db54f785f..33036cae4 100644
+index d99c68fb2..ea7c978d6 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
 @@ -13,6 +13,9 @@ target_compile_features(PCSX2_FLAGS INTERFACE cxx_std_17)
@@ -94,7 +94,7 @@ index db54f785f..33036cae4 100644
  # Check that people use the good file
  if(NOT TOP_CMAKE_WAS_SOURCED)
  	message(FATAL_ERROR "
-@@ -1138,7 +1141,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
+@@ -1144,7 +1147,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
  	cubeb
  	rcheevos
  	discord-rpc
@@ -103,7 +103,7 @@ index db54f785f..33036cae4 100644
  	SDL2::SDL2
  	ZLIB::ZLIB
 diff --git a/pcsx2/Host/CubebAudioStream.cpp b/pcsx2/Host/CubebAudioStream.cpp
-index 4cd9993ca..604635d19 100644
+index 7c00c9e1f..c0eefa00a 100644
 --- a/pcsx2/Host/CubebAudioStream.cpp
 +++ b/pcsx2/Host/CubebAudioStream.cpp
 @@ -288,7 +288,7 @@ std::vector<std::pair<std::string, std::string>> AudioStream::GetCubebDriverName
@@ -116,7 +116,7 @@ index 4cd9993ca..604635d19 100644
  		names.emplace_back(cubeb_names[i], cubeb_names[i]);
  
 diff --git a/pcsx2/INISettingsInterface.cpp b/pcsx2/INISettingsInterface.cpp
-index 0ff93aaa8..675d6f8d2 100644
+index e7b84f7bd..afa1efe37 100644
 --- a/pcsx2/INISettingsInterface.cpp
 +++ b/pcsx2/INISettingsInterface.cpp
 @@ -136,7 +136,14 @@ void INISettingsInterface::Clear()
@@ -136,5 +136,5 @@ index 0ff93aaa8..675d6f8d2 100644
  
  bool INISettingsInterface::GetIntValue(const char* section, const char* key, int* value) const
 -- 
-2.46.0
+2.48.1
 

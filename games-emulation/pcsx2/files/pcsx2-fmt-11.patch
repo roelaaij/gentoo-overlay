@@ -1,27 +1,17 @@
-From 629cd004d022ea56124483f20d65ac2b3d929e5b Mon Sep 17 00:00:00 2001
+From b939c174b4ef0d9d10688b1621177755f90616d6 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Thu, 19 Dec 2024 12:35:44 +0100
-Subject: [PATCH] fmt 10
+Date: Fri, 31 Jan 2025 15:01:48 +0100
+Subject: [PATCH] fmt 11
 
 ---
- common/SmallString.h | 14 ++++++++++++--
- 1 file changed, 12 insertions(+), 2 deletions(-)
+ common/SmallString.h | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/common/SmallString.h b/common/SmallString.h
-index c756dda38..c448de656 100644
+index 9359965a8..ebfbe29ef 100644
 --- a/common/SmallString.h
 +++ b/common/SmallString.h
-@@ -179,6 +179,9 @@ public:
- 	// STL adapters
- 	__fi void push_back(value_type&& val) { append(val); }
- 
-+	// STL adapters
-+	__fi void push_back(const value_type& val) { append(val); }
-+
- 	// returns a string view for this string
- 	std::string_view view() const;
- 
-@@ -377,6 +380,13 @@ __fi SmallStackString<L> SmallStackString<L>::from_vformat(fmt::string_view fmt,
+@@ -378,6 +378,13 @@ __fi SmallStackString<L> SmallStackString<L>::from_vformat(fmt::string_view fmt,
  using TinyString = SmallStackString<64>;
  using SmallString = SmallStackString<256>;
  
@@ -35,16 +25,7 @@ index c756dda38..c448de656 100644
  template <typename... T>
  __fi void SmallStringBase::append_format(fmt::format_string<T...> fmt, T&&... args)
  {
-@@ -413,7 +423,7 @@ __fi void SmallStringBase::format(fmt::format_string<T...> fmt, T&&... args)
- 		} \
- \
- 		template <typename FormatContext> \
--		auto format(const type& str, FormatContext& ctx) \
-+		auto format(const type& str, FormatContext& ctx) const \
- 		{ \
- 			return fmt::format_to(ctx.out(), "{}", str.view()); \
- 		} \
-@@ -422,4 +432,4 @@ __fi void SmallStringBase::format(fmt::format_string<T...> fmt, T&&... args)
+@@ -423,4 +430,4 @@ __fi void SmallStringBase::format(fmt::format_string<T...> fmt, T&&... args)
  MAKE_FORMATTER(TinyString);
  MAKE_FORMATTER(SmallString);
  
@@ -52,5 +33,5 @@ index c756dda38..c448de656 100644
 \ No newline at end of file
 +#undef MAKE_FORMATTER
 -- 
-2.47.1
+2.48.1
 

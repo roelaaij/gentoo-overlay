@@ -1,15 +1,14 @@
-From 86fb24e9c05adca5f84fc088f1fa16e493ca0c64 Mon Sep 17 00:00:00 2001
+From 1a69ee8b4961d290ac0843dac744e025c5647f8f Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Thu, 19 Dec 2024 12:36:25 +0100
-Subject: [PATCH] fix build
+Date: Fri, 31 Jan 2025 14:35:50 +0100
+Subject: [PATCH] pcsx2 fix build
 
 ---
  pcsx2/DebugTools/SymbolGuardian.h | 1 +
- pcsx2/Host.h                      | 1 +
- 2 files changed, 2 insertions(+)
+ 1 file changed, 1 insertion(+)
 
 diff --git a/pcsx2/DebugTools/SymbolGuardian.h b/pcsx2/DebugTools/SymbolGuardian.h
-index 67bfd129c..81e2bfd71 100644
+index 52ba4dd81..67eb48ae9 100644
 --- a/pcsx2/DebugTools/SymbolGuardian.h
 +++ b/pcsx2/DebugTools/SymbolGuardian.h
 @@ -4,6 +4,7 @@
@@ -19,19 +18,7 @@ index 67bfd129c..81e2bfd71 100644
 +#include <mutex>
  #include <thread>
  #include <functional>
- #include <shared_mutex>
-diff --git a/pcsx2/Host.h b/pcsx2/Host.h
-index 3028455ec..825607041 100644
---- a/pcsx2/Host.h
-+++ b/pcsx2/Host.h
-@@ -10,6 +10,7 @@
- 
- #include <ctime>
- #include <functional>
-+#include <memory>
  #include <mutex>
- #include <optional>
- #include <string>
 -- 
-2.47.1
+2.48.1
 

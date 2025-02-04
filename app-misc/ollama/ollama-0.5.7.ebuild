@@ -11,10 +11,11 @@ LICENSE="MIT"
 SLOT="0"
 SRC_URI="https://github.com/${PN}/${PN}/archive/refs/tags/v${PV}.tar.gz -> ${PN}-${PV}.tar.gz"
 SRC_URI+=" https://dev.gentoo.org/~raaij/dist/${P}-deps.tar.xz"
-IUSE="nvidia amd"
+IUSE="cuda rocm"
 
 CPU_FLAGS=(
 		avx
+		fma3
 		avx2
 		avx512f
 		avx512vbmi
@@ -34,8 +35,8 @@ BDEPEND="
 	>=dev-lang/go-1.21.0
 	>=dev-build/cmake-3.24
 	>=sys-devel/gcc-11.4.0
-	nvidia? ( dev-util/nvidia-cuda-toolkit )
-	amd? (
+	cuda? ( dev-util/nvidia-cuda-toolkit )
+	rocm? (
 		sci-libs/clblast
 		dev-libs/rocm-opencl-runtime
 	)
@@ -47,8 +48,8 @@ PATCHES=(
 )
 
 pkg_pretend() {
-	if use amd; then
-		ewarn "WARNING: AMD & Nvidia support in this ebuild are experimental"
+	if use rocm; then
+		ewarn "WARNING: ROCm & CUDA support in this ebuild are experimental"
 		einfo "If you run into issues, especially compiling dev-libs/rocm-opencl-runtime"
 		einfo "you may try the docker image here https://github.com/ROCm/ROCm-docker"
 		einfo "and follow instructions here"
@@ -64,7 +65,7 @@ src_prepare() {
 
 src_compile() {
 	export GOFLAGS="'-ldflags=-w -s \"-X=github.com/ollama/ollama/version.Version=${PV}\"'"
-	if use amd; then
+	if use rocm; then
 		AMDGPU_TARGETS="$(get_amdgpu_flags)"
 		ROCM_MAKE_ARGS=(
 			HIP_PATH=${EPREFIX}/usr
@@ -73,7 +74,7 @@ src_compile() {
 		)
 	fi
 
-	if use nvidia; then
+	if use cuda; then
 		NVCC_CCBIN="$(cuda_gccdir)"
 		export NVCC_CCBIN
 		einfo "NVCC_CCBIN ${NVCC_CCBIN}"
@@ -88,6 +89,9 @@ src_compile() {
 		if [[ ${ABI} == amd64 || ${ABI} == x86 ]]; then
 			# These are merged into one flag internally
 			case "${i}" in
+				fma3)
+					value="fma"
+					;;
 				avx512f)
 					value="avx512"
 					;;

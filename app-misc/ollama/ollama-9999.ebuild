@@ -23,10 +23,13 @@ declare -A CPU_FLAGS=(
 	[avx512_bf16]=AVX512_BF16
 	[fma3]=FMA
 	[f16c]=F16C
+	[amx_tile]=AMX_TILE
+	[amx_int8]=AMX_INT8
+
 )
 
 CPU_FEATURES=$(printf "cpu_flags_x86_%s " "${!CPU_FLAGS[@]}")
-IUSE+=" ${CPU_FEATURES[@]}"
+IUSE+=" ${CPU_FEATURES[@]} blas mkl"
 
 RDEPEND="
 	acct-group/ollama
@@ -37,6 +40,14 @@ BDEPEND="
 	>=dev-lang/go-1.21.0
 	>=dev-build/cmake-3.24
 	>=sys-devel/gcc-11.4.0
+	blas? (
+		!mkl? (
+			virtual/blas
+		)
+		mkl? (
+			sci-libs/mkl
+		)
+	)
 	cuda? ( dev-util/nvidia-cuda-toolkit )
 	rocm? (
 		sci-libs/clblast
@@ -66,11 +77,18 @@ src_unpack() {
 
 src_prepare() {
 	sed -iE "s|/usr/local/cuda-[12]{2}|/opt/cuda|g" llama/llama.go
-	cuda_src_prepare
+	if use cuda; then
+		cuda_src_prepare
+	fi
 	cmake_src_prepare
 }
 
 src_configure() {
+	mycmakeargs+=(
+		-DGGML_CPU_ALL_VARIANTS=OFF
+		-DGGML_BLAS="$(usex blas)"
+	)
+
 	if use rocm; then
 		AMDGPU_TARGETS="$(get_amdgpu_flags)"
 		mycmakeargs+=(
@@ -86,7 +104,18 @@ src_configure() {
 		)
 	fi
 
-	mycmakeargs+=("-DGGML_CPU_ALL_VARIANTS=OFF")
+	if use blas; then
+		if use mkl; then
+			mycmakeargs+=(
+				-DGGML_BLAS_VENDOR="Intel"
+			)
+		else
+			mycmakeargs+=(
+				-DGGML_BLAS_VENDOR="Generic"
+			)
+		fi
+	fi
+
 	for i in "${!CPU_FLAGS[@]}" ; do
 		if [[ ${ABI} == amd64 || ${ABI} == x86 ]]; then
 			use "cpu_flags_x86_${i}" && mycmakeargs+=("-DGGML_${CPU_FLAGS[$i]}=ON")
@@ -115,20 +144,16 @@ src_install() {
 	if use rocm; then
 		# cmake_src_install does a bundled install, while we want to
 		# find the system libraries
-		mv ${IMAGE}/usr/lib/ollama/rocm/libggml-hip.so ${IMAGE}/usr/lib/ollama/
-		rm -rf ${IMAGE}/usr/lib/ollama/rocm
+		mv ${ED}/usr/lib/ollama/rocm/libggml-hip.so ${ED}/usr/lib/ollama/
+		rm -rf ${ED}/usr/lib/ollama/rocm
 	fi
 
 	if use cuda; then
 		# cmake_src_install does a bundled install, while we want to
 		# find the system libraries
-		mv ${IMAGE}/usr/lib/ollama/cuda_v12/libggml-cuda.so ${IMAGE}/usr/lib/ollama/
-		rm -rf ${D}/usr/lib/ollama/cuda_v12
+		mv ${IMAGE}/usr/lib/ollama/cuda_v12/libggml-cuda.so ${ED}/usr/lib/ollama/
+		rm -rf ${ED}/usr/lib/ollama/cuda_v12
 	fi
-
-	# Install runner libraries
-	# insinto ${EPREFIX}/usr/libexec/ollama
-	# doins ${BUILD_DIR}/lib/ollama/libggml-*.so
 
 	doinitd "${FILESDIR}"/ollama
 }

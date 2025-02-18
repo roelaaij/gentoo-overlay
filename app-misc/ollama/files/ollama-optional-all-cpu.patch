@@ -1,14 +1,14 @@
-From 191a96ab105ee7ae62df184b786b406b442e9964 Mon Sep 17 00:00:00 2001
-From: Roel Aaij <roel.aaij@nikhef.nl>
-Date: Mon, 3 Feb 2025 11:06:10 +0100
-Subject: [PATCH] Disable all cpu variants to have more finegrained control
+From 50abf1d11e4413f25550471a1ee2f040da7a1d3c Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Mon, 17 Feb 2025 10:13:10 +0100
+Subject: [PATCH] ollama optional all cpu
 
 ---
  CMakeLists.txt | 5 -----
  1 file changed, 5 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 19d9bd8f..a2478288 100644
+index 081d48bc..72f8b96b 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -24,11 +24,6 @@ set(GGML_LLAMAFILE ON)
@@ -20,9 +20,9 @@ index 19d9bd8f..a2478288 100644
 -    set(GGML_CPU_ALL_VARIANTS ON)
 -endif()
 -
- set(OLLAMA_BUILD_DIR ${CMAKE_BINARY_DIR}/lib/ollama)
- set(OLLAMA_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib/ollama)
- 
+ if (CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
+     set(CMAKE_BUILD_RPATH "@loader_path")
+     set(CMAKE_INSTALL_RPATH "@loader_path")
 -- 
 2.48.1
 

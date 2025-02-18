@@ -57,6 +57,7 @@ BDEPEND="
 
 PATCHES=(
 	${FILESDIR}/${PN}-amd-igpu.patch
+	${FILESDIR}/${PN}-reranking.patch
 	${FILESDIR}/${PN}-optional-all-cpu.patch
 )
 
@@ -151,7 +152,7 @@ src_install() {
 	if use cuda; then
 		# cmake_src_install does a bundled install, while we want to
 		# find the system libraries
-		mv ${IMAGE}/usr/lib/ollama/cuda_v12/libggml-cuda.so ${ED}/usr/lib/ollama/
+		mv ${ED}/usr/lib/ollama/cuda_v12/libggml-cuda.so ${ED}/usr/lib/ollama/
 		rm -rf ${ED}/usr/lib/ollama/cuda_v12
 	fi
 

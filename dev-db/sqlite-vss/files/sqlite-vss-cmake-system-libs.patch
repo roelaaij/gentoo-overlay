@@ -1,0 +1,130 @@
+--- a/CMakeLists.txt	2023-08-06 04:25:15.000000000 +0200
++++ b/CMakeLists.txt	2025-02-20 12:07:12.954038047 +0100
+@@ -4,6 +4,9 @@
+ project(sqlite-vector VERSION $ENV{SQLITE_VSS_CMAKE_VERSION})
+ project(sqlite-vector-static VERSION $ENV{SQLITE_VSS_CMAKE_VERSION})
+ 
++option(BUILD_SHARED "" ON)
++option(BUILD_STATIC "" ON)
++
+ if(PROJECT_VERSION_TWEAK)
+   set(SQLITE_VSS_VERSION "v${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-alpha.${PROJECT_VERSION_TWEAK}")
+ else()
+@@ -15,53 +18,81 @@
+ set(CMAKE_CXX_STANDARD 11)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ 
+-option(FAISS_ENABLE_GPU "" OFF)
+-option(FAISS_ENABLE_PYTHON "" OFF)
+-option(BUILD_TESTING "" OFF)
+-add_subdirectory(./vendor/faiss)
++if (USE_SYSTEM_FAISS)
++  find_package(faiss CONFIG REQUIRED)
++else()
++  option(FAISS_ENABLE_GPU "" OFF)
++  option(FAISS_ENABLE_PYTHON "" OFF)
++  option(BUILD_TESTING "" OFF)
++  add_subdirectory(./vendor/faiss)
++endif()
+ 
+ # vendor in SQLite amalgammation
+-include_directories(vendor/sqlite)
+-link_directories(BEFORE vendor/sqlite)
++if (USE_SYSTEM_SQLITE)
++  find_package(SQLite3 REQUIRED)
++else()
++  include_directories(vendor/sqlite)
++  link_directories(BEFORE vendor/sqlite)
++endif()
+ 
+ # Adding nlohmann_json for json parsing
+-set(JSON_BuildTests OFF CACHE INTERNAL "")
+-add_subdirectory(vendor/json)
++if (USE_SYSTEM_JSON)
++  find_package(nlohmann_json CONFIG REQUIRED)
++else()
++  set(JSON_BuildTests OFF CACHE INTERNAL "")
++  add_subdirectory(vendor/json)
++endif()
++
++set(FAISS_LIB)
++if (TARGET faiss_avx512_spr)
++  set(FAISS_LIB faiss_avx512_spr)
++elseif(TARGET faiss_avx512)
++  set(FAISS_LIB faiss_avx512)
++elseif(TARGET faiss_avx2)
++  set(FAISS_LIB faiss_avx2)
++else()
++  set(FAISS_LIB faiss)
++endif()
+ 
+ # ================================== sqlite-vector ================================== #
+-add_library(sqlite-vector SHARED src/sqlite-vector.cpp)
+-target_link_libraries(sqlite-vector sqlite3)
+-target_link_libraries(sqlite-vector nlohmann_json::nlohmann_json)
+-target_include_directories(sqlite-vector PUBLIC "${PROJECT_BINARY_DIR}")
++if (BUILD_SHARED)
++  add_library(sqlite-vector SHARED src/sqlite-vector.cpp)
++  target_link_libraries(sqlite-vector sqlite3)
++  target_link_libraries(sqlite-vector nlohmann_json::nlohmann_json ${FAISS_LIB})
++  target_include_directories(sqlite-vector PUBLIC "${PROJECT_BINARY_DIR}")
+ 
+-set_target_properties(sqlite-vector PROPERTIES PREFIX "")
+-set_target_properties(sqlite-vector PROPERTIES OUTPUT_NAME "vector0")
++  set_target_properties(sqlite-vector PROPERTIES PREFIX "")
++  set_target_properties(sqlite-vector PROPERTIES OUTPUT_NAME "vector0")
++endif()
+ 
+ # ============================== sqlite-vector-static ============================== #
+-add_library(sqlite-vector-static STATIC src/sqlite-vector.cpp)
+-target_link_libraries(sqlite-vector-static sqlite3)
+-target_link_libraries(sqlite-vector-static nlohmann_json::nlohmann_json)
+-target_include_directories(sqlite-vector-static PUBLIC "${PROJECT_BINARY_DIR}")
+-set_target_properties(sqlite-vector-static PROPERTIES OUTPUT_NAME "sqlite_vector0")
+-target_compile_definitions(sqlite-vector-static PUBLIC SQLITE_CORE)
+-
++if (BUILD_STATIC)
++  add_library(sqlite-vector-static STATIC src/sqlite-vector.cpp)
++  target_link_libraries(sqlite-vector-static sqlite3)
++  target_link_libraries(sqlite-vector-static nlohmann_json::nlohmann_json ${FAISS_LIB})
++  target_include_directories(sqlite-vector-static PUBLIC "${PROJECT_BINARY_DIR}")
++  set_target_properties(sqlite-vector-static PROPERTIES OUTPUT_NAME "sqlite_vector0")
++  target_compile_definitions(sqlite-vector-static PUBLIC SQLITE_CORE)
++endif()
+ 
+ # ================================== sqlite-vss ================================== #
+-add_library(sqlite-vss SHARED src/sqlite-vss.cpp)
+-target_link_libraries(sqlite-vss sqlite3)
+-target_link_libraries(sqlite-vss faiss_avx2)
+-target_include_directories(sqlite-vss PUBLIC "${PROJECT_BINARY_DIR}")
++if (BUILD_SHARED)
++  add_library(sqlite-vss SHARED src/sqlite-vss.cpp)
++  target_link_libraries(sqlite-vss sqlite3)
++  target_link_libraries(sqlite-vss ${FAISS_LIB})
++  target_include_directories(sqlite-vss PUBLIC "${PROJECT_BINARY_DIR}")
+ 
+-set_target_properties(sqlite-vss PROPERTIES PREFIX "")
+-set_target_properties(sqlite-vss PROPERTIES OUTPUT_NAME "vss0")
++  set_target_properties(sqlite-vss PROPERTIES PREFIX "")
++  set_target_properties(sqlite-vss PROPERTIES OUTPUT_NAME "vss0")
++endif()
+ 
+ # ============================== sqlite-vss-static =============================== #
+-add_library(sqlite-vss-static STATIC src/sqlite-vss.cpp)
+-target_link_libraries(sqlite-vss-static PRIVATE sqlite3)
+-target_link_libraries(sqlite-vss-static PUBLIC faiss_avx2)
+-target_link_options(sqlite-vss-static PRIVATE "-Wl,-all_load")
+-target_include_directories(sqlite-vss-static PUBLIC "${PROJECT_BINARY_DIR}")
+-set_target_properties(sqlite-vss-static PROPERTIES OUTPUT_NAME "sqlite_vss0")
+-target_compile_definitions(sqlite-vss-static PRIVATE SQLITE_CORE)
+-
+-
++if (BUILD_STATIC)
++  add_library(sqlite-vss-static STATIC src/sqlite-vss.cpp)
++  target_link_libraries(sqlite-vss-static PRIVATE sqlite3)
++  target_link_libraries(sqlite-vss-static PUBLIC ${FAISS_LIB})
++  target_link_options(sqlite-vss-static PRIVATE "-Wl,-all_load")
++  target_include_directories(sqlite-vss-static PUBLIC "${PROJECT_BINARY_DIR}")
++  set_target_properties(sqlite-vss-static PROPERTIES OUTPUT_NAME "sqlite_vss0")
++  target_compile_definitions(sqlite-vss-static PRIVATE SQLITE_CORE)
++endif()

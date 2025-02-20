@@ -100,7 +100,7 @@ src_configure() {
 	if use cuda; then
 		mycmakeargs+=(
 			-DCMAKE_CUDA_COMPILER=${EPREFIX}/opt/cuda/bin/nvcc
-			-DCMAKE_CUDA_HOST_COMPILER="$(cuda_gccdir)"/bin/gcc
+			-DCMAKE_CUDA_HOST_COMPILER="$(cuda_gccdir)"/gcc
 			-DCMAKE_CUDA_ARCHITECTURES=${CUDA_COMPUTE_CAPABILITIES//./}
 		)
 	fi

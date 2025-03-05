@@ -40,7 +40,7 @@ COMMON_DEPEND="
 	media-libs/libglvnd[X]
 	media-libs/libjpeg-turbo:=
 	media-libs/libpng:=
-	media-libs/libsdl2[haptic,joystick]
+	>=media-libs/libsdl3-3.2.6[haptic,joystick]
 	media-libs/libwebp:=
 	media-video/ffmpeg:=
 	net-libs/libpcap

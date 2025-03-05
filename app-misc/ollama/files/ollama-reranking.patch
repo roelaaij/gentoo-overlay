@@ -1,7 +1,7 @@
-From 39b3ce0abf9ef97194976c942c3c2f8d3559712c Mon Sep 17 00:00:00 2001
+From 1071879d77128c7b0cf7b14ee213b8436f15457a Mon Sep 17 00:00:00 2001
 From: Liu Yuan <namei.unix@gmail.com>
 Date: Tue, 29 Oct 2024 22:17:44 +0800
-Subject: [PATCH 1/4] go runner: add rerank support
+Subject: [PATCH 1/5] go runner: add rerank support
 
 Co-authored-by Craig Hughes
 Signed-off-by: Liu Yuan <namei.unix@gmail.com>
@@ -11,10 +11,10 @@ Signed-off-by: Liu Yuan <namei.unix@gmail.com>
  2 files changed, 113 insertions(+), 4 deletions(-)
 
 diff --git a/llama/llama.go b/llama/llama.go
-index a20f2357..da1a7da1 100644
+index 0c4fca43..73b9452a 100644
 --- a/llama/llama.go
 +++ b/llama/llama.go
-@@ -117,7 +117,7 @@ type ContextParams struct {
+@@ -111,7 +111,7 @@ type ContextParams struct {
  	c C.struct_llama_context_params
  }
  
@@ -23,7 +23,7 @@ index a20f2357..da1a7da1 100644
  	params := C.llama_context_default_params()
  	params.n_ctx = C.uint(numCtx)
  	params.n_batch = C.uint(batchSize)
-@@ -128,7 +128,9 @@ func NewContextParams(numCtx int, batchSize int, numSeqMax int, threads int, fla
+@@ -122,7 +122,9 @@ func NewContextParams(numCtx int, batchSize int, numSeqMax int, threads int, fla
  	params.flash_attn = C.bool(flashAttention)
  	params.type_k = kvCacheTypeFromStr(strings.ToLower(kvCacheType))
  	params.type_v = kvCacheTypeFromStr(strings.ToLower(kvCacheType))
@@ -34,7 +34,7 @@ index a20f2357..da1a7da1 100644
  	return ContextParams{c: params}
  }
  
-@@ -220,6 +222,18 @@ func (c *Context) GetEmbeddingsIth(i int) []float32 {
+@@ -214,6 +216,18 @@ func (c *Context) GetEmbeddingsIth(i int) []float32 {
  	return embeddings
  }
  
@@ -53,8 +53,8 @@ index a20f2357..da1a7da1 100644
  type ModelParams struct {
  	NumGpuLayers int
  	MainGpu      int
-@@ -304,6 +318,10 @@ func (m *Model) AddBOSToken() bool {
- 	return bool(C.llama_add_bos_token(m.c))
+@@ -298,6 +312,10 @@ func (m *Model) AddBOSToken() bool {
+ 	return bool(C.llama_vocab_get_add_bos(m.Vocab()))
  }
  
 +func (m *Model) AddEOSToken() bool {
@@ -65,7 +65,7 @@ index a20f2357..da1a7da1 100644
  	cLoraPath := C.CString(loraPath)
  	defer C.free(unsafe.Pointer(cLoraPath))
 diff --git a/runner/llamarunner/runner.go b/runner/llamarunner/runner.go
-index 72873ec4..c5cf260b 100644
+index 82880c98..6ffae7a6 100644
 --- a/runner/llamarunner/runner.go
 +++ b/runner/llamarunner/runner.go
 @@ -823,6 +823,94 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +188,7 @@ index 72873ec4..c5cf260b 100644
  
  	var lpaths multiLPath
  	fs.Var(&lpaths, "lora", "Path to lora layer file (can be specified multiple times)")
-@@ -965,7 +1055,7 @@ func Execute(args []string) error {
+@@ -963,7 +1053,7 @@ func Execute(args []string) error {
  	}
  
  	server.ready.Add(1)
@@ -197,7 +197,7 @@ index 72873ec4..c5cf260b 100644
  
  	server.cond = sync.NewCond(&server.mu)
  
-@@ -985,6 +1075,7 @@ func Execute(args []string) error {
+@@ -984,6 +1074,7 @@ func Execute(args []string) error {
  	mux.HandleFunc("/embedding", server.embeddings)
  	mux.HandleFunc("/completion", server.completion)
  	mux.HandleFunc("/health", server.health)
@@ -209,10 +209,10 @@ index 72873ec4..c5cf260b 100644
 2.48.1
 
 
-From 7c959633091bb11cb760d729cb36e497f6f6c0d0 Mon Sep 17 00:00:00 2001
+From 217b29e8af1da4178f0feaaa9e6200005b99916f Mon Sep 17 00:00:00 2001
 From: Liu Yuan <namei.unix@gmail.com>
 Date: Tue, 15 Oct 2024 18:46:35 +0800
-Subject: [PATCH 2/4] route: add rerank support
+Subject: [PATCH 2/5] route: add rerank support
 
 Signed-off-by: Liu Yuan <namei.unix@gmail.com>
 ---
@@ -222,10 +222,10 @@ Signed-off-by: Liu Yuan <namei.unix@gmail.com>
  3 files changed, 153 insertions(+)
 
 diff --git a/api/types.go b/api/types.go
-index f4c5b105..6bf8da6a 100644
+index 637ca204..561a803e 100644
 --- a/api/types.go
 +++ b/api/types.go
-@@ -292,6 +292,23 @@ type EmbeddingResponse struct {
+@@ -294,6 +294,23 @@ type EmbeddingResponse struct {
  	Embedding []float64 `json:"embedding"`
  }
  
@@ -332,7 +332,7 @@ index f35df295..bf0aab0f 100644
  	Content string `json:"content"`
  }
 diff --git a/server/routes.go b/server/routes.go
-index 14f8ebf1..08815624 100644
+index b09e96ca..b5e0dbcf 100644
 --- a/server/routes.go
 +++ b/server/routes.go
 @@ -19,6 +19,7 @@ import (
@@ -343,7 +343,7 @@ index 14f8ebf1..08815624 100644
  	"strings"
  	"syscall"
  	"time"
-@@ -367,6 +368,76 @@ func (s *Server) GenerateHandler(c *gin.Context) {
+@@ -369,6 +370,76 @@ func (s *Server) GenerateHandler(c *gin.Context) {
  	streamResponse(c, ch)
  }
  
@@ -420,22 +420,22 @@ index 14f8ebf1..08815624 100644
  func (s *Server) EmbedHandler(c *gin.Context) {
  	checkpointStart := time.Now()
  	var req api.EmbedRequest
-@@ -1161,6 +1232,7 @@ func (s *Server) GenerateRoutes() http.Handler {
- 	r.POST("/api/blobs/:digest", s.CreateBlobHandler)
- 	r.HEAD("/api/blobs/:digest", s.HeadBlobHandler)
- 	r.GET("/api/ps", s.PsHandler)
+@@ -1191,6 +1262,7 @@ func (s *Server) GenerateRoutes(rc *ollama.Registry) (http.Handler, error) {
+ 	r.POST("/api/chat", s.ChatHandler)
+ 	r.POST("/api/embed", s.EmbedHandler)
+ 	r.POST("/api/embeddings", s.EmbeddingsHandler)
 +	r.POST("/api/rerank", s.RerankHandler)
  
- 	// Compatibility endpoints
+ 	// Inference (OpenAI compatibility)
  	r.POST("/v1/chat/completions", openai.ChatMiddleware(), s.ChatHandler)
 -- 
 2.48.1
 
 
-From bd2776c7b6f55e0516274553c125a061eae626b8 Mon Sep 17 00:00:00 2001
+From 3ee8e690a5148f432200459e6db3396022e3374b Mon Sep 17 00:00:00 2001
 From: Liu Yuan <namei.unix@gmail.com>
 Date: Thu, 31 Oct 2024 22:48:27 +0800
-Subject: [PATCH 3/4] enable --reranking flag for rerank handler while starting
+Subject: [PATCH 3/5] enable --reranking flag for rerank handler while starting
  server
 
 Signed-off-by: Liu Yuan <namei.unix@gmail.com>
@@ -446,10 +446,10 @@ Signed-off-by: Liu Yuan <namei.unix@gmail.com>
  3 files changed, 9 insertions(+)
 
 diff --git a/api/types.go b/api/types.go
-index 6bf8da6a..0b5e158a 100644
+index 561a803e..89bac455 100644
 --- a/api/types.go
 +++ b/api/types.go
-@@ -241,6 +241,7 @@ type Runner struct {
+@@ -243,6 +243,7 @@ type Runner struct {
  	UseMMap   *bool `json:"use_mmap,omitempty"`
  	UseMLock  bool  `json:"use_mlock,omitempty"`
  	NumThread int   `json:"num_thread,omitempty"`
@@ -473,10 +473,10 @@ index bf0aab0f..75f29382 100644
  		params = append(params, "--n-gpu-layers", strconv.Itoa(opts.NumGPU))
  	}
 diff --git a/server/routes.go b/server/routes.go
-index 08815624..5c4dcbf6 100644
+index b5e0dbcf..1317799e 100644
 --- a/server/routes.go
 +++ b/server/routes.go
-@@ -390,6 +390,10 @@ func (s *Server) RerankHandler(c *gin.Context) {
+@@ -392,6 +392,10 @@ func (s *Server) RerankHandler(c *gin.Context) {
  		return
  	}
  
@@ -491,10 +491,10 @@ index 08815624..5c4dcbf6 100644
 2.48.1
 
 
-From c83834addfaf85c522c9fed155b89ab93cd66f5f Mon Sep 17 00:00:00 2001
+From 78bec9e9b8375926b802917e71cd64a9ffb17acf Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@nikhef.nl>
 Date: Mon, 17 Feb 2025 10:45:48 +0100
-Subject: [PATCH 4/4] Follow developments in how the runners are done
+Subject: [PATCH 4/5] Follow developments in how the runners are done
 
 ---
  llm/server.go                | 7 ++++++-
@@ -524,7 +524,7 @@ index 75f29382..80afdc91 100644
  	if err != nil {
  		return err
 diff --git a/runner/llamarunner/runner.go b/runner/llamarunner/runner.go
-index c5cf260b..02da78b5 100644
+index 6ffae7a6..8b689c7e 100644
 --- a/runner/llamarunner/runner.go
 +++ b/runner/llamarunner/runner.go
 @@ -990,7 +990,7 @@ func Execute(args []string) error {
@@ -536,6 +536,51 @@ index c5cf260b..02da78b5 100644
  
  	var lpaths multiLPath
  	fs.Var(&lpaths, "lora", "Path to lora layer file (can be specified multiple times)")
+-- 
+2.48.1
+
+
+From 48bd776f2057240fbce41a1feb492177181d74b1 Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@nikhef.nl>
+Date: Wed, 5 Mar 2025 13:46:36 +0100
+Subject: [PATCH 5/5] Follow changes in llama.cpp
+
+---
+ llama/llama.go | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/llama/llama.go b/llama/llama.go
+index 73b9452a..c18b42f4 100644
+--- a/llama/llama.go
++++ b/llama/llama.go
+@@ -217,15 +217,15 @@ func (c *Context) GetEmbeddingsIth(i int) []float32 {
+ }
+ 
+ func (c *Context) GetTokenBOS() C.llama_token {
+-	return C.llama_token_bos(c.Model().c)
++	return C.llama_vocab_bos(c.Model().Vocab())
+ }
+ 
+ func (c *Context) GetTokenEOS() C.llama_token {
+-	return C.llama_token_eos(c.Model().c)
++	return C.llama_vocab_eos(c.Model().Vocab())
+ }
+ 
+ func (c *Context) GetTokenSEP() C.llama_token {
+-	return C.llama_token_sep(c.Model().c)
++	return C.llama_vocab_sep(c.Model().Vocab())
+ }
+ 
+ type ModelParams struct {
+@@ -313,7 +313,7 @@ func (m *Model) AddBOSToken() bool {
+ }
+ 
+ func (m *Model) AddEOSToken() bool {
+-	return bool(C.llama_add_eos_token(m.c))
++	return bool(C.llama_vocab_get_add_eos(m.Vocab()))
+ }
+ 
+ func (m *Model) ApplyLoraFromFile(context *Context, loraPath string, scale float32, threads int) error {
 -- 
 2.48.1
 

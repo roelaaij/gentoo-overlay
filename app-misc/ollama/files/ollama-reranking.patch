@@ -1,4 +1,4 @@
-From 1071879d77128c7b0cf7b14ee213b8436f15457a Mon Sep 17 00:00:00 2001
+From cbeb672e8bd3056af1e6c450aa9723089eb7b8a6 Mon Sep 17 00:00:00 2001
 From: Liu Yuan <namei.unix@gmail.com>
 Date: Tue, 29 Oct 2024 22:17:44 +0800
 Subject: [PATCH 1/5] go runner: add rerank support
@@ -11,10 +11,10 @@ Signed-off-by: Liu Yuan <namei.unix@gmail.com>
  2 files changed, 113 insertions(+), 4 deletions(-)
 
 diff --git a/llama/llama.go b/llama/llama.go
-index 0c4fca43..73b9452a 100644
+index a026bee2..19bf476b 100644
 --- a/llama/llama.go
 +++ b/llama/llama.go
-@@ -111,7 +111,7 @@ type ContextParams struct {
+@@ -86,7 +86,7 @@ type ContextParams struct {
  	c C.struct_llama_context_params
  }
  
@@ -23,7 +23,7 @@ index 0c4fca43..73b9452a 100644
  	params := C.llama_context_default_params()
  	params.n_ctx = C.uint(numCtx)
  	params.n_batch = C.uint(batchSize)
-@@ -122,7 +122,9 @@ func NewContextParams(numCtx int, batchSize int, numSeqMax int, threads int, fla
+@@ -97,7 +97,9 @@ func NewContextParams(numCtx int, batchSize int, numSeqMax int, threads int, fla
  	params.flash_attn = C.bool(flashAttention)
  	params.type_k = kvCacheTypeFromStr(strings.ToLower(kvCacheType))
  	params.type_v = kvCacheTypeFromStr(strings.ToLower(kvCacheType))
@@ -34,7 +34,7 @@ index 0c4fca43..73b9452a 100644
  	return ContextParams{c: params}
  }
  
-@@ -214,6 +216,18 @@ func (c *Context) GetEmbeddingsIth(i int) []float32 {
+@@ -189,6 +191,18 @@ func (c *Context) GetEmbeddingsIth(i int) []float32 {
  	return embeddings
  }
  
@@ -53,7 +53,7 @@ index 0c4fca43..73b9452a 100644
  type ModelParams struct {
  	NumGpuLayers int
  	MainGpu      int
-@@ -298,6 +312,10 @@ func (m *Model) AddBOSToken() bool {
+@@ -287,6 +301,10 @@ func (m *Model) AddBOSToken() bool {
  	return bool(C.llama_vocab_get_add_bos(m.Vocab()))
  }
  
@@ -65,10 +65,10 @@ index 0c4fca43..73b9452a 100644
  	cLoraPath := C.CString(loraPath)
  	defer C.free(unsafe.Pointer(cLoraPath))
 diff --git a/runner/llamarunner/runner.go b/runner/llamarunner/runner.go
-index 82880c98..6ffae7a6 100644
+index 83802d60..1ec1f5cd 100644
 --- a/runner/llamarunner/runner.go
 +++ b/runner/llamarunner/runner.go
-@@ -823,6 +823,94 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
+@@ -738,6 +738,94 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
  	}
  }
  
@@ -163,7 +163,7 @@ index 82880c98..6ffae7a6 100644
  type multiLPath []string
  
  func (m *multiLPath) Set(value string) error {
-@@ -844,6 +932,7 @@ func (s *Server) loadModel(
+@@ -759,6 +847,7 @@ func (s *Server) loadModel(
  	flashAttention bool,
  	threads int,
  	multiUserCache bool,
@@ -171,7 +171,7 @@ index 82880c98..6ffae7a6 100644
  ) {
  	var err error
  	s.model, err = llama.LoadModelFromFile(mpath, params)
-@@ -851,7 +940,7 @@ func (s *Server) loadModel(
+@@ -766,7 +855,7 @@ func (s *Server) loadModel(
  		panic(err)
  	}
  
@@ -180,7 +180,7 @@ index 82880c98..6ffae7a6 100644
  	s.lc, err = llama.NewContextWithModel(s.model, ctxParams)
  	if err != nil {
  		panic(err)
-@@ -901,6 +990,7 @@ func Execute(args []string) error {
+@@ -816,6 +905,7 @@ func Execute(args []string) error {
  	mlock := fs.Bool("mlock", false, "force system to keep model in RAM rather than swapping or compressing")
  	tensorSplit := fs.String("tensor-split", "", "fraction of the model to offload to each GPU, comma-separated list of proportions")
  	multiUserCache := fs.Bool("multiuser-cache", false, "optimize input cache algorithm for multiple users")
@@ -188,7 +188,7 @@ index 82880c98..6ffae7a6 100644
  
  	var lpaths multiLPath
  	fs.Var(&lpaths, "lora", "Path to lora layer file (can be specified multiple times)")
-@@ -963,7 +1053,7 @@ func Execute(args []string) error {
+@@ -877,7 +967,7 @@ func Execute(args []string) error {
  	}
  
  	server.ready.Add(1)
@@ -197,7 +197,7 @@ index 82880c98..6ffae7a6 100644
  
  	server.cond = sync.NewCond(&server.mu)
  
-@@ -984,6 +1074,7 @@ func Execute(args []string) error {
+@@ -898,6 +988,7 @@ func Execute(args []string) error {
  	mux.HandleFunc("/embedding", server.embeddings)
  	mux.HandleFunc("/completion", server.completion)
  	mux.HandleFunc("/health", server.health)
@@ -209,7 +209,7 @@ index 82880c98..6ffae7a6 100644
 2.48.1
 
 
-From 217b29e8af1da4178f0feaaa9e6200005b99916f Mon Sep 17 00:00:00 2001
+From d8b374a2638f28b665c238ddd4d028bdc0a14a31 Mon Sep 17 00:00:00 2001
 From: Liu Yuan <namei.unix@gmail.com>
 Date: Tue, 15 Oct 2024 18:46:35 +0800
 Subject: [PATCH 2/5] route: add rerank support
@@ -222,7 +222,7 @@ Signed-off-by: Liu Yuan <namei.unix@gmail.com>
  3 files changed, 153 insertions(+)
 
 diff --git a/api/types.go b/api/types.go
-index 637ca204..561a803e 100644
+index a38b335b..cbabe1cd 100644
 --- a/api/types.go
 +++ b/api/types.go
 @@ -294,6 +294,23 @@ type EmbeddingResponse struct {
@@ -250,10 +250,10 @@ index 637ca204..561a803e 100644
  type CreateRequest struct {
  	Model    string `json:"model"`
 diff --git a/llm/server.go b/llm/server.go
-index f35df295..bf0aab0f 100644
+index 7db204da..e131cfa4 100644
 --- a/llm/server.go
 +++ b/llm/server.go
-@@ -37,6 +37,7 @@ type LlamaServer interface {
+@@ -38,6 +38,7 @@ type LlamaServer interface {
  	WaitUntilRunning(ctx context.Context) error
  	Completion(ctx context.Context, req CompletionRequest, fn func(CompletionResponse)) error
  	Embedding(ctx context.Context, input string) ([]float32, error)
@@ -261,7 +261,7 @@ index f35df295..bf0aab0f 100644
  	Tokenize(ctx context.Context, content string) ([]int, error)
  	Detokenize(ctx context.Context, tokens []int) (string, error)
  	Close() error
-@@ -925,6 +926,69 @@ func (s *llmServer) Embedding(ctx context.Context, input string) ([]float32, err
+@@ -904,6 +905,69 @@ func (s *llmServer) Embedding(ctx context.Context, input string) ([]float32, err
  	return e.Embedding, nil
  }
  
@@ -289,7 +289,7 @@ index f35df295..bf0aab0f 100644
 +	if err != nil {
 +		return err
 +	} else if status != ServerStatusReady {
-+		return fmt.Errorf("unexpected server status: %s", status.ToString())
++		return fmt.Errorf("unexpected server status: %s", status)
 +	}
 +
 +	data, err := json.Marshal(req)
@@ -332,7 +332,7 @@ index f35df295..bf0aab0f 100644
  	Content string `json:"content"`
  }
 diff --git a/server/routes.go b/server/routes.go
-index b09e96ca..b5e0dbcf 100644
+index dde75c62..112f63ad 100644
 --- a/server/routes.go
 +++ b/server/routes.go
 @@ -19,6 +19,7 @@ import (
@@ -343,7 +343,7 @@ index b09e96ca..b5e0dbcf 100644
  	"strings"
  	"syscall"
  	"time"
-@@ -369,6 +370,76 @@ func (s *Server) GenerateHandler(c *gin.Context) {
+@@ -375,6 +376,76 @@ func (s *Server) GenerateHandler(c *gin.Context) {
  	streamResponse(c, ch)
  }
  
@@ -420,7 +420,7 @@ index b09e96ca..b5e0dbcf 100644
  func (s *Server) EmbedHandler(c *gin.Context) {
  	checkpointStart := time.Now()
  	var req api.EmbedRequest
-@@ -1191,6 +1262,7 @@ func (s *Server) GenerateRoutes(rc *ollama.Registry) (http.Handler, error) {
+@@ -1203,6 +1274,7 @@ func (s *Server) GenerateRoutes(rc *ollama.Registry) (http.Handler, error) {
  	r.POST("/api/chat", s.ChatHandler)
  	r.POST("/api/embed", s.EmbedHandler)
  	r.POST("/api/embeddings", s.EmbeddingsHandler)
@@ -432,7 +432,7 @@ index b09e96ca..b5e0dbcf 100644
 2.48.1
 
 
-From 3ee8e690a5148f432200459e6db3396022e3374b Mon Sep 17 00:00:00 2001
+From 4a6f1c1440b87ddf3a6b81a980dd35aaa1acddc4 Mon Sep 17 00:00:00 2001
 From: Liu Yuan <namei.unix@gmail.com>
 Date: Thu, 31 Oct 2024 22:48:27 +0800
 Subject: [PATCH 3/5] enable --reranking flag for rerank handler while starting
@@ -446,7 +446,7 @@ Signed-off-by: Liu Yuan <namei.unix@gmail.com>
  3 files changed, 9 insertions(+)
 
 diff --git a/api/types.go b/api/types.go
-index 561a803e..89bac455 100644
+index cbabe1cd..fabde80f 100644
 --- a/api/types.go
 +++ b/api/types.go
 @@ -243,6 +243,7 @@ type Runner struct {
@@ -458,10 +458,10 @@ index 561a803e..89bac455 100644
  
  // EmbedRequest is the request passed to [Client.Embed].
 diff --git a/llm/server.go b/llm/server.go
-index bf0aab0f..75f29382 100644
+index e131cfa4..8ba165d6 100644
 --- a/llm/server.go
 +++ b/llm/server.go
-@@ -136,6 +136,10 @@ func NewLlamaServer(gpus discover.GpuInfoList, model string, f *ggml.GGML, adapt
+@@ -144,6 +144,10 @@ func NewLlamaServer(gpus discover.GpuInfoList, modelPath string, f *ggml.GGML, a
  		"--batch-size", strconv.Itoa(opts.NumBatch),
  	}
  
@@ -473,10 +473,10 @@ index bf0aab0f..75f29382 100644
  		params = append(params, "--n-gpu-layers", strconv.Itoa(opts.NumGPU))
  	}
 diff --git a/server/routes.go b/server/routes.go
-index b5e0dbcf..1317799e 100644
+index 112f63ad..483592a8 100644
 --- a/server/routes.go
 +++ b/server/routes.go
-@@ -392,6 +392,10 @@ func (s *Server) RerankHandler(c *gin.Context) {
+@@ -398,6 +398,10 @@ func (s *Server) RerankHandler(c *gin.Context) {
  		return
  	}
  
@@ -491,7 +491,7 @@ index b5e0dbcf..1317799e 100644
 2.48.1
 
 
-From 78bec9e9b8375926b802917e71cd64a9ffb17acf Mon Sep 17 00:00:00 2001
+From 505ca5d7d1a496d9f5da3d1ccfad4e29c979ef30 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@nikhef.nl>
 Date: Mon, 17 Feb 2025 10:45:48 +0100
 Subject: [PATCH 4/5] Follow developments in how the runners are done
@@ -502,10 +502,10 @@ Subject: [PATCH 4/5] Follow developments in how the runners are done
  2 files changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/llm/server.go b/llm/server.go
-index 75f29382..80afdc91 100644
+index 8ba165d6..7f49cd90 100644
 --- a/llm/server.go
 +++ b/llm/server.go
-@@ -945,11 +945,16 @@ type RerankResponse struct {
+@@ -924,11 +924,16 @@ type RerankResponse struct {
  
  func (s *llmServer) Rerank(ctx context.Context, req RerankRequest, fn func(RerankResponse)) error {
  	if err := s.sem.Acquire(ctx, 1); err != nil {
@@ -524,10 +524,10 @@ index 75f29382..80afdc91 100644
  	if err != nil {
  		return err
 diff --git a/runner/llamarunner/runner.go b/runner/llamarunner/runner.go
-index 6ffae7a6..8b689c7e 100644
+index 1ec1f5cd..a7582ebe 100644
 --- a/runner/llamarunner/runner.go
 +++ b/runner/llamarunner/runner.go
-@@ -990,7 +990,7 @@ func Execute(args []string) error {
+@@ -905,7 +905,7 @@ func Execute(args []string) error {
  	mlock := fs.Bool("mlock", false, "force system to keep model in RAM rather than swapping or compressing")
  	tensorSplit := fs.String("tensor-split", "", "fraction of the model to offload to each GPU, comma-separated list of proportions")
  	multiUserCache := fs.Bool("multiuser-cache", false, "optimize input cache algorithm for multiple users")
@@ -540,7 +540,7 @@ index 6ffae7a6..8b689c7e 100644
 2.48.1
 
 
-From 48bd776f2057240fbce41a1feb492177181d74b1 Mon Sep 17 00:00:00 2001
+From 2c3aacb7f4e6680da048f5ed25cb7a659f2cef1b Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@nikhef.nl>
 Date: Wed, 5 Mar 2025 13:46:36 +0100
 Subject: [PATCH 5/5] Follow changes in llama.cpp
@@ -550,10 +550,10 @@ Subject: [PATCH 5/5] Follow changes in llama.cpp
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/llama/llama.go b/llama/llama.go
-index 73b9452a..c18b42f4 100644
+index 19bf476b..6dd84735 100644
 --- a/llama/llama.go
 +++ b/llama/llama.go
-@@ -217,15 +217,15 @@ func (c *Context) GetEmbeddingsIth(i int) []float32 {
+@@ -192,15 +192,15 @@ func (c *Context) GetEmbeddingsIth(i int) []float32 {
  }
  
  func (c *Context) GetTokenBOS() C.llama_token {
@@ -572,7 +572,7 @@ index 73b9452a..c18b42f4 100644
  }
  
  type ModelParams struct {
-@@ -313,7 +313,7 @@ func (m *Model) AddBOSToken() bool {
+@@ -302,7 +302,7 @@ func (m *Model) AddBOSToken() bool {
  }
  
  func (m *Model) AddEOSToken() bool {

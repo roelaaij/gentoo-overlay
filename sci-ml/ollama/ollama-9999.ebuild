@@ -53,6 +53,8 @@ BDEPEND="
 		sci-libs/clblast
 		dev-libs/rocm-opencl-runtime
 	)
+	acct-group/ollama
+	acct-user/ollama[cuda?]
 "
 
 PATCHES=(

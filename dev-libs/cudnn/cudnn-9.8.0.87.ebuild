@@ -1,4 +1,4 @@
-# Copyright 1999-2023 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -6,16 +6,14 @@ EAPI=8
 BASE_V="$(ver_cut 0-3)"
 # supports 11.x but URL has a specific version number
 CUDA_MA="12"
-CUDA_MI="2"
-CUDA_V="${CUDA_MA}.${CUDA_MI}"
 
 DESCRIPTION="NVIDIA Accelerated Deep Learning on GPU library"
 HOMEPAGE="https://developer.nvidia.com/cudnn"
-SRC_URI="https://developer.download.nvidia.com/compute/redist/cudnn/v${BASE_V}/local_installers/${CUDA_V}/cudnn-linux-x86_64-${PV}_cuda${CUDA_MA}-archive.tar.xz"
+SRC_URI="https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-x86_64/cudnn-linux-x86_64-${PV}_cuda${CUDA_MA}-archive.tar.xz"
 S="${WORKDIR}/cudnn-linux-x86_64-${PV}_cuda${CUDA_MA}-archive"
 
 LICENSE="NVIDIA-cuDNN"
-SLOT="0/8"
+SLOT="0/9"
 KEYWORDS="~amd64 ~amd64-linux"
 RESTRICT="mirror"
 

@@ -1,24 +1,24 @@
-From 1a69ee8b4961d290ac0843dac744e025c5647f8f Mon Sep 17 00:00:00 2001
+From ba0a346e6ef936975252166959ebe5ef12072db6 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Fri, 31 Jan 2025 14:35:50 +0100
-Subject: [PATCH] pcsx2 fix build
+Date: Fri, 2 May 2025 12:13:36 +0200
+Subject: [PATCH 2/2] fix build
 
 ---
- pcsx2/DebugTools/SymbolGuardian.h | 1 +
+ pcsx2/GS/Renderers/HW/GSHwHack.cpp | 1 +
  1 file changed, 1 insertion(+)
 
-diff --git a/pcsx2/DebugTools/SymbolGuardian.h b/pcsx2/DebugTools/SymbolGuardian.h
-index 52ba4dd81..67eb48ae9 100644
---- a/pcsx2/DebugTools/SymbolGuardian.h
-+++ b/pcsx2/DebugTools/SymbolGuardian.h
-@@ -4,6 +4,7 @@
- #pragma once
+diff --git a/pcsx2/GS/Renderers/HW/GSHwHack.cpp b/pcsx2/GS/Renderers/HW/GSHwHack.cpp
+index 8a703e519..e71b85b4c 100644
+--- a/pcsx2/GS/Renderers/HW/GSHwHack.cpp
++++ b/pcsx2/GS/Renderers/HW/GSHwHack.cpp
+@@ -5,6 +5,7 @@
+ #include "GS/Renderers/HW/GSHwHack.h"
+ #include "GS/GSGL.h"
+ #include "GS/GSUtil.h"
++#include <cmath>
  
- #include <atomic>
-+#include <mutex>
- #include <thread>
- #include <functional>
- #include <mutex>
+ static bool s_nativeres;
+ 
 -- 
-2.48.1
+2.49.0
 

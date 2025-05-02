@@ -86,6 +86,7 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-1.7.4667-flags.patch
 	"${FILESDIR}"/${PN}-fmt-11.patch
 	"${FILESDIR}"/${PN}-fix-build.patch
+	"${FILESDIR}"/${PN}-system-plutosvg.patch
 )
 
 src_unpack() {

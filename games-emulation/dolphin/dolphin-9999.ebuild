@@ -216,7 +216,6 @@ src_configure() {
 		-DENCODE_FRAMEDUMPS=$(usex ffmpeg)
 		-DFASTLOG=$(usex log)
 		-DOPROFILING=$(usex profile)
-		-DSTEAM=OFF
 		-DUSE_DISCORD_PRESENCE=$(usex discord-presence)
 		-DUSE_MGBA=$(usex mgba)
 		-DUSE_RETRO_ACHIEVEMENTS=OFF
@@ -232,7 +231,7 @@ src_configure() {
 		-DUSE_SYSTEM_BZIP2=ON
 		-DUSE_SYSTEM_LIBLZMA=ON
 		-DUSE_SYSTEM_ZSTD=ON
-		-DUSE_SYSTEM_ZLIB=ON
+		-DUSE_SYSTEM_ZLIBNG=ON
 		-DUSE_SYSTEM_MINIZIP=ON
 		-DUSE_SYSTEM_LZO=ON
 		-DUSE_SYSTEM_LZ4=ON

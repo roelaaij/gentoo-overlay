@@ -29,7 +29,7 @@ S="${WORKDIR}"/${MYP}
 LICENSE="BSD"
 SLOT="0"
 KEYWORDS="~amd64 ~arm64"
-IUSE="cuda distributed fbgemm flash gloo memefficient mkl mpi nnpack +numpy
+IUSE="cuda cusparselt distributed fbgemm flash gloo memefficient mkl mpi nnpack +numpy
 	onednn openblas opencl openmp qnnpack rocm xnnpack"
 RESTRICT="test"
 REQUIRED_USE="
@@ -62,6 +62,7 @@ RDEPEND="
 		dev-libs/cudnn
 		>=sci-ml/cudnn-frontend-1.0.3:0/8
 		dev-util/nvidia-cuda-toolkit:=[profiler]
+		cusparselt? ( dev-libs/cusparselt )
 	)
 	fbgemm? ( sci-ml/FBGEMM )
 	gloo? ( sci-ml/gloo[cuda?] )
@@ -113,7 +114,7 @@ DEPEND="
 		dev-python/pyyaml[${PYTHON_USEDEP}]
 		dev-python/typing-extensions[${PYTHON_USEDEP}]
 	')
-	cuda? ( >=dev-libs/cutlass-3.8.0 )
+	cuda? ( ~dev-libs/cutlass-3.8.0 )
 	onednn? ( sci-ml/ideep )
 	qnnpack? ( dev-libs/clog )
 "
@@ -240,7 +241,7 @@ src_configure() {
 		-DUSE_GLOG=ON
 		-DUSE_GLOO=$(usex gloo)
 		-DUSE_ITT=OFF
-		-DUSE_KINETO=ON # TODO
+		-DUSE_KINETO=ON
 		-DUSE_KLEIDIAI=OFF # TODO
 		-DUSE_MAGMA=OFF # TODO: In GURU as sci-libs/magma
 		-DUSE_MEM_EFF_ATTENTION=$(usex memefficient)
@@ -292,6 +293,8 @@ src_configure() {
 			-DTORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-3.5 7.0}"
 			-DUSE_NCCL=OFF # TODO: NVIDIA Collective Communication Library
 			-DCMAKE_CUDA_FLAGS="$(cuda_gccdir -f | tr -d \")"
+			-DUSE_CUSPARSELT=$(usex cusparselt)
+			-DUSE_SYSTEM_NVTX=ON
 		)
 	elif use rocm; then
 		export PYTORCH_ROCM_ARCH="$(get_amdgpu_flags)"

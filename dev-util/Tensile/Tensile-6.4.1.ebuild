@@ -6,7 +6,7 @@ EAPI=8
 PYTHON_COMPAT=( python3_{10..13} )
 DISTUTILS_USE_PEP517=setuptools
 ROCM_VERSION=${PV}
-LLVM_COMPAT=( 19 )
+LLVM_COMPAT=( 20 )
 
 inherit cmake distutils-r1 llvm-r1 prefix rocm
 
@@ -53,9 +53,9 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-6.3.0-use-ninja.patch
 	"${FILESDIR}"/${PN}-6.1.1-fix-msgpack-dependency.patch
 	"${FILESDIR}"/${PN}-6.0.2-expand-isa-compatibility.patch
-	"${FILESDIR}"/${PN}-6.3.0-more-gfx1151.patch
-	"${FILESDIR}"/${PN}-6.3.0-gfx1103.patch
-	"${FILESDIR}"/${PN}-6.2.4-gfx1035.patch
+	"${FILESDIR}"/${PN}-6.4.1-more-gfx1151.patch
+	"${FILESDIR}"/${PN}-6.4.1-gfx1103.patch
+	"${FILESDIR}"/${PN}-6.4.1-gfx1035.patch
 )
 
 CMAKE_USE_DIR="${S}/${PN}/Source"

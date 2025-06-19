@@ -15,6 +15,7 @@ if [[ ${PV} == *9999 ]]; then
 		Externals/mGBA/mgba
 		Externals/implot/implot
 		Externals/tinygltf/tinygltf
+		Externals/watcher/watcher
 		Externals/VulkanMemoryAllocator
 	)
 else
@@ -140,6 +141,7 @@ declare -A KEEP_BUNDLED=(
 	[expr]=MIT
 	[rangeset]=ZLIB
 	[FatFs]=FatFs
+	[watcher]=MIT
 	[VulkanMemoryAllocator]=MIT
 )
 
@@ -232,7 +234,6 @@ src_configure() {
 		-DUSE_SYSTEM_LIBLZMA=ON
 		-DUSE_SYSTEM_ZSTD=ON
 		-DUSE_SYSTEM_ZLIBNG=ON
-		-DUSE_SYSTEM_MINIZIP=ON
 		-DUSE_SYSTEM_LZO=ON
 		-DUSE_SYSTEM_LZ4=ON
 		-DUSE_SYSTEM_SPNG=ON

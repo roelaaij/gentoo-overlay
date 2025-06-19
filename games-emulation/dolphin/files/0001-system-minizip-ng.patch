@@ -1,31 +1,27 @@
-From b5d1eccbca94f87d9bb7c3b20851112dbe57c7c8 Mon Sep 17 00:00:00 2001
+From 28584c919b6f367728ac8eeb0b38de71227b46b7 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Wed, 14 May 2025 22:10:30 +0200
+Date: Thu, 19 Jun 2025 21:24:53 +0200
 Subject: [PATCH] system minizip-ng
 
 ---
- CMakeLists.txt                        |  4 ++--
+ CMakeLists.txt                        |  2 +-
  Source/Core/Common/Hash.cpp           |  8 ++++----
  Source/Core/DiscIO/CompressedBlob.cpp | 20 ++++++++++----------
- 3 files changed, 16 insertions(+), 16 deletions(-)
+ 3 files changed, 15 insertions(+), 15 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index b67e31838d..e9b7fd4795 100644
+index 549007ddd6..10ec0536eb 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -689,10 +689,10 @@ dolphin_make_imported_target_if_missing(LibLZMA::LibLZMA LIBLZMA)
+@@ -689,7 +689,7 @@ dolphin_make_imported_target_if_missing(LibLZMA::LibLZMA LIBLZMA)
  
  dolphin_find_optional_system_library_pkgconfig(ZSTD libzstd>=1.4.0 zstd::zstd Externals/zstd)
  
 -dolphin_find_optional_system_library_pkgconfig(ZLIB zlib>=1.3.1 ZLIB::ZLIB Externals/zlib-ng)
 +dolphin_find_optional_system_library_pkgconfig(ZLIBNG zlib-ng>=2.2.3 ZLIB::ZLIB Externals/zlib-ng)
  
- dolphin_find_optional_system_library_pkgconfig(MINIZIP
--  "minizip>=4.0.4" minizip::minizip Externals/minizip-ng
-+  "minizip-ng>=4.0.8" minizip::minizip Externals/minizip-ng
- )
- 
- dolphin_find_optional_system_library(LZO Externals/LZO)
+ dolphin_find_optional_system_library_pkgconfig(minizip-ng
+   "minizip-ng>=4.0.4" minizip-ng::minizip-ng Externals/minizip-ng
 diff --git a/Source/Core/Common/Hash.cpp b/Source/Core/Common/Hash.cpp
 index 8cb697b695..9b7472bc22 100644
 --- a/Source/Core/Common/Hash.cpp
@@ -151,5 +147,5 @@ index 99a982efd9..061cedfc06 100644
    state->compressed_buffer.resize(block_size - state->z.avail_out);
  
 -- 
-2.49.0
+2.50.0
 

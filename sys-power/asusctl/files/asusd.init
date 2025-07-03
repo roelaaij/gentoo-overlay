@@ -1,0 +1,20 @@
+#!/sbin/openrc-run
+# Copyright 1999-2024 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+description="ASUS Notebook Control"
+command="/usr/bin/asusd"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+supervisor=supervise-daemon
+supervise_daemon_args="-e IS_SERVICE=1"
+
+Type=dbus
+BusName=org.asuslinux.Daemon
+
+output_log="/var/log/asusd.log"
+error_log="/var/log/asusd.err"
+
+depend() {
+    after logger modules
+}

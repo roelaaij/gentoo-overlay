@@ -43,6 +43,7 @@ COMMON_DEPEND="
 	>=media-libs/libsdl3-3.2.6
 	media-libs/libwebp:=
 	media-video/ffmpeg:=
+	>=media-libs/plutosvg-0.0.7
 	net-libs/libpcap
 	net-misc/curl
 	sys-apps/dbus

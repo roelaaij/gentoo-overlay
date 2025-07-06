@@ -1,36 +1,39 @@
-From eee7bc928a249a0cbcbe94bd0d404d75ea27fdb4 Mon Sep 17 00:00:00 2001
+From 3593503a054d8742f821068a35b56195e87d9339 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Wed, 14 May 2025 21:43:52 +0200
+Date: Sun, 6 Jul 2025 09:34:41 +0200
 Subject: [PATCH] system plutosvg
 
 ---
- cmake/SearchForStuff.cmake | 6 ++++--
- 1 file changed, 4 insertions(+), 2 deletions(-)
+ cmake/SearchForStuff.cmake | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index bb27bfdc4..d2db63e92 100644
+index ef6afde94..e360d6d2e 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
 @@ -19,8 +19,6 @@ find_package(LZ4 REQUIRED)
  find_package(WebP REQUIRED) # v1.3.2, spews an error on Linux because no pkg-config.
  find_package(SDL3 3.2.6 REQUIRED)
  find_package(Freetype 2.11.1 REQUIRED)
--find_package(plutovg REQUIRED) # v0.0.13 is needed for building plutosvg, but we can support v1.0.0
--find_package(plutosvg 0.0.6 REQUIRED)
+-find_package(plutovg 1.1.0 REQUIRED)
+-find_package(plutosvg 0.0.7 REQUIRED)
  
  if(USE_VULKAN)
  	find_package(Shaderc REQUIRED)
-@@ -75,6 +73,10 @@ else()
- 		endif()
- 
- 		find_package(PkgConfig REQUIRED)
-+		pkg_check_modules(plutovg REQUIRED IMPORTED_TARGET plutovg>=1.0.0)
+@@ -86,6 +84,13 @@ else()
+ 		find_package(RapidJSON REQUIRED)
+ 		add_library(rapidjson INTERFACE)
+ 		find_package(fmt REQUIRED)
++		pkg_check_modules(plutovg REQUIRED IMPORTED_TARGET plutovg>=1.1.0)
 +		add_library(plutovg::plutovg ALIAS PkgConfig::plutovg)
-+		pkg_check_modules(plutosvg REQUIRED IMPORTED_TARGET plutosvg>=0.0.6)
++		pkg_check_modules(plutosvg REQUIRED IMPORTED_TARGET plutosvg>=0.0.7)
 +		add_library(plutosvg::plutosvg ALIAS PkgConfig::plutosvg)
- 		pkg_check_modules(DBUS REQUIRED dbus-1)
- 		find_package(ryml REQUIRED)
- 		add_library(rapidyaml::rapidyaml ALIAS ryml::ryml)
++	else()
++		find_package(plutovg 1.1.0 REQUIRED)
++		find_package(plutosvg 0.0.7 REQUIRED)
+ 	endif()
+ endif()
+ 
 -- 
-2.49.0
+2.50.0
 

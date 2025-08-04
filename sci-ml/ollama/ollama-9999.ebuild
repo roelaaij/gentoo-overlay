@@ -156,6 +156,7 @@ src_install() {
 		# find the system libraries
 		mv ${ED}/usr/lib/ollama/cuda_v12/libggml-cuda.so ${ED}/usr/lib/ollama/
 		rm -rf ${ED}/usr/lib/ollama/cuda_v12
+		rm -rf ${ED}/usr/lib/ollama/libcu*
 	fi
 
 	doinitd "${FILESDIR}"/ollama

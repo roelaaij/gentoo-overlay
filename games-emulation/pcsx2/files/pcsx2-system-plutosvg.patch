@@ -1,6 +1,6 @@
-From 3593503a054d8742f821068a35b56195e87d9339 Mon Sep 17 00:00:00 2001
+From 6b0f20e95c473edcb5d1d7c5f11eb7bc7828309c Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sun, 6 Jul 2025 09:34:41 +0200
+Date: Wed, 13 Aug 2025 13:45:23 +0200
 Subject: [PATCH] system plutosvg
 
 ---
@@ -8,13 +8,13 @@ Subject: [PATCH] system plutosvg
  1 file changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index ef6afde94..e360d6d2e 100644
+index 1a80d652a..5dd566186 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
 @@ -19,8 +19,6 @@ find_package(LZ4 REQUIRED)
  find_package(WebP REQUIRED) # v1.3.2, spews an error on Linux because no pkg-config.
  find_package(SDL3 3.2.6 REQUIRED)
- find_package(Freetype 2.11.1 REQUIRED)
+ find_package(Freetype 2.12 REQUIRED)
 -find_package(plutovg 1.1.0 REQUIRED)
 -find_package(plutosvg 0.0.7 REQUIRED)
  
@@ -35,5 +35,5 @@ index ef6afde94..e360d6d2e 100644
  endif()
  
 -- 
-2.50.0
+2.50.1
 

@@ -1,17 +1,17 @@
-From b899c52b6dfefd94d41d29657e65308450e4182b Mon Sep 17 00:00:00 2001
+From f8e830371f7f9a5d6bbe219d9f1bbf769813a165 Mon Sep 17 00:00:00 2001
 From: Maciej Mogilany <mogilany@gmail.com>
 Date: Fri, 8 Nov 2024 15:09:12 +0100
 Subject: [PATCH] rewrite for ollama 4.0
 
 ---
- discover/amd_linux.go | 101 +++++++++++++++++++++++++++++++++++++++---
+ discover/amd_linux.go | 100 +++++++++++++++++++++++++++++++++++++++---
  discover/gpu_linux.go |  14 ++++++
  discover/types.go     |   7 +--
- llm/server.go         |   3 +-
- 4 files changed, 115 insertions(+), 10 deletions(-)
+ llm/server.go         |  11 ++---
+ 4 files changed, 118 insertions(+), 14 deletions(-)
 
 diff --git a/discover/amd_linux.go b/discover/amd_linux.go
-index ecf91056..ee1444c9 100644
+index ebffbdf6..8784313a 100644
 --- a/discover/amd_linux.go
 +++ b/discover/amd_linux.go
 @@ -8,6 +8,7 @@ import (
@@ -117,7 +117,7 @@ index ecf91056..ee1444c9 100644
  // Gather GPU information from the amdgpu driver if any supported GPUs are detected
  // Only called once during bootstrap
  func AMDGetGPUInfo() ([]RocmGPUInfo, error) {
-@@ -236,10 +310,19 @@ func AMDGetGPUInfo() ([]RocmGPUInfo, error) {
+@@ -232,10 +306,19 @@ func AMDGetGPUInfo() ([]RocmGPUInfo, error) {
  			if !matched {
  				continue
  			}
@@ -139,12 +139,11 @@ index ecf91056..ee1444c9 100644
  			buf, err := os.ReadFile(totalFile)
  			if err != nil {
  				slog.Debug("failed to read sysfs node", "file", totalFile, "error", err)
-@@ -251,7 +334,12 @@ func AMDGetGPUInfo() ([]RocmGPUInfo, error) {
+@@ -247,7 +330,11 @@ func AMDGetGPUInfo() ([]RocmGPUInfo, error) {
  				break
  			}
  
 -			usedFile = filepath.Join(devDir, DRMUsedMemoryFile)
-+			var usedFile string
 +			if ApuUseGTT {
 +				usedFile = filepath.Join(devDir, DRMUsedMemoryFileGTT)
 +			} else {
@@ -153,16 +152,16 @@ index ecf91056..ee1444c9 100644
  			usedMemory, err = getFreeMemory(usedFile)
  			if err != nil {
  				slog.Debug("failed to update used memory", "error", err)
-@@ -286,6 +374,7 @@ func AMDGetGPUInfo() ([]RocmGPUInfo, error) {
+@@ -282,6 +369,7 @@ func AMDGetGPUInfo() ([]RocmGPUInfo, error) {
  				MinimumMemory: rocmMinimumMemory,
  				DriverMajor:   driverMajor,
  				DriverMinor:   driverMinor,
 +				ApuUseGTT:     ApuUseGTT, //AMD APU use GTT for its memory
  			},
  			usedFilepath: usedFile,
- 			index:        gpuID,
+ 			index:        gpuCount,
 diff --git a/discover/gpu_linux.go b/discover/gpu_linux.go
-index d636a54e..c400291d 100644
+index 44c53b44..512af7d9 100644
 --- a/discover/gpu_linux.go
 +++ b/discover/gpu_linux.go
 @@ -4,6 +4,7 @@ import (
@@ -194,10 +193,10 @@ index d636a54e..c400291d 100644
  }
  
 diff --git a/discover/types.go b/discover/types.go
-index 4568e3b8..cee83fa6 100644
+index 13a030fd..e6a168c3 100644
 --- a/discover/types.go
 +++ b/discover/types.go
-@@ -37,9 +37,10 @@ type GpuInfo struct { // TODO better name maybe "InferenceProcessor"?
+@@ -36,9 +36,10 @@ type GpuInfo struct { // TODO better name maybe "InferenceProcessor"?
  	UnreliableFreeMemory bool
  
  	// GPU information
@@ -207,48 +206,47 @@ index 4568e3b8..cee83fa6 100644
 +	ID        string `json:"gpu_id"`  // string to use for selection of this specific GPU
 +	Name      string `json:"name"`    // user friendly name if available
 +	Compute   string `json:"compute"` // Compute Capability or gfx
-+	ApuUseGTT bool   //AMD APU using GTT memory used to set -no-mmap to avoid trashing RAM, GTT use RAM
++	ApuUseGTT bool                    //AMD APU using GTT memory used to set -no-mmap to avoid trashing RAM, GTT use RAM
  
  	// Driver Information - TODO no need to put this on each GPU
  	DriverMajor int `json:"driver_major,omitempty"`
 diff --git a/llm/server.go b/llm/server.go
-index 89e5f54a..bff97899 100644
+index 01224a16..08029909 100644
 --- a/llm/server.go
 +++ b/llm/server.go
-@@ -250,7 +250,8 @@ func NewLlamaServer(gpus discover.GpuInfoList, model string, ggml *GGML, adapter
- 	if (runtime.GOOS == "windows" && gpus[0].Library == "cuda" && opts.UseMMap == nil) ||
- 		(runtime.GOOS == "linux" && systemFreeMemory < estimate.TotalSize && opts.UseMMap == nil) ||
- 		(gpus[0].Library == "cpu" && opts.UseMMap == nil) ||
--		(opts.UseMMap != nil && !*opts.UseMMap) {
-+		(opts.UseMMap != nil && !*opts.UseMMap) ||
-+		(gpus[0].ApuUseGTT && opts.UseMMap != nil && !*opts.UseMMap) {
- 		params = append(params, "--no-mmap")
+@@ -553,7 +553,8 @@ func (s *llamaServer) Load(ctx context.Context, gpus discover.GpuInfoList, requi
+ 		if (runtime.GOOS == "windows" && gpus[0].Library == "cuda" && s.options.UseMMap == nil) ||
+ 			(runtime.GOOS == "linux" && systemInfo.System.FreeMemory < s.estimate.TotalSize && s.options.UseMMap == nil) ||
+ 			(gpus[0].Library == "cpu" && s.options.UseMMap == nil) ||
+-			(s.options.UseMMap != nil && !*s.options.UseMMap) {
++			(s.options.UseMMap != nil && !*s.options.UseMMap) ||
++			(s.gpus[0].ApuUseGTT && s.options.UseMMap != nil && !*s.options.UseMMap) {
+ 			s.loadRequest.UseMmap = false
+ 		}
  	}
- 
+@@ -1300,18 +1301,18 @@ object ::=
+   "{" ws (
+          string ":" ws value
+     ("," ws string ":" ws value)*
+-  )? ws "}" 
++  )? ws "}"
+ array  ::=
+   "[" ws (
+             value
+     ("," ws value)*
+-  )? ws "]" 
++  )? ws "]"
+ string ::=
+   "\"" (
+     [^"\\\x7F\x00-\x1F] |
+     "\\" (["\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]) # escapes
+-  )* "\"" 
+-number ::= ("-"? ([0-9] | [1-9] [0-9]*)) ("." [0-9]+)? ([eE] [-+]? [0-9]+)? 
++  )* "\""
++number ::= ("-"? ([0-9] | [1-9] [0-9]*)) ("." [0-9]+)? ([eE] [-+]? [0-9]+)?
+ # Optional space: by convention, applied in this grammar after literal chars when allowed
+ ws ::= ([ \t\n] ws)?
+ `
 -- 
-2.48.0
-
-From 3b2f6ce2709ed0b1db5228bc089d59d80c5876fd Mon Sep 17 00:00:00 2001
-From: Roel Aaij <roel.aaij@nikhef.nl>
-Date: Thu, 23 Jan 2025 14:37:46 +0100
-Subject: [PATCH] Fix double var declaration
-
----
- discover/amd_linux.go | 1 -
- 1 file changed, 1 deletion(-)
-
-diff --git a/discover/amd_linux.go b/discover/amd_linux.go
-index ee1444c9..072314d1 100644
---- a/discover/amd_linux.go
-+++ b/discover/amd_linux.go
-@@ -334,7 +334,6 @@ func AMDGetGPUInfo() ([]RocmGPUInfo, error) {
- 				break
- 			}
- 
--			var usedFile string
- 			if ApuUseGTT {
- 				usedFile = filepath.Join(devDir, DRMUsedMemoryFileGTT)
- 			} else {
--- 
-2.48.0
+2.50.1
 

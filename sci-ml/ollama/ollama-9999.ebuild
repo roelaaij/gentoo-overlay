@@ -59,7 +59,6 @@ BDEPEND="
 
 PATCHES=(
 	${FILESDIR}/${PN}-amd-igpu.patch
-	${FILESDIR}/${PN}-reranking.patch
 	${FILESDIR}/${PN}-optional-all-cpu.patch
 )
 

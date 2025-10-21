@@ -1,31 +1,17 @@
-From 77c8af1fa51649783bb495d60b72b24acb634cf8 Mon Sep 17 00:00:00 2001
+From 947b20ee8c616d61b7eea6c911986780427819d9 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Thu, 13 Jun 2024 21:12:26 +0200
+Date: Tue, 14 Oct 2025 11:04:27 +0200
 Subject: [PATCH] pcsx2 system vulkan
 
 ---
- cmake/SearchForStuff.cmake | 2 +-
- pcsx2/CMakeLists.txt       | 3 +--
- 2 files changed, 2 insertions(+), 3 deletions(-)
+ pcsx2/CMakeLists.txt | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index edea19bde..10d28b026 100644
---- a/cmake/SearchForStuff.cmake
-+++ b/cmake/SearchForStuff.cmake
-@@ -111,7 +111,7 @@ endif()
- find_package(Qt6 6.7.0 COMPONENTS CoreTools Core GuiTools Gui WidgetsTools Widgets LinguistTools REQUIRED)
- 
- if(WIN32)
--  add_subdirectory(3rdparty/rainterface EXCLUDE_FROM_ALL)
-+	find_package(VulkanHeaders REQUIRED)
- endif()
- 
- # Demangler for the debugger
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index 40cb732f6..9eef1c29a 100644
+index 09c05bf6f..731bdbc5d 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
-@@ -612,8 +612,7 @@ if(USE_VULKAN)
+@@ -650,8 +650,7 @@ if(USE_VULKAN)
  		GS/Renderers/Vulkan/VKStreamBuffer.h
  		GS/Renderers/Vulkan/VKSwapChain.h
  	)
@@ -36,5 +22,5 @@ index 40cb732f6..9eef1c29a 100644
  
  set(pcsx2GSMetalShaders
 -- 
-2.45.2
+2.51.0
 

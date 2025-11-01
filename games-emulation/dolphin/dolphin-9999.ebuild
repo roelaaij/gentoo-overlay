@@ -3,7 +3,7 @@
 
 EAPI=8
 
-LLVM_COMPAT=( 18 )
+LLVM_COMPAT=( 20 )
 LLVM_OPTIONAL=1
 
 inherit cmake llvm-r1 pax-utils xdg-utils
@@ -12,6 +12,8 @@ if [[ ${PV} == *9999 ]]; then
 	inherit git-r3
 	EGIT_REPO_URI="https://github.com/dolphin-emu/dolphin"
 	EGIT_SUBMODULES=(
+		Externals/cpp-ipc/cpp-ipc
+		Externals/cpp-optparse/cpp-optparse
 		Externals/mGBA/mgba
 		Externals/implot/implot
 		Externals/tinygltf/tinygltf
@@ -142,6 +144,7 @@ declare -A KEEP_BUNDLED=(
 	[rangeset]=ZLIB
 	[FatFs]=FatFs
 	[watcher]=MIT
+	[cpp-ipc]=MIT
 	[VulkanMemoryAllocator]=MIT
 )
 
@@ -263,7 +266,7 @@ src_configure() {
 
 	use test && mycmakeargs+=( -DUSE_SYSTEM_GTEST=ON )
 	use mgba && mycmakeargs+=( -DUSE_SYSTEM_LIBMGBA=OFF )
-	use sdl && mycmakeargs+=( -DUSE_SYSTEM_SDL2=ON )
+	use sdl && mycmakeargs+=( -DUSE_SYSTEM_SDL3=ON )
 	use upnp && mycmakeargs+=( -DUSE_SYSTEM_MINIUPNPC=ON )
 
 	cmake_src_configure

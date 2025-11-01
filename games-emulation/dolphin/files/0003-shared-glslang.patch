@@ -1,79 +1,65 @@
-From fa02e8438f4818cdfbf835030df9d039418fbec1 Mon Sep 17 00:00:00 2001
+From aa8c20713f5307a509d9f48e781fef54bd435fe8 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 27 Sep 2025 21:19:03 +0200
-Subject: [PATCH] shared glslang
+Date: Sat, 1 Nov 2025 21:20:14 +0100
+Subject: [PATCH] system glslang
 
 ---
- .../Core/VideoBackends/Vulkan/CMakeLists.txt  |   4 +-
- Source/Core/VideoCommon/CMakeLists.txt        |  14 +-
- Source/Core/VideoCommon/Spirv.cpp             | 123 +-----------------
- Source/Core/VideoCommon/Spirv.h               |   2 +-
- 4 files changed, 11 insertions(+), 132 deletions(-)
+ CMakeLists.txt                                |   2 +-
+ .../Core/VideoBackends/Vulkan/CMakeLists.txt  |   1 -
+ Source/Core/VideoCommon/CMakeLists.txt        |   1 +
+ Source/Core/VideoCommon/Spirv.cpp             | 119 +-----------------
+ 4 files changed, 4 insertions(+), 119 deletions(-)
 
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 77eb170452..f74a649ad9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -642,7 +642,7 @@ dolphin_find_optional_system_library_pkgconfig(FMT
+ add_subdirectory(Externals/imgui)
+ add_subdirectory(Externals/implot)
+ 
+-dolphin_find_optional_system_library(glslang Externals/glslang 15.0)
++dolphin_find_optional_system_library(glslang Externals/glslang 16.0)
+ 
+ # SPIRV-Cross is used on Windows for GLSL to HLSL conversion for the Direct3D 11 and Direct3D 12
+ # video backends, and on Apple devices for the Metal video backend.
 diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-index c4fbd847e1..dc9e2ec466 100644
+index 5f5583f2b0..8a165fc68d 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 +++ b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-@@ -39,7 +39,9 @@ add_library(videovulkan
- 
- target_link_libraries(videovulkan
+@@ -41,7 +41,6 @@ target_link_libraries(videovulkan
  PUBLIC
--  common
-+  glslang::glslang
-+  glslang::SPIRV
-+  glslang::glslang-default-resource-limits
+   common
    videocommon
- 
+-
  PRIVATE
+   xxhash::xxhash
+ )
 diff --git a/Source/Core/VideoCommon/CMakeLists.txt b/Source/Core/VideoCommon/CMakeLists.txt
-index 0ead1af2f8..172c3ee9fb 100644
+index fb9cba4fa4..dfba855023 100644
 --- a/Source/Core/VideoCommon/CMakeLists.txt
 +++ b/Source/Core/VideoCommon/CMakeLists.txt
-@@ -224,7 +224,9 @@ PRIVATE
-   xxhash::xxhash
+@@ -226,6 +226,7 @@ PRIVATE
    imgui
    implot
--  glslang
-+  glslang::glslang
-+  glslang::SPIRV
+   glslang::SPIRV
 +  glslang::glslang-default-resource-limits
    tinygltf
  )
  
-@@ -267,16 +269,6 @@ if(FFmpeg_FOUND)
-   endif()
- endif()
- 
--# Silence warnings on glslang by flagging it as a system include
--target_include_directories(videocommon
--SYSTEM PUBLIC
--  ${CMAKE_SOURCE_DIR}/Externals/glslang/glslang/glslang/Public
--SYSTEM PRIVATE
--  ${CMAKE_SOURCE_DIR}/Externals/glslang/glslang/glslang
--  ${CMAKE_SOURCE_DIR}/Externals/glslang/glslang/SPIRV
--  ${CMAKE_SOURCE_DIR}/Externals/glslang/glslang
--)
--
- if(MSVC)
-   # Add precompiled header
-   target_link_libraries(videocommon PRIVATE use_pch)
 diff --git a/Source/Core/VideoCommon/Spirv.cpp b/Source/Core/VideoCommon/Spirv.cpp
-index 1ee3d6da2d..4eee3441e9 100644
+index 59bc872f93..b94cbefc8e 100644
 --- a/Source/Core/VideoCommon/Spirv.cpp
 +++ b/Source/Core/VideoCommon/Spirv.cpp
-@@ -4,8 +4,9 @@
- #include "VideoCommon/Spirv.h"
+@@ -5,6 +5,7 @@
  
- // glslang includes
--#include "GlslangToSpv.h"
--#include "disassemble.h"
-+#include "glslang/SPIRV/GlslangToSpv.h"
-+#include "glslang/SPIRV/disassemble.h"
+ #include <glslang/SPIRV/GlslangToSpv.h>
+ #include <glslang/SPIRV/disassemble.h>
 +#include "glslang/Public/ResourceLimits.h"
  
  #include "Common/FileUtil.h"
  #include "Common/Logging/Log.h"
-@@ -38,123 +39,7 @@ bool InitializeGlslang()
+@@ -37,123 +38,7 @@ bool InitializeGlslang()
  
  const TBuiltInResource* GetCompilerResourceLimits()
  {
@@ -198,19 +184,6 @@ index 1ee3d6da2d..4eee3441e9 100644
  }
  
  std::optional<SPIRV::CodeVector>
-diff --git a/Source/Core/VideoCommon/Spirv.h b/Source/Core/VideoCommon/Spirv.h
-index fe75ea0f99..55fe4416f3 100644
---- a/Source/Core/VideoCommon/Spirv.h
-+++ b/Source/Core/VideoCommon/Spirv.h
-@@ -8,7 +8,7 @@
- #include <string_view>
- #include <vector>
- 
--#include "ShaderLang.h"
-+#include "glslang/Public/ShaderLang.h"
- 
- #include "Common/CommonTypes.h"
- #include "VideoCommon/VideoCommon.h"
 -- 
-2.51.0
+2.51.1
 

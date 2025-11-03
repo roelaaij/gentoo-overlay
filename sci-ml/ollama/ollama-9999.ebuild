@@ -11,7 +11,7 @@ EGIT_REPO_URI="https://github.com/ollama/ollama.git"
 LICENSE="MIT"
 SLOT="0"
 
-IUSE="cuda rocm"
+IUSE="cuda rocm vulkan"
 
 declare -A CPU_FLAGS=(
 	[avx]=AVX
@@ -53,12 +53,15 @@ BDEPEND="
 		sci-libs/clblast
 		dev-libs/rocm-opencl-runtime
 	)
+	vulkan? (
+		dev-util/vulkan-headers
+		media-libs/shaderc
+	)
 	acct-group/ollama
 	acct-user/ollama[cuda?]
 "
 
 PATCHES=(
-	${FILESDIR}/${PN}-amd-igpu.patch
 	${FILESDIR}/${PN}-optional-all-cpu.patch
 )
 
@@ -89,6 +92,7 @@ src_configure() {
 	mycmakeargs+=(
 		-DGGML_CPU_ALL_VARIANTS=OFF
 		-DGGML_BLAS="$(usex blas)"
+		"$(cmake_use_find_package vulkan Vulkan)"
 	)
 
 	if use rocm; then

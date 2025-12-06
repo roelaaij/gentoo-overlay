@@ -1,0 +1,10 @@
+--- a/onnxruntime/core/common/semver.h	2025-12-05 11:37:55.741814778 +0100
++++ b/onnxruntime/core/common/semver.h	2025-12-05 11:23:15.263133142 +0100
+@@ -3,6 +3,7 @@
+ 
+ #pragma once
+ 
++#include <cstdint>
+ #include <optional>
+ #include <string_view>
+ 

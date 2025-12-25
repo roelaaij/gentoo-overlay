@@ -15,6 +15,7 @@ if [[ ${PV} == *9999 ]]; then
 		Externals/cpp-ipc/cpp-ipc
 		Externals/cpp-optparse/cpp-optparse
 		Externals/mGBA/mgba
+		Externals/imgui/imgui
 		Externals/implot/implot
 		Externals/tinygltf/tinygltf
 		Externals/watcher/watcher
@@ -149,7 +150,6 @@ declare -A KEEP_BUNDLED=(
 )
 
 PATCHES=(
-	"${FILESDIR}"/dolphin-2407-minizip.patch
 	"${FILESDIR}"/0003-shared-glslang.patch
 	"${FILESDIR}"/0001-system-minizip-ng.patch
 )

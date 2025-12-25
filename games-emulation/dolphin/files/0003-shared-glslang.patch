@@ -10,19 +10,6 @@ Subject: [PATCH] system glslang
  Source/Core/VideoCommon/Spirv.cpp             | 119 +-----------------
  4 files changed, 4 insertions(+), 119 deletions(-)
 
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 77eb170452..f74a649ad9 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -642,7 +642,7 @@ dolphin_find_optional_system_library_pkgconfig(FMT
- add_subdirectory(Externals/imgui)
- add_subdirectory(Externals/implot)
- 
--dolphin_find_optional_system_library(glslang Externals/glslang 15.0)
-+dolphin_find_optional_system_library(glslang Externals/glslang 16.0)
- 
- # SPIRV-Cross is used on Windows for GLSL to HLSL conversion for the Direct3D 11 and Direct3D 12
- # video backends, and on Apple devices for the Metal video backend.
 diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
 index 5f5583f2b0..8a165fc68d 100644
 --- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
@@ -46,21 +33,21 @@ index fb9cba4fa4..dfba855023 100644
 +  glslang::glslang-default-resource-limits
    tinygltf
  )
- 
+
 diff --git a/Source/Core/VideoCommon/Spirv.cpp b/Source/Core/VideoCommon/Spirv.cpp
 index 59bc872f93..b94cbefc8e 100644
 --- a/Source/Core/VideoCommon/Spirv.cpp
 +++ b/Source/Core/VideoCommon/Spirv.cpp
 @@ -5,6 +5,7 @@
- 
+
  #include <glslang/SPIRV/GlslangToSpv.h>
  #include <glslang/SPIRV/disassemble.h>
 +#include "glslang/Public/ResourceLimits.h"
- 
+
  #include "Common/FileUtil.h"
  #include "Common/Logging/Log.h"
 @@ -37,123 +38,7 @@ bool InitializeGlslang()
- 
+
  const TBuiltInResource* GetCompilerResourceLimits()
  {
 -  static const TBuiltInResource default_resource = {
@@ -182,8 +169,7 @@ index 59bc872f93..b94cbefc8e 100644
 -  return &default_resource;
 +  return GetDefaultResources();
  }
- 
- std::optional<SPIRV::CodeVector>
--- 
-2.51.1
 
+ std::optional<SPIRV::CodeVector>
+--
+2.51.1

@@ -1,6 +1,6 @@
-From cbd74c7013f6282c5a39410128d02d4e4fbaf1d3 Mon Sep 17 00:00:00 2001
+From 52d87a4c3676315f8b109f07591e80b151344789 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Tue, 14 Oct 2025 11:29:06 +0200
+Date: Mon, 22 Dec 2025 22:04:36 +0100
 Subject: [PATCH] pcsx2 unbundle
 
 ---
@@ -11,13 +11,13 @@ Subject: [PATCH] pcsx2 unbundle
  4 files changed, 28 insertions(+), 16 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index 686cd22cf..7efa9ff17 100644
+index 29568298b..1195ee31c 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
 @@ -26,6 +26,9 @@ if(USE_VULKAN)
  	find_package(Shaderc REQUIRED)
  endif()
-
+ 
 +# Prevent fmt from being built with exceptions, or being thrown at call sites.
 +set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_USE_EXCEPTIONS=0 -DFMT_USE_RTTI=0")
 +
@@ -25,7 +25,7 @@ index 686cd22cf..7efa9ff17 100644
  if (WIN32)
  	add_subdirectory(3rdparty/D3D12MemAlloc EXCLUDE_FROM_ALL)
 @@ -73,24 +76,29 @@ else()
-
+ 
  		find_package(PkgConfig REQUIRED)
  		pkg_check_modules(DBUS REQUIRED dbus-1)
 +		find_package(ryml REQUIRED)
@@ -40,9 +40,9 @@ index 686cd22cf..7efa9ff17 100644
 +		find_package(fmt REQUIRED)
  	endif()
  endif()
-
+ 
  set(CMAKE_FIND_FRAMEWORK ${FIND_FRAMEWORK_BACKUP})
-
+ 
  add_subdirectory(3rdparty/fast_float EXCLUDE_FROM_ALL)
 -add_subdirectory(3rdparty/rapidyaml EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/lzma EXCLUDE_FROM_ALL)
@@ -58,21 +58,21 @@ index 686cd22cf..7efa9ff17 100644
 -add_subdirectory(3rdparty/rapidjson EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/discord-rpc EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/freesurround EXCLUDE_FROM_ALL)
-
+ 
 @@ -102,9 +110,6 @@ if(USE_VULKAN)
  	add_subdirectory(3rdparty/vulkan EXCLUDE_FROM_ALL)
  endif()
-
+ 
 -add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
 -disable_compiler_warnings_for_target(cubeb)
 -disable_compiler_warnings_for_target(speex)
-
+ 
  # Find the Qt components that we need.
  if(ENABLE_QT_UI)
 @@ -135,10 +140,6 @@ elseif(_M_ARM64)
  	add_subdirectory(3rdparty/vixl EXCLUDE_FROM_ALL)
  endif()
-
+ 
 -# Prevent fmt from being built with exceptions, or being thrown at call sites.
 -set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_USE_EXCEPTIONS=0 -DFMT_USE_RTTI=0")
 -add_subdirectory(3rdparty/fmt EXCLUDE_FROM_ALL)
@@ -81,20 +81,20 @@ index 686cd22cf..7efa9ff17 100644
  if(MSVC)
  	# Don't warn about "deprecated" POSIX functions.
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index c66a27eee..09c05bf6f 100644
+index cacbebacb..a8f367e0b 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
 @@ -13,6 +13,9 @@ target_compile_features(PCSX2_FLAGS INTERFACE cxx_std_17)
  target_compile_definitions(PCSX2_FLAGS INTERFACE "${PCSX2_DEFS}")
  target_compile_options(PCSX2_FLAGS INTERFACE "${PCSX2_WARNINGS}")
-
+ 
 +target_compile_definitions(PCSX2_FLAGS INTERFACE SI_CONVERT_ICU)
 +target_compile_definitions(PCSX2_FLAGS INTERFACE ST_NO_EXCEPTION_HANDLING)
 +
  # Check that people use the good file
  if(NOT TOP_CMAKE_WAS_SOURCED)
  	message(FATAL_ERROR "
-@@ -1147,7 +1150,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
+@@ -1146,7 +1149,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
  	cubeb
  	rcheevos
  	discord-rpc
@@ -103,20 +103,20 @@ index c66a27eee..09c05bf6f 100644
  	SDL3::SDL3
  	ZLIB::ZLIB
 diff --git a/pcsx2/Host/CubebAudioStream.cpp b/pcsx2/Host/CubebAudioStream.cpp
-index b1d85c2da..f0ae3bf0e 100644
+index 78a96e413..8fc9ce866 100644
 --- a/pcsx2/Host/CubebAudioStream.cpp
 +++ b/pcsx2/Host/CubebAudioStream.cpp
-@@ -289,8 +289,10 @@ std::vector<std::pair<std::string, std::string>> AudioStream::GetCubebDriverName
+@@ -312,8 +312,10 @@ std::vector<std::pair<std::string, std::string>> AudioStream::GetCubebDriverName
  	names.emplace_back(std::string(), TRANSLATE_STR("AudioStream", "Default"));
-
+ 
  	auto cubeb_names = cubeb_get_backend_names();
--	for (int i = 0; i < cubeb_names.count; i++)
+-	for (size_t i = 0; i < cubeb_names.count; i++)
 -		names.emplace_back(cubeb_names.names[i], cubeb_names.names[i]);
 +	int backend_count = 0;
 +	while (cubeb_names[backend_count] != nullptr) ++backend_count;
 +	for (int i = 0; i < backend_count; i++)
 +		names.emplace_back(cubeb_names[i], cubeb_names[i]);
-
+ 
  	return names;
  }
 diff --git a/pcsx2/INISettingsInterface.cpp b/pcsx2/INISettingsInterface.cpp
@@ -124,7 +124,7 @@ index e7b84f7bd..afa1efe37 100644
 --- a/pcsx2/INISettingsInterface.cpp
 +++ b/pcsx2/INISettingsInterface.cpp
 @@ -136,7 +136,14 @@ void INISettingsInterface::Clear()
-
+ 
  bool INISettingsInterface::IsEmpty()
  {
 -	return (m_ini.GetKeyCount() == 0);
@@ -137,7 +137,8 @@ index e7b84f7bd..afa1efe37 100644
 +                        return keys.empty();
 +                      } ) );
  }
-
+ 
  bool INISettingsInterface::GetIntValue(const char* section, const char* key, int* value) const
---
-2.51.0
+-- 
+2.52.0
+

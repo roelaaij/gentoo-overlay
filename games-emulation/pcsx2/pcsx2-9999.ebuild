@@ -84,7 +84,6 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-unbundle.patch
 	"${FILESDIR}"/${PN}-system-vulkan.patch
 	"${FILESDIR}"/${PN}-1.7.3773-lto.patch
-	"${FILESDIR}"/${PN}-1.7.4667-flags.patch
 	"${FILESDIR}"/${PN}-fmt-11.patch
 	"${FILESDIR}"/${PN}-fix-build.patch
 	"${FILESDIR}"/${PN}-system-plutosvg.patch
@@ -182,7 +181,7 @@ src_install() {
 	newicon bin/resources/icons/AppIconLarge.png ${PN}.png
 	make_desktop_entry ${PN} ${PN^^}
 
-	dodoc README.md bin/docs/{Debugger.pdf,GameIndex.pdf,debugger.txt}
+	dodoc README.md bin/docs/GameIndex.pdf
 
 	use !test || rm "${ED}"/usr/lib/${PN}/*_test || die
 }

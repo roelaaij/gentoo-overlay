@@ -1,9 +1,9 @@
-# Copyright 2024-2025 Gentoo Authors
+# Copyright 2024-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 ROCM_VERSION=6.1.2
-inherit git-r3 go-module rocm cuda cmake
+inherit git-r3 go-module rocm cuda cmake linux-info systemd toolchain-funcs
 
 DESCRIPTION="Get up and running with Llama 3, Mistral, Gemma, and other language models."
 HOMEPAGE="https://ollama.com"
@@ -90,6 +90,11 @@ src_prepare() {
 
 src_configure() {
 	mycmakeargs+=(
+		# backends end up in /usr/bin otherwise
+		-DGGML_BACKEND_DL="yes"
+		# TODO causes duplicate install warning but breaks detection otherwise ollama/issues/13614
+		-DGGML_BACKEND_DIR="${EPREFIX}/usr/$(get_libdir)/${PN}"
+
 		-DGGML_CPU_ALL_VARIANTS=OFF
 		-DGGML_BLAS="$(usex blas)"
 		"$(cmake_use_find_package vulkan Vulkan)"
@@ -100,6 +105,10 @@ src_configure() {
 		mycmakeargs+=(
 			-DAMDGPU_TARGETS="\"${AMDGPU_TARGETS::-1}\""
 		)
+	else
+		mycmakeargs+=(
+			-DCMAKE_HIP_COMPILER="NOTFOUND"
+		)
 	fi
 
 	if use cuda; then
@@ -108,12 +117,16 @@ src_configure() {
 			-DCMAKE_CUDA_HOST_COMPILER="$(cuda_gccdir)"/gcc
 			-DCMAKE_CUDA_ARCHITECTURES=${CUDA_COMPUTE_CAPABILITIES//./}
 		)
+	else
+		mycmakeargs+=(
+			-DCMAKE_CUDA_COMPILER="NOTFOUND"
+		)
 	fi
 
 	if use blas; then
 		if use mkl; then
 			mycmakeargs+=(
-				-DGGML_BLAS_VENDOR="Intel"
+				-DGGML_BLAS_VENDOR="Intel10_64lp"
 			)
 		else
 			mycmakeargs+=(
@@ -137,9 +150,15 @@ src_compile() {
 		| sed -e "s/^v//g"
 		assert
 	)
-	export GOFLAGS="'-ldflags=-w -s \"-X=github.com/ollama/ollama/version.Version=${VERSION}\"'"
+	local EXTRA_GOFLAGS_LD=(
+		# "-w" # disable DWARF generation
+		# "-s" # disable symbol table
+		"-X=github.com/ollama/ollama/version.Version=${VERSION}"
+		"-X=github.com/ollama/ollama/server.mode=release"
+	)
+	GOFLAGS+=" '-ldflags=${EXTRA_GOFLAGS_LD[*]}'"
 
-	ego build .
+	ego build
 }
 
 src_install() {
@@ -147,32 +166,29 @@ src_install() {
 
 	dobin ollama
 
-	if use rocm; then
-		# cmake_src_install does a bundled install, while we want to
-		# find the system libraries
-		mv ${ED}/usr/lib/ollama/rocm/libggml-hip.so ${ED}/usr/lib/ollama/
-		rm -rf ${ED}/usr/lib/ollama/rocm
-	fi
+	newinitd "${FILESDIR}/ollama.init" "${PN}"
+	newconfd "${FILESDIR}/ollama.confd" "${PN}"
 
-	if use cuda; then
-		# cmake_src_install does a bundled install, while we want to
-		# find the system libraries
-		mv ${ED}/usr/lib/ollama/cuda_v12/libggml-cuda.so ${ED}/usr/lib/ollama/
-		rm -rf ${ED}/usr/lib/ollama/cuda_v12
-		rm -rf ${ED}/usr/lib/ollama/libcu*
-	fi
-
-	doinitd "${FILESDIR}"/ollama
+	systemd_dounit "${FILESDIR}/ollama.service"
 }
 
 pkg_preinst() {
 	keepdir /var/log/ollama
+	fperms 750 /var/log/ollama
 	fowners ollama:ollama /var/log/ollama
 }
 
 pkg_postinst() {
-	einfo "Quick guide:"
-	einfo "ollama serve"
-	einfo "ollama run llama3:70b"
-	einfo "See available models at https://ollama.com/library"
+	if [[ -z ${REPLACING_VERSIONS} ]] ; then
+		einfo "Quick guide:"
+		einfo "\tollama serve"
+		einfo "\tollama run llama3:70b"
+		einfo
+		einfo "See available models at https://ollama.com/library"
+	fi
+
+	if use cuda ; then
+		einfo "When using cuda the user running ${PN} has to be in the video group or it won't detect devices."
+		einfo "The ebuild ensures this for user ${PN} via acct-user/${PN}[cuda]"
+	fi
 }

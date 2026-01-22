@@ -1,17 +1,17 @@
-From faa10736905e8e6e448e418a32dd085c3d271c9c Mon Sep 17 00:00:00 2001
-From: Roel Aaij <roel.aaij@nikhef.nl>
-Date: Fri, 15 Aug 2025 11:48:44 +0200
-Subject: [PATCH] Disable all variants
+From 739e5a16e0fa00d2522ff0ad06d91075be1195cd Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Thu, 22 Jan 2026 13:09:34 +0100
+Subject: [PATCH] ollama optional all cpu
 
 ---
- CMakeLists.txt | 5 -----
- 1 file changed, 5 deletions(-)
+ CMakeLists.txt | 7 +------
+ 1 file changed, 1 insertion(+), 6 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index d62c8f99..4fc0dd29 100644
+index f6bfc52d..d18cee36 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -27,11 +27,6 @@ set(GGML_CUDA_GRAPHS ON)
+@@ -43,11 +43,6 @@ set(GGML_CUDA_GRAPHS ON)
  set(GGML_CUDA_FA ON)
  set(GGML_CUDA_COMPRESSION_MODE default)
  
@@ -20,9 +20,16 @@ index d62c8f99..4fc0dd29 100644
 -    set(GGML_CPU_ALL_VARIANTS ON)
 -endif()
 -
- if (CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
+ if(APPLE)
      set(CMAKE_BUILD_RPATH "@loader_path")
      set(CMAKE_INSTALL_RPATH "@loader_path")
+@@ -216,4 +211,4 @@ if(MLX_ENGINE)
+                 COMPONENT MLX)
+         endif()
+     endif()
+-endif()
+\ No newline at end of file
++endif()
 -- 
-2.50.1
+2.52.0
 

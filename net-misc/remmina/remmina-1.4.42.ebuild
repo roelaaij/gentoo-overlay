@@ -1,24 +1,24 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 
-PYTHON_COMPAT=( python3_{10..12} )
-
-inherit cmake python-single-r1 xdg
+PYTHON_COMPAT=( python3_{10..13} )
 
 MY_P="${PN^}-v${PV}"
+inherit cmake python-single-r1 xdg
 
 DESCRIPTION="A GTK+ RDP, SPICE, VNC and SSH client"
 HOMEPAGE="https://remmina.org/"
 SRC_URI="https://gitlab.com/Remmina/Remmina/-/archive/v${PV}/${MY_P}.tar.bz2"
+S="${WORKDIR}/${MY_P}"
 
 LICENSE="GPL-2+-with-openssl-exception"
 SLOT="0"
 KEYWORDS="~amd64 ~arm64 ~riscv ~x86"
-IUSE="+appindicator crypt cups examples keyring gvnc kwallet nls python spice ssh rdp vnc wayland webkit zeroconf"
+IUSE="+appindicator crypt cups examples keyring gvnc kwallet nls python spice ssh rdp vnc wayland webkit zeroconf X"
 
-REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} )"
+REQUIRED_USE="python? ( ${PYTHON_REQUIRED_USE} ) || ( X wayland )"
 
 COMMON_DEPEND="
 	dev-libs/glib:2
@@ -27,16 +27,18 @@ COMMON_DEPEND="
 	dev-libs/libsodium:=
 	dev-libs/openssl:0=
 	x11-libs/gdk-pixbuf
-	x11-libs/gtk+:3[wayland?]
-	x11-libs/libX11
-	x11-libs/libxkbfile
+	x11-libs/gtk+:3[X?,wayland?]
+	X? (
+		x11-libs/libX11
+		x11-libs/libxkbfile
+	)
 	appindicator? ( dev-libs/libayatana-appindicator )
 	crypt? ( dev-libs/libgcrypt:0= )
 	keyring? ( app-crypt/libsecret )
-	gvnc? ( net-libs/gtk-vnc )
-	kwallet? ( kde-frameworks/kwallet:5 )
+	gvnc? ( net-libs/gtk-vnc[pulseaudio] )
+	kwallet? ( kde-frameworks/kwallet:6 )
 	python? ( ${PYTHON_DEPS} )
-	rdp? ( >=net-misc/freerdp-3.4.0:3=[X]
+	rdp? ( >=net-misc/freerdp-3.11.0:3=
 		cups? ( net-print/cups:= ) )
 	spice? ( net-misc/spice-gtk[gtk3] )
 	ssh? ( net-libs/libssh:0=[sftp]
@@ -45,25 +47,24 @@ COMMON_DEPEND="
 	webkit? ( net-libs/webkit-gtk:4.1 )
 	zeroconf? ( >=net-dns/avahi-0.8-r2[dbus,gtk] )
 "
-
 DEPEND="
 	${COMMON_DEPEND}
 	spice? ( app-emulation/spice-protocol )
 "
-
+RDEPEND="
+	${COMMON_DEPEND}
+	virtual/freedesktop-icon-theme
+"
 BDEPEND="
 	virtual/pkgconfig
 	nls? ( sys-devel/gettext )
 "
 
-RDEPEND="
-	${COMMON_DEPEND}
-	virtual/freedesktop-icon-theme
-"
-
 DOCS=( AUTHORS CHANGELOG.md README.md THANKS.md )
 
-S="${WORKDIR}/${PN^}-v${PV}"
+PATCHES=(
+	"${FILESDIR}/${PN}-1.4.40-kf6wallet.patch" # bug 950750; TODO: upstream
+)
 
 pkg_setup() {
 	use python && python-single-r1_pkg_setup
@@ -84,8 +85,9 @@ src_configure() {
 		-DWITH_FREERDP3=ON
 		-DWITH_GCRYPT=$(usex crypt)
 		-DWITH_GETTEXT=$(usex nls)
+		-DWITH_GVNC=$(usex gvnc)
 		-DWITH_ICON_CACHE=OFF
-		-DWITH_KF5WALLET=$(usex kwallet)
+		-DWITH_KF6WALLET=$(usex kwallet)
 		-DWITH_LIBSECRET=$(usex keyring)
 		-DWITH_LIBSSH=$(usex ssh)
 		-DWITH_LIBVNCSERVER=$(usex vnc)

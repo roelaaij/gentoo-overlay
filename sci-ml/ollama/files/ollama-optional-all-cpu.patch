@@ -1,14 +1,14 @@
-From 739e5a16e0fa00d2522ff0ad06d91075be1195cd Mon Sep 17 00:00:00 2001
+From 4b428e18a5db3d066afe89fdac5803b0587fea05 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Thu, 22 Jan 2026 13:09:34 +0100
+Date: Mon, 16 Feb 2026 13:53:50 +0100
 Subject: [PATCH] ollama optional all cpu
 
 ---
- CMakeLists.txt | 7 +------
- 1 file changed, 1 insertion(+), 6 deletions(-)
+ CMakeLists.txt | 5 -----
+ 1 file changed, 5 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f6bfc52d..d18cee36 100644
+index 7d53531b..a5fd5283 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -43,11 +43,6 @@ set(GGML_CUDA_GRAPHS ON)
@@ -23,13 +23,6 @@ index f6bfc52d..d18cee36 100644
  if(APPLE)
      set(CMAKE_BUILD_RPATH "@loader_path")
      set(CMAKE_INSTALL_RPATH "@loader_path")
-@@ -216,4 +211,4 @@ if(MLX_ENGINE)
-                 COMPONENT MLX)
-         endif()
-     endif()
--endif()
-\ No newline at end of file
-+endif()
 -- 
-2.52.0
+2.53.0
 

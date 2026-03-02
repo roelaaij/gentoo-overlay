@@ -2,9 +2,9 @@
 # Distributed under the terms of the GNU General Public License v2
 EAPI=8
 
-RUST_MIN_VER="1.85.0"
+RUST_MIN_VER="1.90.0"
 RUST_NEEDS_LLVM=1
-LLVM_COMPAT=( 21 )
+LLVM_COMPAT=( 20 21 )
 
 inherit llvm-r1 systemd cargo linux-info udev xdg desktop
 

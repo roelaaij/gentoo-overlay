@@ -1,0 +1,47 @@
+--- a/torch/csrc/utils/python_arg_parser.cpp	2026-03-04 20:40:00.646340733 +0100
++++ b/torch/csrc/utils/python_arg_parser.cpp	2026-03-04 20:40:56.987763633 +0100
+@@ -759,9 +759,12 @@
+   }
+   py::object func =
+       PyObject_FastGetAttrString(THPVariableClass, (char*)func_name);
+-  py::object args = (val == nullptr)
+-      ? py::make_tuple(py::handle(self), py::handle(index))
+-      : py::make_tuple(py::handle(self), py::handle(index), py::handle(val));
++  py::tuple args;
++  if (val == nullptr) {
++    args = py::make_tuple(py::handle(self), py::handle(index));
++  } else {
++    args = py::make_tuple(py::handle(self), py::handle(index), py::handle(val));
++  }
+   return handle_torch_function_no_python_arg_parser(
+       overridable_args,
+       args.ptr(),
+--- a/torch/csrc/jit/python/init.cpp	2026-03-04 20:27:11.167208828 +0100
++++ b/torch/csrc/jit/python/init.cpp	2026-03-04 20:32:26.184199878 +0100
+@@ -1797,7 +1797,7 @@
+ 
+   m.def(
+       "_jit_get_operation",
+-      [](const std::string& op_name) {
++      [](const std::string& op_name) -> py::tuple {
+         try {
+           auto symbol = Symbol::fromQualString(op_name);
+           const auto sortedOps = getAllSortedOperatorsFor(symbol);
+@@ -1823,7 +1823,7 @@
+ 
+           auto func = py::cpp_function(
+               [sortedOps, symbol, allow_numbers_as_tensors](
+-                  const py::args& args, const py::kwargs& kwargs) {
++                const py::args& args, const py::kwargs& kwargs) {
+                 ToIValueAllowNumbersAsTensors g(allow_numbers_as_tensors);
+                 return _get_operation_for_overload_or_packet(
+                     sortedOps, symbol, args, kwargs, false);
+@@ -1844,7 +1844,7 @@
+       "_maybe_call_torch_function_for_op_packet",
+       [](py::handle op_overload_packet,
+          const py::args& args,
+-         const py::kwargs& kwargs) {
++         const py::kwargs& kwargs) -> py::tuple {
+         py::list ns_method =
+             op_overload_packet.attr("_qualified_op_name").attr("split")("::");
+         auto res = _maybe_handle_torch_function(

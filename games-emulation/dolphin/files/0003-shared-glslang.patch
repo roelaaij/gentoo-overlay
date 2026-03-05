@@ -1,53 +1,39 @@
-From aa8c20713f5307a509d9f48e781fef54bd435fe8 Mon Sep 17 00:00:00 2001
+From 806ea125c40b9f1f8d3b216fe59c1581226c6bd5 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Sat, 1 Nov 2025 21:20:14 +0100
-Subject: [PATCH] system glslang
+Date: Thu, 5 Mar 2026 10:58:55 +0100
+Subject: [PATCH] shared glslang
 
 ---
- CMakeLists.txt                                |   2 +-
- .../Core/VideoBackends/Vulkan/CMakeLists.txt  |   1 -
- Source/Core/VideoCommon/CMakeLists.txt        |   1 +
- Source/Core/VideoCommon/Spirv.cpp             | 119 +-----------------
- 4 files changed, 4 insertions(+), 119 deletions(-)
+ Source/Core/VideoCommon/CMakeLists.txt |   1 +
+ Source/Core/VideoCommon/Spirv.cpp      | 119 +------------------------
+ 2 files changed, 3 insertions(+), 117 deletions(-)
 
-diff --git a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-index 5f5583f2b0..8a165fc68d 100644
---- a/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-+++ b/Source/Core/VideoBackends/Vulkan/CMakeLists.txt
-@@ -41,7 +41,6 @@ target_link_libraries(videovulkan
- PUBLIC
-   common
-   videocommon
--
- PRIVATE
-   xxhash::xxhash
- )
 diff --git a/Source/Core/VideoCommon/CMakeLists.txt b/Source/Core/VideoCommon/CMakeLists.txt
-index fb9cba4fa4..dfba855023 100644
+index 69a0968e4d..365036d78b 100644
 --- a/Source/Core/VideoCommon/CMakeLists.txt
 +++ b/Source/Core/VideoCommon/CMakeLists.txt
-@@ -226,6 +226,7 @@ PRIVATE
+@@ -247,6 +247,7 @@ PRIVATE
    imgui
    implot
    glslang::SPIRV
 +  glslang::glslang-default-resource-limits
    tinygltf
  )
-
+ 
 diff --git a/Source/Core/VideoCommon/Spirv.cpp b/Source/Core/VideoCommon/Spirv.cpp
-index 59bc872f93..b94cbefc8e 100644
+index 9fcef18d13..7936b7f97b 100644
 --- a/Source/Core/VideoCommon/Spirv.cpp
 +++ b/Source/Core/VideoCommon/Spirv.cpp
-@@ -5,6 +5,7 @@
-
+@@ -6,6 +6,7 @@
+ #include <fstream>
+ 
  #include <glslang/SPIRV/GlslangToSpv.h>
- #include <glslang/SPIRV/disassemble.h>
 +#include "glslang/Public/ResourceLimits.h"
-
+ 
  #include "Common/FileUtil.h"
  #include "Common/Logging/Log.h"
 @@ -37,123 +38,7 @@ bool InitializeGlslang()
-
+ 
  const TBuiltInResource* GetCompilerResourceLimits()
  {
 -  static const TBuiltInResource default_resource = {
@@ -169,7 +155,8 @@ index 59bc872f93..b94cbefc8e 100644
 -  return &default_resource;
 +  return GetDefaultResources();
  }
-
+ 
  std::optional<SPIRV::CodeVector>
---
-2.51.1
+-- 
+2.53.0
+

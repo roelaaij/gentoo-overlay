@@ -11,8 +11,8 @@ ROCM_VERSION=${PV}
 inherit cmake docs rocm
 
 DESCRIPTION="Next generation library for iterative sparse solvers for ROCm platform"
-HOMEPAGE="https://github.com/ROCmSoftwarePlatform/rocALUTION"
-SRC_URI="https://github.com/ROCmSoftwarePlatform/rocALUTION/archive/rocm-${PV}.tar.gz -> rocALUTION-${PV}.tar.gz"
+HOMEPAGE="https://github.com/ROCm/rocALUTION"
+SRC_URI="https://github.com/ROCm/rocALUTION/archive/rocm-${PV}.tar.gz -> rocALUTION-${PV}.tar.gz"
 S="${WORKDIR}/${PN}-rocm-${PV}"
 
 LICENSE="MIT"
@@ -28,8 +28,8 @@ BDEPEND="
 "
 
 RDEPEND="hip? ( dev-util/hip )
-	 hip? ( sci-libs/rocSPARSE:$SLOT[${ROCM_USEDEP}] )
-	 hip? ( sci-libs/rocBLAS:$SLOT[${ROCM_USEDEP}] )
+	 hip? ( sci-libs/rocSPARSE:$SLOT )
+	 hip? ( sci-libs/rocBLAS:$SLOT )
 	 mpi? ( virtual/mpi )
 "
 
@@ -68,7 +68,7 @@ src_configure() {
 		-DSUPPORT_OMP=$(usex openmp ON OFF)
 		-DSUPPORT_HIP=$(usex hip ON OFF)
 		-DSUPPORT_MPI=$(usex mpi ON OFF)
-		-DAMDGPU_TARGETS="$(get_amdgpu_flags)"
+		-DGPU_TARGETS="$(get_amdgpu_flags)"
 		-DCMAKE_INSTALL_INCLUDEDIR="include/rocALUTION"
 		-DBUILD_SHARED_LIBS=ON
 		-DBUILD_EXAMPLES=ON

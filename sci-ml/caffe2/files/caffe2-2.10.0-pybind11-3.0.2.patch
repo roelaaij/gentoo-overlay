@@ -45,3 +45,14 @@
          py::list ns_method =
              op_overload_packet.attr("_qualified_op_name").attr("split")("::");
          auto res = _maybe_handle_torch_function(
+--- a/torch/csrc/distributed/c10d/init.cpp	2026-03-16 10:42:01.466700200 +0100
++++ b/torch/csrc/distributed/c10d/init.cpp	2026-03-16 10:41:54.066738770 +0100
+@@ -884,7 +884,7 @@
+             return ::c10d::ReduceOp(self);
+           })
+       .def(py::pickle(
+-          [](const ::c10d::ReduceOp& r) {
++          [](const ::c10d::ReduceOp& r) -> py::tuple {
+             // __getstate__
+             if (r.op_ != ::c10d::ReduceOp::RedOpType::PREMUL_SUM) {
+               return py::make_tuple(r.op_, py::none());

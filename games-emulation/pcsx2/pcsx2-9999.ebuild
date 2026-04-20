@@ -1,4 +1,4 @@
-# Copyright 1999-2025 Gentoo Authors
+# Copyright 1999-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -54,11 +54,9 @@ COMMON_DEPEND="
 	jack? ( virtual/jack )
 	pulseaudio? ( media-libs/libpulse )
 	sndio? ( media-sound/sndio:= )
-	vulkan? (
-		media-libs/shaderc
-		media-libs/vulkan-loader
-		dev-libs/vulkan-memory-allocator
-	)
+	media-libs/shaderc
+	media-libs/vulkan-loader
+	dev-libs/vulkan-memory-allocator
 	wayland? ( dev-libs/wayland )
 "
 # patches is a optfeature but always pull given PCSX2 complaints if it
@@ -86,7 +84,6 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-1.7.3773-lto.patch
 	"${FILESDIR}"/${PN}-fmt-11.patch
 	"${FILESDIR}"/${PN}-fix-build.patch
-	"${FILESDIR}"/${PN}-system-plutosvg.patch
 )
 
 src_unpack() {
@@ -129,7 +126,7 @@ src_prepare() {
 			# w/ patch, and discord-rpc be optional w/ dependency on rapidjson
 			demangler discord-rpc glad imgui include jpgd
 			rapidyaml rcheevos xbyak zydis
-			$(usev vulkan 'glslang vulkan-headers')
+			glslang vulkan-headers
 		)
 		find 3rdparty -mindepth 1 -maxdepth 1 -type d \
 			-not \( -false ${keep[*]/#/-o -name } \) -exec rm -r {} + || die
@@ -139,7 +136,18 @@ src_prepare() {
 	# relax Qt6 and SDL2 version requirements which often get restricted
 	# without a specific need, please report a bug to Gentoo (not upstream)
 	# if a still-available older version is really causing issues
-	sed -e '/find_package(\(Qt6\|SDL2\)/s/ [0-9.]*/ /' \
+	sed -e '/find_package(\(Qt6\|SDL3\)/s/ [0-9.]*/ /' \
+		-i cmake/SearchForStuff.cmake || die
+
+	# pluto(s)vg likewise often restrict versions and Gentoo also does not
+	# have .cmake files for it, use sed to avoid rebasing on version changes
+	sed -e '/^find_package(plutovg/d' \
+		-e '/^find_package(plutosvg/c\
+			find_package(PkgConfig REQUIRED)\
+			pkg_check_modules(plutovg REQUIRED IMPORTED_TARGET plutovg)\
+			alias_library(plutovg::plutovg PkgConfig::plutovg)\
+			pkg_check_modules(plutosvg REQUIRED IMPORTED_TARGET plutosvg)\
+			alias_library(plutosvg::plutosvg PkgConfig::plutosvg)' \
 		-i cmake/SearchForStuff.cmake || die
 }
 
@@ -155,10 +163,12 @@ src_configure() {
 	local mycmakeargs=(
 		-DBUILD_SHARED_LIBS=no
 		-DDISABLE_ADVANCE_SIMD=no
+		-DPACKAGE_MODE=yes
+		-DUSE_BACKTRACE=no # not packaged (bug #885471)
 		-DENABLE_TESTS=$(usex test)
 		-DUSE_LINKED_FFMPEG=yes
 		-DUSE_VTUNE=no
-		-DUSE_VULKAN=$(usex vulkan)
+		-DUSE_VULKAN=yes
 		-DWAYLAND_API=$(usex wayland)
 		-DX11_API=yes # X libs are currently hard-required either way
 		-DLTO_PCSX2_CORE=$(usex lto)
@@ -172,29 +182,25 @@ src_test() {
 }
 
 src_install() {
-	insinto /usr/lib/${PN}
-	doins -r "${BUILD_DIR}"/bin/.
+	cmake_src_install
 
-	fperms +x /usr/lib/${PN}/pcsx2-qt
-	dosym -r /usr/lib/${PN}/pcsx2-qt /usr/bin/${PN}
-
-	newicon bin/resources/icons/AppIconLarge.png ${PN}.png
-	make_desktop_entry ${PN} ${PN^^}
+	newicon bin/resources/icons/AppIconLarge.png pcsx2.png
+	make_desktop_entry pcsx2-qt PCSX2
 
 	dodoc README.md bin/docs/GameIndex.pdf
-
-	use !test || rm "${ED}"/usr/lib/${PN}/*_test || die
 }
 
 pkg_postinst() {
-	fcaps -m 0755 cap_net_admin,cap_net_raw=eip usr/lib/${PN}/pcsx2-qt
+	fcaps cap_net_admin,cap_net_raw=eip usr/bin/pcsx2-qt
 
-	if [[ ${REPLACING_VERSIONS##* } ]] &&
-		ver_test ${REPLACING_VERSIONS##* } -lt 1.7; then
-		elog ">=${PN}-1.7 has received several changes since <=${PN}-1.6.0, and is"
-		elog "notably now a 64bit build using Qt6. Just-in-case it is recommended"
-		elog "to backup configs, save states, and memory cards before using."
+	# calls aplay or gst-play/launch-1.0 as fallback
+	# https://github.com/PCSX2/pcsx2/issues/11141
+	optfeature "UI sound effects support" \
+		media-sound/alsa-utils \
+		media-libs/gst-plugins-base:1.0
+
+	if ver_replacing -lt 2.2.0; then
 		elog
-		elog "The executable was also renamed from 'PCSX2' to 'pcsx2'."
+		elog "Note that the 'pcsx2' executable was renamed to 'pcsx2-qt' with this version."
 	fi
 }

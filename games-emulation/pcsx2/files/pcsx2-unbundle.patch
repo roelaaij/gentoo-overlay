@@ -1,20 +1,20 @@
-From 52d87a4c3676315f8b109f07591e80b151344789 Mon Sep 17 00:00:00 2001
+From b6c0eb0430332e8a38a30398d028957b9a359632 Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Mon, 22 Dec 2025 22:04:36 +0100
+Date: Mon, 20 Apr 2026 17:54:57 +0200
 Subject: [PATCH] pcsx2 unbundle
 
 ---
- cmake/SearchForStuff.cmake      | 25 +++++++++++++------------
+ cmake/SearchForStuff.cmake      | 22 +++++++++++-----------
  pcsx2/CMakeLists.txt            |  4 +++-
  pcsx2/Host/CubebAudioStream.cpp |  6 ++++--
  pcsx2/INISettingsInterface.cpp  |  9 ++++++++-
- 4 files changed, 28 insertions(+), 16 deletions(-)
+ 4 files changed, 26 insertions(+), 15 deletions(-)
 
 diff --git a/cmake/SearchForStuff.cmake b/cmake/SearchForStuff.cmake
-index 29568298b..1195ee31c 100644
+index 8407e6393..de18e1f6c 100644
 --- a/cmake/SearchForStuff.cmake
 +++ b/cmake/SearchForStuff.cmake
-@@ -26,6 +26,9 @@ if(USE_VULKAN)
+@@ -27,6 +27,9 @@ if(USE_VULKAN)
  	find_package(Shaderc REQUIRED)
  endif()
  
@@ -24,12 +24,10 @@ index 29568298b..1195ee31c 100644
  # Platform-specific dependencies.
  if (WIN32)
  	add_subdirectory(3rdparty/D3D12MemAlloc EXCLUDE_FROM_ALL)
-@@ -73,24 +76,29 @@ else()
+@@ -75,6 +78,14 @@ else()
  
  		find_package(PkgConfig REQUIRED)
  		pkg_check_modules(DBUS REQUIRED dbus-1)
-+		find_package(ryml REQUIRED)
-+		add_library(rapidyaml::rapidyaml ALIAS ryml::ryml)
 +		pkg_check_modules(cpuinfo REQUIRED libcpuinfo)
 +		pkg_check_modules(soundtouch REQUIRED IMPORTED_TARGET soundtouch)
 +		add_library(SoundTouch::SoundTouch ALIAS PkgConfig::soundtouch)
@@ -41,10 +39,7 @@ index 29568298b..1195ee31c 100644
  	endif()
  endif()
  
- set(CMAKE_FIND_FRAMEWORK ${FIND_FRAMEWORK_BACKUP})
- 
- add_subdirectory(3rdparty/fast_float EXCLUDE_FROM_ALL)
--add_subdirectory(3rdparty/rapidyaml EXCLUDE_FROM_ALL)
+@@ -84,14 +95,10 @@ add_subdirectory(3rdparty/fast_float EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/lzma EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/libchdr EXCLUDE_FROM_ALL)
  disable_compiler_warnings_for_target(libchdr)
@@ -59,7 +54,7 @@ index 29568298b..1195ee31c 100644
  add_subdirectory(3rdparty/discord-rpc EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/freesurround EXCLUDE_FROM_ALL)
  
-@@ -102,9 +110,6 @@ if(USE_VULKAN)
+@@ -103,9 +110,6 @@ if(USE_VULKAN)
  	add_subdirectory(3rdparty/vulkan EXCLUDE_FROM_ALL)
  endif()
  
@@ -69,7 +64,7 @@ index 29568298b..1195ee31c 100644
  
  # Find the Qt components that we need.
  if(ENABLE_QT_UI)
-@@ -135,10 +140,6 @@ elseif(_M_ARM64)
+@@ -138,10 +142,6 @@ elseif(ARCH_ARM64)
  	add_subdirectory(3rdparty/vixl EXCLUDE_FROM_ALL)
  endif()
  
@@ -81,7 +76,7 @@ index 29568298b..1195ee31c 100644
  if(MSVC)
  	# Don't warn about "deprecated" POSIX functions.
 diff --git a/pcsx2/CMakeLists.txt b/pcsx2/CMakeLists.txt
-index cacbebacb..a8f367e0b 100644
+index 1ff5bbc23..aeb6f4dde 100644
 --- a/pcsx2/CMakeLists.txt
 +++ b/pcsx2/CMakeLists.txt
 @@ -13,6 +13,9 @@ target_compile_features(PCSX2_FLAGS INTERFACE cxx_std_17)
@@ -94,16 +89,16 @@ index cacbebacb..a8f367e0b 100644
  # Check that people use the good file
  if(NOT TOP_CMAKE_WAS_SOURCED)
  	message(FATAL_ERROR "
-@@ -1146,7 +1149,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
+@@ -1156,7 +1159,6 @@ target_link_libraries(PCSX2_FLAGS INTERFACE
  	cubeb
  	rcheevos
  	discord-rpc
 -	simpleini
  	freesurround
+ 	Freetype::Freetype
  	SDL3::SDL3
- 	ZLIB::ZLIB
 diff --git a/pcsx2/Host/CubebAudioStream.cpp b/pcsx2/Host/CubebAudioStream.cpp
-index 78a96e413..8fc9ce866 100644
+index d1b512ba4..8eced7f74 100644
 --- a/pcsx2/Host/CubebAudioStream.cpp
 +++ b/pcsx2/Host/CubebAudioStream.cpp
 @@ -312,8 +312,10 @@ std::vector<std::pair<std::string, std::string>> AudioStream::GetCubebDriverName
@@ -120,7 +115,7 @@ index 78a96e413..8fc9ce866 100644
  	return names;
  }
 diff --git a/pcsx2/INISettingsInterface.cpp b/pcsx2/INISettingsInterface.cpp
-index e7b84f7bd..afa1efe37 100644
+index 9d35bbd93..cfc04fa45 100644
 --- a/pcsx2/INISettingsInterface.cpp
 +++ b/pcsx2/INISettingsInterface.cpp
 @@ -136,7 +136,14 @@ void INISettingsInterface::Clear()
@@ -140,5 +135,5 @@ index e7b84f7bd..afa1efe37 100644
  
  bool INISettingsInterface::GetIntValue(const char* section, const char* key, int* value) const
 -- 
-2.52.0
+2.53.0
 

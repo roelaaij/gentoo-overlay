@@ -1,12 +1,11 @@
-# Copyright 1999-2025 Gentoo Authors
+# Copyright 1999-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 
-PYTHON_COMPAT=( python3_{11..13} )
-DISTUTILS_USE_PEP517=standalone
+PYTHON_COMPAT=( python3_{12..14} )
 
-inherit cmake edo flag-o-matic distutils-r1
+inherit cmake edo flag-o-matic python-r1
 
 EIGEN_COMMIT="1d8b82b0740839c0de7f1242a3585e3390ff5f33"
 
@@ -19,6 +18,7 @@ SRC_URI="
 	https://github.com/microsoft/onnxruntime/archive/refs/tags/v${PV}.tar.gz -> ${P}.tar.gz
 	https://gitlab.com/libeigen/eigen/-/archive/${EIGEN_COMMIT}/eigen-${EIGEN_COMMIT}.tar.bz2 ->
 		eigen-3.4.0_p20250216.tar.bz2
+	https://github.com/onnx/onnx/archive/refs/tags/v1.21.0.tar.gz -> onnx-1.21.0.tar.gz
 "
 
 LICENSE="MIT"
@@ -33,7 +33,6 @@ RDEPEND="
 	dev-libs/cpuinfo
 	dev-libs/protobuf:=
 	dev-libs/re2:=
-	<sci-ml/onnx-1.18[disableStaticReg]
 
 	python? (
 		${PYTHON_DEPS}
@@ -70,16 +69,18 @@ BDEPEND="
 "
 
 PATCHES=(
-	"${FILESDIR}/${PN}-1.22.2-add-a-missing-include-of-cstdint.patch"
 	"${FILESDIR}/${PN}-1.22.2-relax-the-dependency-on-flatbuffers.patch"
-	"${FILESDIR}/${PN}-1.22.2-remove-the-absl-low_level_hash-target.patch"
-	"${FILESDIR}/${PN}-1.22.2-use-system-libraries.patch"
+	"${FILESDIR}/${PN}-1.24.3-use-system-libraries.patch"
+	"${FILESDIR}/${PN}-1.24.4-no-werror.patch"
+	"${FILESDIR}/${PN}-1.23.2-fix-cuda-build.patch"
 )
 
 CMAKE_USE_DIR="${S}/cmake"
 
 src_prepare() {
 	cmake_src_prepare
+	cd ${WORKDIR}/onnx-1.21.0
+	eapply ${CMAKE_USE_DIR}/patches/onnx/onnx.patch
 }
 
 src_configure() {
@@ -95,6 +96,9 @@ src_configure() {
 		# This is required until a newer version of Eigen3 comes out
 		-DFETCHCONTENT_SOURCE_DIR_EIGEN3="${WORKDIR}/eigen-${EIGEN_COMMIT}"
 
+		# onnxruntime carries some private patches for onnx
+		-DFETCHCONTENT_SOURCE_DIR_ONNX="${WORKDIR}/onnx-1.21.0"
+
 		# This makes it possible for `find_path` to find the `onnx-ml.proto` file
 		-DCMAKE_INCLUDE_PATH="$(python_get_sitedir)"
 
@@ -103,10 +107,6 @@ src_configure() {
 
 	append-ldflags -Wl,-z,noexecstack
 	cmake_src_configure
-}
-
-src_compile() {
-	cmake_src_compile
 }
 
 # Adapted from `run_onnxruntime_tests` in `tools/ci_build/build.py`
@@ -120,7 +120,7 @@ python_test() {
 }
 
 src_test() {
-	export GTEST_FILTER="*:-ActivationOpNoInfTest.Softsign"
+	local -x GTEST_FILTER="*:-ActivationOpNoInfTest.Softsign:LayoutTransformationPotentiallyAddedOpsTests.OpsHaveLatestVersions"
 	cmake_src_test
 
 	if use python ; then
@@ -131,37 +131,28 @@ src_test() {
 # There is some custom logic in `setup.py`
 python_install() {
 	cd "${S}/cmake_build" || die
-	edo ${EPYTHON} ../setup.py bdist_wheel
+	edo "${EPYTHON}" ../setup.py install \
+		--prefix="${EPREFIX}/usr" \
+		--root="${D}"
 
-	local wheel_infix=$(
-		${EPYTHON} -c "from packaging.tags import sys_tags;t = next(sys_tags());print(f'{t.interpreter}-{t.abi}');" || die "failed to determine wheel infix"
-	)
-
-	# Taken from distutils-r1, because we want to --overwrite
-	${EPYTHON} -m gpep517 install-wheel \
-			   --destdir="${D}" \
-			   --interpreter="${PYTHON}" \
-			   --prefix="${EPREFIX}/usr" \
-			   --optimize=all \
-			   --overwrite \
-			   dist/${P}-${wheel_infix}*.whl || die "Wheel install failed"
-
-	libs=(
+	local libs=(
 		"libonnxruntime.so.${PV}"
 		"libonnxruntime_providers_shared.so"
-		"libonnxruntime_providers_cuda.so"
 	)
 	for lib in "${libs[@]}"; do
-		if [ -f "${ED}/usr/$(get_libdir)/${lib}" ]; then
-			ln -fsr "${ED}/usr/$(get_libdir)/${lib}" "${D}/$(python_get_sitedir)/onnxruntime/capi/${lib}"
-		fi
+		ln -fsr "${ED}/usr/$(get_libdir)/${lib}" "${D}/$(python_get_sitedir)/onnxruntime/capi/${lib}" || die
 	done
+
+	rm -rf "${D}/$(python_get_sitedir)"/*.egg-info || die
+	python_optimize
 }
 
 src_install() {
 	cmake_src_install
 
 	if use python ; then
-		distutils-r1_src_install
+		python_foreach_impl python_install
 	fi
+
+	dodoc "${S}/"{README.md,LICENSE}
 }

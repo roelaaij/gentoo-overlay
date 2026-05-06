@@ -97,23 +97,6 @@ index 1ff5bbc23..aeb6f4dde 100644
  	freesurround
  	Freetype::Freetype
  	SDL3::SDL3
-diff --git a/pcsx2/Host/CubebAudioStream.cpp b/pcsx2/Host/CubebAudioStream.cpp
-index d1b512ba4..8eced7f74 100644
---- a/pcsx2/Host/CubebAudioStream.cpp
-+++ b/pcsx2/Host/CubebAudioStream.cpp
-@@ -312,8 +312,10 @@ std::vector<std::pair<std::string, std::string>> AudioStream::GetCubebDriverName
- 	names.emplace_back(std::string(), TRANSLATE_STR("AudioStream", "Default"));
- 
- 	auto cubeb_names = cubeb_get_backend_names();
--	for (size_t i = 0; i < cubeb_names.count; i++)
--		names.emplace_back(cubeb_names.names[i], cubeb_names.names[i]);
-+	int backend_count = 0;
-+	while (cubeb_names[backend_count] != nullptr) ++backend_count;
-+	for (int i = 0; i < backend_count; i++)
-+		names.emplace_back(cubeb_names[i], cubeb_names[i]);
- 
- 	return names;
- }
 diff --git a/pcsx2/INISettingsInterface.cpp b/pcsx2/INISettingsInterface.cpp
 index 9d35bbd93..cfc04fa45 100644
 --- a/pcsx2/INISettingsInterface.cpp

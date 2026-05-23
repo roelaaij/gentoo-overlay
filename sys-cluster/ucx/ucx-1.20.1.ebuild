@@ -1,4 +1,4 @@
-# Copyright 1999-2024 Gentoo Authors
+# Copyright 1999-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -7,24 +7,22 @@ inherit autotools toolchain-funcs
 
 MY_PV=${PV/_/-}
 DESCRIPTION="Unified Communication X"
-HOMEPAGE="https://www.openucx.org"
+HOMEPAGE="https://openucx.org"
 SRC_URI="https://github.com/openucx/ucx/releases/download/v${PV}/${P}.tar.gz"
 S="${WORKDIR}/${PN}-${MY_PV}"
 
 LICENSE="BSD"
 SLOT="0"
-KEYWORDS="~amd64 -riscv ~x86 ~amd64-linux ~x86-linux"
-IUSE="+numa +openmp"
+KEYWORDS="~amd64 ~arm64 ~ppc64 -riscv ~x86"
+IUSE="+openmp"
 
 RDEPEND="
 	sys-libs/binutils-libs:=
-	numa? ( sys-process/numactl )
 "
 DEPEND="${RDEPEND}"
 
 PATCHES=(
-	"${FILESDIR}"/${PN}-1.13.0-drop-werror.patch
-	"${FILESDIR}"/${P}-no-rpm-sandbox.patch
+	"${FILESDIR}"/${PN}-1.19.0-clang21-fix.patch
 )
 
 pkg_pretend() {
@@ -41,15 +39,21 @@ src_prepare() {
 }
 
 src_configure() {
+
 	BASE_CFLAGS="" econf \
+		--disable-doxygen-doc \
 		--disable-compiler-opt \
 		--without-fuse3 \
 		--without-go \
 		--without-java \
-		$(use_enable numa) \
 		$(use_enable openmp)
 }
 
 src_compile() {
 	BASE_CFLAGS="" emake
+}
+
+src_install() {
+	default
+	find "${ED}" -type f -name '*.la' -delete || die
 }

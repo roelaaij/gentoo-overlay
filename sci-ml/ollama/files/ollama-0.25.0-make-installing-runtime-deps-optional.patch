@@ -1,0 +1,126 @@
+From 639b5318b48a0ed4d2d29b9aac05e6e77bc0b0ab Mon Sep 17 00:00:00 2001
+From: Roel Aaij <roel.aaij@gmail.com>
+Date: Tue, 19 May 2026 15:49:54 +0200
+Subject: [PATCH] make installing runtime deps optional
+
+---
+ CMakeLists.txt | 43 ++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 32 insertions(+), 11 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f402d238..1c212d1c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -83,6 +83,8 @@ set(GGML_VERSION_MINOR 0)
+ set(GGML_VERSION_PATCH 0)
+ set(GGML_VERSION "${GGML_VERSION_MAJOR}.${GGML_VERSION_MINOR}.${GGML_VERSION_PATCH}")
+ 
++option(OLLAMA_INSTALL_RUNTIME_DEPS "Install the dependencies of library as well" ON)
++
+ set(GGML_CPU ON)
+ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ml/backend/ggml/ggml/src)
+ set_property(TARGET ggml PROPERTY EXCLUDE_FROM_ALL TRUE)
+@@ -101,12 +103,17 @@ foreach(variant ${CPU_VARIANTS})
+ endforeach()
+ 
+ install(TARGETS ggml-base ${CPU_VARIANTS}
+-    RUNTIME_DEPENDENCIES
+-        PRE_EXCLUDE_REGEXES ".*"
+-    RUNTIME DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT CPU
++    RUNTIME_DEPENDENCY_SET base
+     LIBRARY DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT CPU
+     FRAMEWORK DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT CPU
+ )
++if(OLLAMA_INSTALL_RUNTIME_DEPS)
++install(RUNTIME_DEPENDENCY_SET base
++    PRE_EXCLUDE_REGEXES ".*"
++    RUNTIME DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT CPU
++    LIBRARY DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT CPU
++)
++endif()
+ 
+ check_language(CUDA)
+ if(CMAKE_CUDA_COMPILER)
+@@ -118,13 +125,18 @@ if(CMAKE_CUDA_COMPILER)
+     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ml/backend/ggml/ggml/src/ggml-cuda)
+     target_include_directories(ggml-cuda PRIVATE ${GGML_INCLUDE_DIRS})
+     install(TARGETS ggml-cuda
+-        RUNTIME_DEPENDENCIES
+-            DIRECTORIES ${CUDAToolkit_BIN_DIR} ${CUDAToolkit_BIN_DIR}/x64 ${CUDAToolkit_LIBRARY_DIR}
+-            PRE_INCLUDE_REGEXES cublas cublasLt cudart
+-            PRE_EXCLUDE_REGEXES ".*"
++        RUNTIME_DEPENDENCY_SET cuda
++        LIBRARY DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT CUDA
++    )
++    if(OLLAMA_INSTALL_RUNTIME_DEPS)
++    install(RUNTIME_DEPENDENCY_SET cuda
++        DIRECTORIES ${CUDAToolkit_BIN_DIR} ${CUDAToolkit_BIN_DIR}/x64 ${CUDAToolkit_LIBRARY_DIR}
++        PRE_INCLUDE_REGEXES cublas cublasLt cudart
++        PRE_EXCLUDE_REGEXES ".*"
+         RUNTIME DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT CUDA
+         LIBRARY DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT CUDA
+     )
++    endif()
+ endif()
+ 
+ set(WINDOWS_AMDGPU_TARGETS_EXCLUDE_REGEX "^gfx(908|90a|1200|1201):xnack[+-]$"
+@@ -158,9 +170,9 @@ if(CMAKE_HIP_COMPILER)
+ 
+         install(TARGETS ggml-hip
+             RUNTIME_DEPENDENCY_SET rocm
+-            RUNTIME DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT HIP
+             LIBRARY DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT HIP
+         )
++        if(OLLAMA_INSTALL_RUNTIME_DEPS)
+         install(RUNTIME_DEPENDENCY_SET rocm
+                 DIRECTORIES ${HIP_BIN_INSTALL_DIR} ${HIP_LIB_INSTALL_DIR}
+                 PRE_INCLUDE_REGEXES hipblas rocblas amdhip64 rocsolver amd_comgr hsa-runtime64 rocsparse tinfo rocprofiler-register roctx64 rocroller drm drm_amdgpu numa elf
+@@ -176,6 +188,7 @@ if(CMAKE_HIP_COMPILER)
+                 break()
+             endif()
+         endforeach()
++        endif()
+     endif()
+ endif()
+ 
+@@ -185,12 +198,17 @@ if(NOT APPLE)
+         add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ml/backend/ggml/ggml/src/ggml-vulkan)
+         target_include_directories(ggml-vulkan PRIVATE ${GGML_INCLUDE_DIRS})
+         install(TARGETS ggml-vulkan
+-            RUNTIME_DEPENDENCIES
+-                PRE_INCLUDE_REGEXES vulkan
+-                PRE_EXCLUDE_REGEXES ".*"
++            RUNTIME_DEPENDENCY_SET vulkan
++            LIBRARY DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT Vulkan
++        )
++        if(OLLAMA_INSTALL_RUNTIME_DEPS)
++        install(RUNTIME_DEPENDENCY_SET vulkan
++            PRE_INCLUDE_REGEXES vulkan
++            PRE_EXCLUDE_REGEXES ".*"
+             RUNTIME DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT Vulkan
+             LIBRARY DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT Vulkan
+         )
++        endif()
+     endif()
+ endif()
+ 
+@@ -235,6 +253,8 @@ if(MLX_ENGINE)
+         LIBRARY DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT MLX
+         FRAMEWORK DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT MLX
+     )
++
++	if(OLLAMA_INSTALL_RUNTIME_DEPS)
+     install(RUNTIME_DEPENDENCY_SET mlx_runtime_deps
+         DIRECTORIES ${MLX_RUNTIME_DIRS}
+         PRE_INCLUDE_REGEXES ${MLX_INCLUDE_REGEXES}
+@@ -242,6 +262,7 @@ if(MLX_ENGINE)
+         RUNTIME DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT MLX_VENDOR
+         LIBRARY DESTINATION ${OLLAMA_INSTALL_DIR} COMPONENT MLX_VENDOR
+     )
++    endif()
+ 
+     if(TARGET jaccl)
+         install(TARGETS jaccl
+-- 
+2.54.0
+

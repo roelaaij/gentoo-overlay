@@ -107,7 +107,7 @@ RDEPEND="
 
 PATCHES=(
 	"${FILESDIR}/${PN}-9999-use-GNUInstallDirs.patch"
-	"${FILESDIR}/${PN}-0.22.0-make-installing-runtime-deps-optional.patch"
+	"${FILESDIR}/${PN}-0.25.0-make-installing-runtime-deps-optional.patch"
 	"${FILESDIR}/${PN}-optional-all-cpu.patch"
 )
 

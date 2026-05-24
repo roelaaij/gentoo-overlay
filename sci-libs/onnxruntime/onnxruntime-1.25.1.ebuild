@@ -71,6 +71,7 @@ BDEPEND="
 PATCHES=(
 	"${FILESDIR}/${PN}-1.22.2-relax-the-dependency-on-flatbuffers.patch"
 	"${FILESDIR}/${PN}-1.24.3-use-system-libraries.patch"
+	"${FILESDIR}/${PN}-1.24.1-onnx-static-libs.patch"
 	"${FILESDIR}/${PN}-1.24.4-no-werror.patch"
 	"${FILESDIR}/${PN}-1.23.2-fix-cuda-build.patch"
 )
@@ -81,6 +82,7 @@ src_prepare() {
 	cmake_src_prepare
 	cd ${WORKDIR}/onnx-1.21.0
 	eapply ${CMAKE_USE_DIR}/patches/onnx/onnx.patch
+	eapply ${FILESDIR}/onnx-1.21.1-force-static-libs.patch
 }
 
 src_configure() {

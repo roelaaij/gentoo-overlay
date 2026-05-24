@@ -1,0 +1,10 @@
+--- a/cmake/external/onnxruntime_external_deps.cmake	2026-05-24 16:38:29.726399709 +0200
++++ b/cmake/external/onnxruntime_external_deps.cmake	2026-05-24 15:37:34.326434998 +0200
+@@ -533,6 +533,7 @@
+   FIND_PACKAGE_ARGS NAMES ONNX onnx REQUIRED
+ )
+ 
++set(ONNX_SHARED_LIBS OFF)
+ onnxruntime_fetchcontent_makeavailable(onnx)
+ 
+ if(TARGET ONNX::onnx AND NOT TARGET onnx)

@@ -1,0 +1,13 @@
+--- a/CMakeLists.txt	2026-05-24 16:28:36.996405431 +0200
++++ b/CMakeLists.txt	2026-05-24 16:26:24.026406715 +0200
+@@ -34,7 +34,9 @@
+     OUTPUT_STRIP_TRAILING_WHITESPACE)
+ endif()
+
+-if(NOT BUILD_SHARED_LIBS)
++if(DEFINED ONNX_SHARED_LIBS)
++  set(BUILD_SHARED_LIBS ${ONNX_SHARED_LIBS})
++elseif(NOT BUILD_SHARED_LIBS)
+   # by default, cmake builds static libraries
+   set(BUILD_SHARED_LIBS OFF)
+ endif()

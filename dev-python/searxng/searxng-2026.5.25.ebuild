@@ -14,7 +14,7 @@ HOMEPAGE="https://github.com/searxng/searxng https://docs.searxng.org"
 
 SEARXNG_COMMIT="28ef4f7447debd6f988963c80b3ad15046c65908"
 MY_P="${PN}-${SEARXNG_COMMIT}"
-SRC_URI="https://github.com/searxng/searxng/archive/${SEARXNG_COMMIT}.tar.gz"
+SRC_URI="https://github.com/searxng/searxng/archive/${SEARXNG_COMMIT}.tar.gz -> ${P}.tar.gz"
 
 LICENSE="MIT"
 SLOT="0"
@@ -25,25 +25,26 @@ RDEPEND="server? ( dev-python/granian )"
 
 RDEPEND="
 	${DEPEND}
-	acct-group/valkey
-	acct-user/valkey
+	acct-group/searxng
+	acct-user/searxng
 "
 
 BDEPEND="
-	acct-group/valkey
-	acct-user/valkey
+	acct-group/searxng
+	acct-user/searxng
 "
 
 S=${WORKDIR}/${MY_P}
 
 src_install() {
+	distutils-r1_src_install
+
 	insinto /etc/searxng
 	doins utils/templates/etc/searxng/settings.yml
 	doins searx/limiter.toml
-	use prefix || fowners -R searxng:searxng /etc/searxng /etc/searxng/{searxng,sentinel}.conf
+	use prefix || fowners -R searxng:searxng /etc/searxng
 	fperms 0750 /etc/searxng
 	fperms 0644 /etc/searxng/settings.yml
-
 }
 
 distutils_enable_tests pytest

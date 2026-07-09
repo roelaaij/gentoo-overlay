@@ -192,15 +192,4 @@ src_install() {
 
 pkg_postinst() {
 	fcaps cap_net_admin,cap_net_raw=eip usr/bin/pcsx2-qt
-
-	# calls aplay or gst-play/launch-1.0 as fallback
-	# https://github.com/PCSX2/pcsx2/issues/11141
-	optfeature "UI sound effects support" \
-		media-sound/alsa-utils \
-		media-libs/gst-plugins-base:1.0
-
-	if ver_replacing -lt 2.2.0; then
-		elog
-		elog "Note that the 'pcsx2' executable was renamed to 'pcsx2-qt' with this version."
-	fi
 }

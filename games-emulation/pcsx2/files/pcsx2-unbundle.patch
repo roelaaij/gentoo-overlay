@@ -17,15 +17,15 @@ index 8407e6393..de18e1f6c 100644
 @@ -27,6 +27,9 @@ if(USE_VULKAN)
  	find_package(Shaderc REQUIRED)
  endif()
- 
+
 +# Prevent fmt from being built with exceptions, or being thrown at call sites.
 +set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_USE_EXCEPTIONS=0 -DFMT_USE_RTTI=0")
 +
  # Platform-specific dependencies.
  if (WIN32)
  	add_subdirectory(3rdparty/D3D12MemAlloc EXCLUDE_FROM_ALL)
-@@ -75,6 +78,14 @@ else()
- 
+@@ -75,6 +78,13 @@ else()
+
  		find_package(PkgConfig REQUIRED)
  		pkg_check_modules(DBUS REQUIRED dbus-1)
 +		pkg_check_modules(cpuinfo REQUIRED libcpuinfo)
@@ -34,11 +34,10 @@ index 8407e6393..de18e1f6c 100644
 +		find_package(cubeb REQUIRED)
 +		find_package(libzip REQUIRED)
 +		find_package(RapidJSON REQUIRED)
-+		add_library(rapidjson INTERFACE)
 +		find_package(fmt REQUIRED)
  	endif()
  endif()
- 
+
 @@ -84,14 +95,10 @@ add_subdirectory(3rdparty/fast_float EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/lzma EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/libchdr EXCLUDE_FROM_ALL)
@@ -53,21 +52,21 @@ index 8407e6393..de18e1f6c 100644
 -add_subdirectory(3rdparty/rapidjson EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/discord-rpc EXCLUDE_FROM_ALL)
  add_subdirectory(3rdparty/freesurround EXCLUDE_FROM_ALL)
- 
+
 @@ -103,9 +110,6 @@ if(USE_VULKAN)
  	add_subdirectory(3rdparty/vulkan EXCLUDE_FROM_ALL)
  endif()
- 
+
 -add_subdirectory(3rdparty/cubeb EXCLUDE_FROM_ALL)
 -disable_compiler_warnings_for_target(cubeb)
 -disable_compiler_warnings_for_target(speex)
- 
+
  # Find the Qt components that we need.
  if(ENABLE_QT_UI)
 @@ -138,10 +142,6 @@ elseif(ARCH_ARM64)
  	add_subdirectory(3rdparty/vixl EXCLUDE_FROM_ALL)
  endif()
- 
+
 -# Prevent fmt from being built with exceptions, or being thrown at call sites.
 -set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFMT_USE_EXCEPTIONS=0 -DFMT_USE_RTTI=0")
 -add_subdirectory(3rdparty/fmt EXCLUDE_FROM_ALL)
@@ -82,7 +81,7 @@ index 1ff5bbc23..aeb6f4dde 100644
 @@ -13,6 +13,9 @@ target_compile_features(PCSX2_FLAGS INTERFACE cxx_std_17)
  target_compile_definitions(PCSX2_FLAGS INTERFACE "${PCSX2_DEFS}")
  target_compile_options(PCSX2_FLAGS INTERFACE "${PCSX2_WARNINGS}")
- 
+
 +target_compile_definitions(PCSX2_FLAGS INTERFACE SI_CONVERT_ICU)
 +target_compile_definitions(PCSX2_FLAGS INTERFACE ST_NO_EXCEPTION_HANDLING)
 +
@@ -102,7 +101,7 @@ index 9d35bbd93..cfc04fa45 100644
 --- a/pcsx2/INISettingsInterface.cpp
 +++ b/pcsx2/INISettingsInterface.cpp
 @@ -136,7 +136,14 @@ void INISettingsInterface::Clear()
- 
+
  bool INISettingsInterface::IsEmpty()
  {
 -	return (m_ini.GetKeyCount() == 0);
@@ -115,8 +114,7 @@ index 9d35bbd93..cfc04fa45 100644
 +                        return keys.empty();
 +                      } ) );
  }
- 
- bool INISettingsInterface::GetIntValue(const char* section, const char* key, int* value) const
--- 
-2.53.0
 
+ bool INISettingsInterface::GetIntValue(const char* section, const char* key, int* value) const
+--
+2.53.0

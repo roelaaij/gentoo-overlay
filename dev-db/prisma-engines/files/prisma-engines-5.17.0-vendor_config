@@ -1,0 +1,29 @@
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/prisma/barrel.git?branch=mssql-support"]
+git = "https://github.com/prisma/barrel.git"
+branch = "mssql-support"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/prisma/cuid-rust?branch=wasm32-support"]
+git = "https://github.com/prisma/cuid-rust"
+branch = "wasm32-support"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/prisma/graphql-parser"]
+git = "https://github.com/prisma/graphql-parser"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/prisma/mysql_async?branch=vendored-openssl"]
+git = "https://github.com/prisma/mysql_async"
+branch = "vendored-openssl"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/prisma/rust-postgres?branch=pgbouncer-mode"]
+git = "https://github.com/prisma/rust-postgres"
+branch = "pgbouncer-mode"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"

@@ -1,0 +1,8 @@
+--- old/libs/user-facing-errors/src/lib.rs	2024-07-15 17:29:09.000000000 +0200
++++ new/libs/user-facing-errors/src/lib.rs	2026-07-14 16:38:28.900882124 +0200
+@@ -1,4 +1,4 @@
+-#![deny(unsafe_code, warnings, rust_2018_idioms)]
++#![deny(unsafe_code, rust_2018_idioms)]
+ #![allow(clippy::derive_partial_eq_without_eq)]
+ 
+ mod panic_hook;

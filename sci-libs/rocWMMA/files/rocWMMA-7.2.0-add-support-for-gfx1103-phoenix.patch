@@ -1,0 +1,68 @@
+--- a/CMakeLists.txt	2026-01-21 21:47:23.694202400 +0100
++++ b/CMakeLists.txt	2026-07-16 11:44:29.231481377 +0200
+@@ -111,7 +111,7 @@
+         TARGETS "gfx90a:xnack+;gfx942:xnack+;gfx950:xnack+" )
+ else()
+     rocm_check_target_ids(DEFAULT_GPU_TARGETS
+-        TARGETS "gfx908;gfx90a;gfx942;gfx950;gfx1100;gfx1101;gfx1102;gfx1150;gfx1151;gfx1200;gfx1201" )
++        TARGETS "gfx908;gfx90a;gfx942;gfx950;gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151;gfx1200;gfx1201" )
+ endif()
+ 
+ # check if ROCm supports `__hip_fp8_e5m2` and `__hip_fp8_e4m3`
+--- a/library/include/rocwmma/internal/constants.hpp	2026-01-21 21:47:23.694202400 +0100
++++ b/library/include/rocwmma/internal/constants.hpp	2026-07-16 11:46:22.382006763 +0200
+@@ -42,6 +42,7 @@
+         static constexpr uint32_t AMDGCN_ARCH_ID_GFX1100 = 0x1100;
+         static constexpr uint32_t AMDGCN_ARCH_ID_GFX1101 = 0x1101;
+         static constexpr uint32_t AMDGCN_ARCH_ID_GFX1102 = 0x1102;
++        static constexpr uint32_t AMDGCN_ARCH_ID_GFX1103 = 0x1103;
+         static constexpr uint32_t AMDGCN_ARCH_ID_GFX1150 = 0x1150;
+         static constexpr uint32_t AMDGCN_ARCH_ID_GFX1151 = 0x1151;
+         static constexpr uint32_t AMDGCN_ARCH_ID_GFX1200 = 0x1200;
+@@ -72,6 +73,8 @@
+         static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX1101;
+ #elif ROCWMMA_ARCH_GFX1102
+         static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX1102;
++#elif ROCWMMA_ARCH_GFX1103
++        static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX1103;
+ #elif ROCWMMA_ARCH_GFX1150
+         static constexpr uint32_t AMDGCN_CURRENT_ARCH_ID = AMDGCN_ARCH_ID_GFX1150;
+ #elif ROCWMMA_ARCH_GFX1151
+--- a/library/include/rocwmma/internal/config.hpp	2026-01-21 21:47:23.694202400 +0100
++++ b/library/include/rocwmma/internal/config.hpp	2026-07-16 11:45:31.481728139 +0200
+@@ -37,6 +37,7 @@
+ /// ROCWMMA_ARCH_GFX1100
+ /// ROCWMMA_ARCH_GFX1101
+ /// ROCWMMA_ARCH_GFX1102
++/// ROCWMMA_ARCH_GFX1103
+ /// ROCWMMA_ARCH_GFX1150
+ /// ROCWMMA_ARCH_GFX1151
+ /// ROCWMMA_ARCH_GFX1200
+@@ -65,6 +66,8 @@
+ #define ROCWMMA_ARCH_GFX1101 __gfx1101__
+ #elif defined(__gfx1102__) && ROCWMMA_DEVICE_COMPILE
+ #define ROCWMMA_ARCH_GFX1102 __gfx1102__
++#elif defined(__gfx1103__) && ROCWMMA_DEVICE_COMPILE
++#define ROCWMMA_ARCH_GFX1103 __gfx1103__
+ #elif defined(__gfx1150__) && ROCWMMA_DEVICE_COMPILE
+ #define ROCWMMA_ARCH_GFX1150 __gfx1150__
+ #elif defined(__gfx1151__) && ROCWMMA_DEVICE_COMPILE
+@@ -106,6 +109,9 @@
+ #if !defined(ROCWMMA_ARCH_GFX1151)
+ #define ROCWMMA_ARCH_GFX1151 0
+ #endif
++#if !defined(ROCWMMA_ARCH_GFX1103)
++#define ROCWMMA_ARCH_GFX1103 0
++#endif
+ #if !defined(ROCWMMA_ARCH_GFX1200)
+ #define ROCWMMA_ARCH_GFX1200 0
+ #endif
+@@ -134,7 +140,7 @@
+ #define ROCWMMA_BLOCK_DIM_32_SUPPORTED 1
+ #endif
+ 
+-#if ROCWMMA_ARCH_GFX1100 || ROCWMMA_ARCH_GFX1101 || ROCWMMA_ARCH_GFX1102 || ROCWMMA_ARCH_GFX1150 || ROCWMMA_ARCH_GFX1151
++#if ROCWMMA_ARCH_GFX1100 || ROCWMMA_ARCH_GFX1101 || ROCWMMA_ARCH_GFX1102 || ROCWMMA_ARCH_GFX1103 || ROCWMMA_ARCH_GFX1150 || ROCWMMA_ARCH_GFX1151
+ #define ROCWMMA_ARCH_GFX11 1
+ #define ROCWMMA_WAVE32_MODE 1
+ #define ROCWMMA_BLOCK_DIM_16_SUPPORTED 1

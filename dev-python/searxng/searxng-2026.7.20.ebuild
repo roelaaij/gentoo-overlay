@@ -12,7 +12,7 @@ inherit distutils-r1
 DESCRIPTION="SearXNG is a free internet metasearch engine which aggregates results from various search services and databases. Users are neither tracked nor profiled."
 HOMEPAGE="https://github.com/searxng/searxng https://docs.searxng.org"
 
-SEARXNG_COMMIT="6da6eee265daeb4a62ab638d6921522bf405de69"
+SEARXNG_COMMIT="28ef4f7447debd6f988963c80b3ad15046c65908"
 MY_P="${PN}-${SEARXNG_COMMIT}"
 SRC_URI="https://github.com/searxng/searxng/archive/${SEARXNG_COMMIT}.tar.gz -> ${P}.tar.gz"
 

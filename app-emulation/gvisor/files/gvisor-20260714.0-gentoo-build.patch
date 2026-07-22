@@ -1,0 +1,178 @@
+diff --git a/.bazelrc b/.bazelrc
+index 61f50aa..47205c4 100644
+--- a/.bazelrc
++++ b/.bazelrc
+@@ -46,6 +46,8 @@ build:aarch64 --crosstool_top=@crosstool//:toolchains
+ build:aarch64 --cpu=aarch64
+ build:aarch64 --platforms=@io_bazel_rules_go//go/toolchain:linux_arm64
+ 
+-# Use prebuilt protoc to speed up builds.
+-common --@com_google_protobuf//bazel/toolchains:prefer_prebuilt_protoc
++# The system protoc is 34.2 while the protobuf source module is 33.4.
++# Selecting it requires explicitly accepting protobuf's compatibility warning.
++common --@com_google_protobuf//bazel/toolchains:allow_nonstandard_protoc
++
+ common --incompatible_enable_proto_toolchain_resolution=true
+diff --git a/BUILD b/BUILD
+index 22cece9..e36fc64 100644
+--- a/BUILD
++++ b/BUILD
+@@ -1,3 +1,4 @@
++load("@com_google_protobuf//bazel/toolchains:proto_toolchain.bzl", "proto_toolchain")
+ load("@rules_license//rules:license.bzl", "license")
+ load("//tools:defs.bzl", "build_test", "gazelle", "go_path")
+ load("//tools/nogo:defs.bzl", "nogo_config")
+@@ -91,6 +92,12 @@ yaml_test(
+     schema = "@buildkite_pipeline_schema//file",
+ )
+ 
++# Use the system-installed protoc instead of protobuf's downloaded binary.
++proto_toolchain(
++    name = "system_protoc",
++    proto_compiler = "@system_protoc//:bin/protoc",
++)
++
+ # The sandbox filegroup is used for sandbox-internal dependencies.
+ package_group(
+     name = "sandbox",
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 1b22d09..eee6e08 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -97,6 +97,13 @@ new_local_repository(
+     path = "external/tools/plugin-stack",
+ )
+ 
++# Expose the distribution's protoc as an executable Bazel target.
++new_local_repository(
++    name = "system_protoc",
++    build_file = "//tools:system_protoc.BUILD",
++    path = "/usr",
++)
++
+ http_file(
+     name = "buildkite_pipeline_schema",
+     sha256 = "3369c58038b4d55c08928affafb653716eb1e7b3cabb4a391aef979dd921f4e1",
+@@ -122,16 +129,18 @@ http_file(
+ 
+ ### Toolchains
+ register_toolchains("//:cc_toolchain_k8")
++register_toolchains("//:system_protoc_toolchain")
+ 
+ register_toolchains("//:cc_toolchain_aarch64")
+ 
+ ### Go
+ go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+-go_sdk.from_file(
+-    go_mod = "//:go.mod",
+-    patch_strip = 1,
+-    patches = ["//tools:go_types_memoize.patch"],
++new_local_repository(
++    name = "system_go",
++    path = "/usr/lib/go",
++    build_file = "//tools:system_go.BUILD",
+ )
++go_sdk.wrap(root_file = "@system_go//:VERSION")
+ 
+ go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
+ go_deps.from_file(go_mod = "//:go.mod")
+diff --git a/tools/arch.bzl b/tools/arch.bzl
+index fe043b3..357bc03 100644
+--- a/tools/arch.bzl
++++ b/tools/arch.bzl
+@@ -1,14 +1,16 @@
+ """Wrappers for architecture-specific rules."""
+ 
+-load("//tools/bazeldefs:defs.bzl", _amd64_config = "amd64_config", _arch_config = "arch_config", _arm64_config = "arm64_config", _select_arch = "select_arch", _transition_allowlist = "transition_allowlist")
++load("//tools/bazeldefs:defs.bzl", _amd64_config = "amd64_config", _arch_config = "arch_config", _select_arch = "select_arch", _transition_allowlist = "transition_allowlist")
+ 
+ # Export arch rules.
+ select_arch = _select_arch
+ transition_allowlist = _transition_allowlist
+ 
+ def arch_transition_impl(settings, attr):
++    # This local x86_64-only build deliberately omits ARM64 generated
++    # resources and static-analysis configurations. Targets built through this
++    # transition therefore require no AArch64 C/C++ toolchain.
+     return {
+-        "arm64": _arm64_config(settings, attr),
+         "amd64": _amd64_config(settings, attr),
+     }
+ 
+diff --git a/tools/bazeldefs/defs.bzl b/tools/bazeldefs/defs.bzl
+index 9269181..32d7107 100644
+--- a/tools/bazeldefs/defs.bzl
++++ b/tools/bazeldefs/defs.bzl
+@@ -104,5 +104,7 @@ def bpf_program(name, src, bpf_object, visibility, hdrs):
+         srcs = [src],
+         visibility = visibility,
+         outs = [bpf_object],
+-        cmd = "clang -O2 -Wall -Werror -target bpf -c $< -o $@ -I/usr/include/$$(uname -m)-linux-gnu",
++        # Set GVISOR_BPF_CLANG via --action_env to select a versioned clang
++        # executable. Keep plain "clang" as the portable default.
++        cmd = "\"$${GVISOR_BPF_CLANG:-clang}\" -O2 -Wall -Werror -target bpf -c $< -o $@ -I/usr/include/$$(uname -m)-linux-gnu",
+     )
+diff --git a/tools/bazeldefs/extensions/coral_crosstool.bzl b/tools/bazeldefs/extensions/coral_crosstool.bzl
+index 3515855..7e062a8 100644
+--- a/tools/bazeldefs/extensions/coral_crosstool.bzl
++++ b/tools/bazeldefs/extensions/coral_crosstool.bzl
+@@ -8,6 +8,8 @@ def _crosstool_impl(ctx):
+         patch_args = ["-p1"],
+         patches = [
+             "//tools:crosstool-arm-dirs.patch",
++            "//tools:crosstool-gentoo-x86-path.patch",
++            "//tools:crosstool-gentoo-gcc.patch",
+             "//tools:remove_windows_deps.patch",
+         ],
+         sha256 = "f86d488ca353c5ee99187579fe408adb73e9f2bb1d69c6e3a42ffb904ce3ba01",
+diff --git a/tools/crosstool-gentoo-gcc.patch b/tools/crosstool-gentoo-gcc.patch
+new file mode 100644
+index 0000000..4842604
+--- /dev/null
++++ b/tools/crosstool-gentoo-gcc.patch
+@@ -0,0 +1,12 @@
++diff --git a/cc_toolchain_config.bzl.tpl b/cc_toolchain_config.bzl.tpl
++index e864fa2..b91c98d 100644
++--- a/cc_toolchain_config.bzl.tpl
+++++ b/cc_toolchain_config.bzl.tpl
++@@ -195,7 +195,6 @@ def _impl(ctx):
++                 flag_groups = [
++                     flag_group(
++                         flags = [
++-                            "-no-canonical-prefixes",
++                             "-fno-canonical-system-headers",
++                             "-Wno-builtin-macro-redefined",
++                             "-D__DATE__=\"redacted\"",
+diff --git a/tools/crosstool-gentoo-x86-path.patch b/tools/crosstool-gentoo-x86-path.patch
+new file mode 100644
+index 0000000..d6ce074
+--- /dev/null
++++ b/tools/crosstool-gentoo-x86-path.patch
+@@ -0,0 +1,11 @@
++diff --git a/cc_toolchain_config.bzl.tpl b/cc_toolchain_config.bzl.tpl
++index e864fa2..d8e6fa1 100644
++--- a/cc_toolchain_config.bzl.tpl
+++++ b/cc_toolchain_config.bzl.tpl
++@@ -122,5 +122,5 @@ TOOL_PATH_PREFIX = {
++-    "k8":      "/usr/bin/x86_64-linux-gnu-",
+++    "k8":      "/usr/bin/",
++     "armv7a":  "/usr/bin/arm-linux-gnueabihf-",
++     "armv6":   "%{bcm2708_toolchain_root}%/arm-linux-gnueabihf/bin/arm-linux-gnueabihf-",
++     "aarch64": "/usr/bin/aarch64-linux-gnu-",
++     "riscv64": "/usr/bin/riscv64-linux-gnu-",
+diff --git a/tools/system_go.BUILD b/tools/system_go.BUILD
+new file mode 100644
+index 0000000..876315a
+--- /dev/null
++++ b/tools/system_go.BUILD
+@@ -0,0 +1 @@
++exports_files(["VERSION"])
+diff --git a/tools/system_protoc.BUILD b/tools/system_protoc.BUILD
+new file mode 100644
+index 0000000..7edd34c
+--- /dev/null
++++ b/tools/system_protoc.BUILD
+@@ -0,0 +1,3 @@
++package(default_visibility = ["//visibility:public"])
++
++exports_files(["bin/protoc"])

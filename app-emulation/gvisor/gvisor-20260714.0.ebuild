@@ -55,7 +55,8 @@ src_unpack() {
 	gvisor_bazel fetch \
 		--config=x86_64 \
 		--repository_cache="${WORKDIR}/bazel-repository-cache" \
-		//runsc:runsc || die
+		//runsc:runsc \
+		//shim:containerd-shim-runsc-v1 || die
 }
 
 src_prepare() {
@@ -78,9 +79,11 @@ src_compile() {
 		--jobs="$(makeopts_jobs)" \
 		--nofetch \
 		--repository_cache="${WORKDIR}/bazel-repository-cache" \
-		//runsc:runsc || die
+		//runsc:runsc \
+		//shim:containerd-shim-runsc-v1 || die
 }
 
 src_install() {
 	dobin bazel-bin/runsc/runsc_/runsc
+	dobin bazel-bin/shim/containerd-shim-runsc-v1_/containerd-shim-runsc-v1
 }

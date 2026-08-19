@@ -1,9 +1,9 @@
-# Copyright 2023-2025 Gentoo Authors
+# Copyright 2023-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 
-PYTHON_COMPAT=( python3_{11..14} )
+PYTHON_COMPAT=( python3_{11..15} )
 
 inherit cuda cmake python-any-r1 flag-o-matic toolchain-funcs
 
@@ -156,6 +156,9 @@ src_test() {
 
 src_install() {
 	cmake_src_install
+
+	insinto /usr/share/cutlass/examples
+	doins -r examples/python
 
 	rm -r "${ED}/usr/test" || die
 }

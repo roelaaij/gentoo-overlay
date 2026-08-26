@@ -3,7 +3,7 @@
 
 EAPI=8
 
-PYTHON_COMPAT=( python3_{12..14} )
+PYTHON_COMPAT=( python3_{12..15} )
 
 inherit cmake edo flag-o-matic python-r1
 
@@ -92,6 +92,8 @@ src_configure() {
 	python_setup
 
 	local mycmakeargs=(
+		-Donnxruntime_USE_TELEMETRY=OFF
+
 		-Donnxruntime_BUILD_SHARED_LIB=on
 
 		-Donnxruntime_BUILD_UNIT_TESTS=$(usex test)
@@ -159,6 +161,7 @@ src_test() {
 		"SignalOpsTest.DFT20_2D_complex_onesided_inverse"
 		"SignalOpsTest.DFT20_IRFFT_naive"
 		"SignalOpsTest.DFT20_IRFFT_radix2"
+		"SignalOpsTest.DFT20_IRFFT_underprovided_spectrum_prime"
 		"SignalOpsTest.DFT20_RFFT_IRFFT_roundtrip"
 	)
 	local -x GTEST_FILTER="*:-$(IFS=':'; echo "${GTEST_SKIP_TESTS[*]}")"

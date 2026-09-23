@@ -50,6 +50,10 @@ BDEPEND="
 	)
 "
 
+PATCHES=(
+	"${FILESDIR}"/${PN}-2.1.3-hdf5-2.patch
+)
+
 pkg_setup() {
 	use python && python-single-r1_pkg_setup
 }

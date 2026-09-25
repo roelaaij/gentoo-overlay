@@ -1,6 +1,6 @@
-From 28584c919b6f367728ac8eeb0b38de71227b46b7 Mon Sep 17 00:00:00 2001
+From e0025003a89462f3ecb1783c6067e5ba0642b16f Mon Sep 17 00:00:00 2001
 From: Roel Aaij <roel.aaij@gmail.com>
-Date: Thu, 19 Jun 2025 21:24:53 +0200
+Date: Thu, 24 Sep 2026 23:21:40 +0200
 Subject: [PATCH] system minizip-ng
 
 ---
@@ -10,10 +10,10 @@ Subject: [PATCH] system minizip-ng
  3 files changed, 15 insertions(+), 15 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 549007ddd6..10ec0536eb 100644
+index 5ea7f8e112..28218109be 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -689,7 +689,7 @@ dolphin_make_imported_target_if_missing(LibLZMA::LibLZMA LIBLZMA)
+@@ -673,7 +673,7 @@ dolphin_make_imported_target_if_missing(LibLZMA::LibLZMA LIBLZMA)
  
  dolphin_find_optional_system_library_pkgconfig(ZSTD libzstd>=1.4.0 zstd::zstd Externals/zstd)
  
@@ -21,9 +21,9 @@ index 549007ddd6..10ec0536eb 100644
 +dolphin_find_optional_system_library_pkgconfig(ZLIBNG zlib-ng>=2.2.3 ZLIB::ZLIB Externals/zlib-ng)
  
  dolphin_find_optional_system_library_pkgconfig(minizip-ng
-   "minizip-ng>=4.0.4" minizip-ng::minizip-ng Externals/minizip-ng
+   "minizip-ng>=4.0.4" MINIZIP::minizip-ng Externals/minizip-ng
 diff --git a/Source/Core/Common/Hash.cpp b/Source/Core/Common/Hash.cpp
-index 8cb697b695..9b7472bc22 100644
+index f5b9da1b20..535612896d 100644
 --- a/Source/Core/Common/Hash.cpp
 +++ b/Source/Core/Common/Hash.cpp
 @@ -7,7 +7,7 @@
@@ -33,9 +33,9 @@ index 8cb697b695..9b7472bc22 100644
 -#include <zlib.h>
 +#include <zlib-ng.h>
  
- #include "Common/BitUtils.h"
  #include "Common/CPUDetect.h"
-@@ -27,7 +27,7 @@ namespace Common
+ #include "Common/Intrinsics.h"
+@@ -25,7 +25,7 @@ namespace Common
  u32 HashAdler32(const u8* data, size_t len)
  {
    // Use fast implementation from zlib-ng
@@ -44,12 +44,12 @@ index 8cb697b695..9b7472bc22 100644
  }
  
  // Stupid hash - but can't go back now :)
-@@ -429,12 +429,12 @@ u64 GetHash64(const u8* src, u32 len, u32 samples)
+@@ -440,12 +440,12 @@ u64 GetHash64(const u8* src, u32 len, u32 samples)
  
  u32 StartCRC32()
  {
--  return crc32_z(0L, Z_NULL, 0);
-+  return zng_crc32_z(0L, Z_NULL, 0);
+-  return crc32_z(0L, nullptr, 0);
++  return zng_crc32_z(0L, nullptr, 0);
  }
  
  u32 UpdateCRC32(u32 crc, const u8* data, size_t len)
@@ -60,7 +60,7 @@ index 8cb697b695..9b7472bc22 100644
  
  u32 ComputeCRC32(const u8* data, size_t len)
 diff --git a/Source/Core/DiscIO/CompressedBlob.cpp b/Source/Core/DiscIO/CompressedBlob.cpp
-index 99a982efd9..061cedfc06 100644
+index 46573b6111..234e30c9b9 100644
 --- a/Source/Core/DiscIO/CompressedBlob.cpp
 +++ b/Source/Core/DiscIO/CompressedBlob.cpp
 @@ -11,7 +11,7 @@
@@ -72,16 +72,16 @@ index 99a982efd9..061cedfc06 100644
  
  #ifdef _WIN32
  #include <windows.h>
-@@ -132,7 +132,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
+@@ -183,7 +183,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
    }
    else
    {
 -    z_stream z = {};
 +    zng_stream z = {};
      z.next_in = m_zlib_buffer.data();
-     z.avail_in = comp_block_size;
+     z.avail_in = read_size;
      if (z.avail_in > m_header.block_size)
-@@ -141,8 +141,8 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
+@@ -192,8 +192,8 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
      }
      z.next_out = out_ptr;
      z.avail_out = m_header.block_size;
@@ -92,7 +92,7 @@ index 99a982efd9..061cedfc06 100644
      u32 uncomp_size = m_header.block_size - z.avail_out;
      if (status != Z_STREAM_END)
      {
-@@ -150,7 +150,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
+@@ -201,7 +201,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
        // to be sure, don't use compressed isos :P
        ERROR_LOG_FMT(DISCIO, "Failure reading block {} - out of data and not at end.", block_num);
      }
@@ -101,7 +101,7 @@ index 99a982efd9..061cedfc06 100644
      if (uncomp_size != m_header.block_size)
      {
        ERROR_LOG_FMT(DISCIO, "Wrong block size");
-@@ -163,7 +163,7 @@ bool CompressedBlobReader::GetBlock(u64 block_num, u8* out_ptr)
+@@ -254,7 +254,7 @@ bool CompressedBlobReader::ValidateBlockPointers() const
  struct CompressThreadState
  {
    CompressThreadState() : z{} {}
@@ -110,7 +110,7 @@ index 99a982efd9..061cedfc06 100644
  
    // z_stream will stop working if it changes address, so this object must not be moved
    CompressThreadState(const CompressThreadState&) = delete;
-@@ -172,7 +172,7 @@ struct CompressThreadState
+@@ -263,7 +263,7 @@ struct CompressThreadState
    CompressThreadState& operator=(CompressThreadState&&) = delete;
  
    std::vector<u8> compressed_buffer;
@@ -119,7 +119,7 @@ index 99a982efd9..061cedfc06 100644
  };
  
  struct CompressParameters
-@@ -192,7 +192,7 @@ struct OutputParameters
+@@ -283,7 +283,7 @@ struct OutputParameters
  
  static ConversionResultCode SetUpCompressThreadState(CompressThreadState* state)
  {
@@ -128,7 +128,7 @@ index 99a982efd9..061cedfc06 100644
                                               ConversionResultCode::InternalError;
  }
  
-@@ -203,7 +203,7 @@ static ConversionResult<OutputParameters> Compress(CompressThreadState* state,
+@@ -294,7 +294,7 @@ static ConversionResult<OutputParameters> Compress(CompressThreadState* state,
  {
    state->compressed_buffer.resize(block_size);
  
@@ -137,8 +137,8 @@ index 99a982efd9..061cedfc06 100644
    state->z.next_in = parameters.data.data();
    state->z.avail_in = block_size;
    state->z.next_out = state->compressed_buffer.data();
-@@ -215,7 +215,7 @@ static ConversionResult<OutputParameters> Compress(CompressThreadState* state,
-     return ConversionResultCode::InternalError;
+@@ -306,7 +306,7 @@ static ConversionResult<OutputParameters> Compress(CompressThreadState* state,
+     return std::unexpected{ConversionResultCode::InternalError};
    }
  
 -  const int status = deflate(&state->z, Z_FINISH);
@@ -147,5 +147,5 @@ index 99a982efd9..061cedfc06 100644
    state->compressed_buffer.resize(block_size - state->z.avail_out);
  
 -- 
-2.50.0
+2.55.0
 

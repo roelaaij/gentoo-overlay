@@ -4,7 +4,7 @@
 EAPI=8
 
 ROCM_VERSION=7.2
-inherit cuda cmake rocm toolchain-funcs
+inherit cuda cmake rocm toolchain-funcs flag-o-matic
 
 DESCRIPTION="Tensor library for machine learning"
 HOMEPAGE="https://ggml.ai/"
@@ -12,13 +12,17 @@ SRC_URI="https://github.com/ggml-org/${PN}/archive/refs/tags/v${PV}.tar.gz
 	-> ${P}.tar.gz"
 
 LICENSE="MIT"
-SLOT="0"
+SLOT="0/${PV}"
 KEYWORDS="~amd64 ~arm64"
 
 X86_CPU_FLAGS=(
+	amx_bf16
+	amx_int8
+	amx_tile
 	avx
 	avx_vnni
 	avx2
+	avx512_bf16
 	avx512bw
 	avx512f
 	avx512vbmi
@@ -71,6 +75,7 @@ src_prepare() {
 
 	if use cuda; then
 		cuda_src_prepare
+		filter-lto #bug 983121
 	fi
 }
 
@@ -79,11 +84,16 @@ src_configure() {
 		-DGGML_BACKEND_DL=OFF
 		-DGGML_BUILD_EXAMPLES=OFF
 		-DGGML_NATIVE=OFF
+		-DGGML_HIP_MMQ_MFMA=OFF
 
 		# CPU Flags
+		-DGGML_AMX_BF16=$(usex cpu_flags_x86_amx_bf16)
+		-DGGML_AMX_INT8=$(usex cpu_flags_x86_amx_int8)
+		-DGGML_AMX_TILE=$(usex cpu_flags_x86_amx_tile)
 		-DGGML_AVX=$(usex cpu_flags_x86_avx)
 		-DGGML_AVX_VNNI=$(usex cpu_flags_x86_avx_vnni)
 		-DGGML_AVX2=$(usex cpu_flags_x86_avx2)
+		-DGGML_AVX512_BF16=$(usex cpu_flags_x86_avx512_bf16)
 		-DGGML_AVX512_VBMI=$(usex cpu_flags_x86_avx512vbmi)
 		-DGGML_AVX512_VNNI=$(usex cpu_flags_x86_avx512_vnni)
 		-DGGML_BMI2=$(usex cpu_flags_x86_bmi2)

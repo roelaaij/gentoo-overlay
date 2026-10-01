@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>roel.aaij@nikhef.nl</email>
+		<name>Roel Aaij</name>
+	</maintainer>
+	<upstream>
+		<remote-id type="github">pnpm/pnpm</remote-id>
+	</upstream>
+	<longdescription lang="en">
+		pnpm is a fast, disk-space-efficient JavaScript package manager.
+		Content-addressable storage with hardlinks saves disk space and makes
+		installations fast. Version 12.x ships as a native Rust binary; the
+		older 10.x series was a Node.js package.
+	</longdescription>
+</pkgmetadata>

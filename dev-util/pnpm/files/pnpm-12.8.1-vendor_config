@@ -1,0 +1,10 @@
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/pnpm/node-semver-rs?rev=3d74d6b7f4de1de2006cf2f7663aac09de65b1f6"]
+git = "https://github.com/pnpm/node-semver-rs"
+rev = "3d74d6b7f4de1de2006cf2f7663aac09de65b1f6"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"

@@ -1,0 +1,26 @@
+[Unit]
+Description=Backrest web UI for restic backups
+Documentation=https://github.com/garethgeorge/backrest
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=BACKREST_DATA=/var/lib/backrest
+Environment=BACKREST_CONFIG=/etc/backrest/config.json
+Environment=BACKREST_RESTIC_COMMAND=/usr/bin/restic
+Environment=BACKREST_PORT=127.0.0.1:9898
+ExecStart=/usr/bin/backrest
+StateDirectory=backrest
+ConfigurationDirectory=backrest
+LogsDirectory=backrest
+DynamicUser=no
+User=backrest
+Group=backrest
+NoNewPrivileges=yes
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=/var/lib/backrest
+
+[Install]
+WantedBy=multi-user.target

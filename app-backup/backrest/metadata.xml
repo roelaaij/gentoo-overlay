@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>roel.aaij@nikhef.nl</email>
+		<name>Roel Aaij</name>
+	</maintainer>
+	<upstream>
+		<remote-id type="github">garethgeorge/backrest</remote-id>
+	</upstream>
+	<use>
+		<flag name="tray">Build with the desktop tray icon
+			(StatusNotifierItem) in addition to the web UI; needs a D-Bus
+			session.</flag>
+	</use>
+	<longdescription lang="en">
+		Backrest is a web-accessible backup solution built on top of restic.
+		It provides a WebUI which wraps the restic CLI and makes it easy to
+		create repos, browse snapshots, and restore files. Additionally,
+		Backrest can run in the background and take an opinionated approach
+		to scheduling snapshots and orchestrating repo health operations.
+	</longdescription>
+</pkgmetadata>

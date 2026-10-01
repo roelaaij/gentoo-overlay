@@ -1,0 +1,6 @@
+# Backrest: point at the restic binary installed by app-backup/restic.
+# Without this backrest would download restic into its data directory at
+# first start. Override the port and data dir here as needed.
+#BACKREST_RESTIC_COMMAND="/usr/bin/restic"
+#BACKREST_PORT="127.0.0.1:9898"
+#BACKREST_DATA="/var/lib/backrest"

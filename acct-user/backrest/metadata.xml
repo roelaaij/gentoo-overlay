@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>roel.aaij@nikhef.nl</email>
+		<name>Roel Aaij</name>
+	</maintainer>
+</pkgmetadata>

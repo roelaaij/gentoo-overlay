@@ -1,0 +1,22 @@
+#!/sbin/openrc-run
+# Copyright 2026 Gentoo Authors
+# Distributed under the terms of the GNU General Public License v2
+
+description="Backrest web UI for restic backups"
+command="/usr/bin/backrest"
+command_background="yes"
+directory="/var/lib/backrest"
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/backrest/backrest.log"
+error_log="/var/log/backrest/backrest.log"
+
+depend() {
+	need localmount
+	use logger dns
+	after bootmisc
+}
+
+start_pre() {
+	default_start_pre
+	checkpath -d -m 0755 -o root:root /var/log/backrest /var/lib/backrest
+}

@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 EAPI=8
 
-RUST_MAX_VER="1.86.0"
+RUST_MAX_VER="1.90.0"
 
 inherit systemd cargo linux-info udev xdg desktop
 

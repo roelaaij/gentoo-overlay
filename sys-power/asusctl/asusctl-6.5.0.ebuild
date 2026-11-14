@@ -2,11 +2,11 @@
 # Distributed under the terms of the GNU General Public License v2
 EAPI=8
 
-RUST_MIN_VER="1.90.0"
+RUST_MIN_VER="1.92.0"
 RUST_NEEDS_LLVM=1
-LLVM_COMPAT=( 20 21 )
+LLVM_COMPAT=( 21 22 23 )
 
-inherit llvm-r1 systemd cargo linux-info udev xdg desktop
+inherit llvm-r2 systemd cargo linux-info udev xdg desktop
 
 _PV=${PV//_rc/-RC}
 _PVV=`[[ ${_PV} =~ .*"RC".* ]] && echo || echo ${_PV}`
@@ -16,7 +16,7 @@ DESCRIPTION="${PN} (${_PN}) is a utility for Linux to control many aspects of va
 HOMEPAGE="https://asus-linux.org"
 
 SRC_URI="
-	https://gitlab.com/asus-linux/${PN}/-/archive/${_PV}/${PN}-${_PV}.tar.gz -> ${P}.tar.gz
+	https://github.com/OpenGamingCollective/${PN}/archive/refs/tags/${_PV}/${_PV}.tar.gz -> ${P}.tar.gz
 	https://gitlab.com/-/project/20328305/uploads/0f0ff7247d7a63cae89a4a705c78f4ad/vendor_${PN}_${_PV}.tar.xz -> vendor_${PN}_${_PV}.tar.xz
 "
 LICENSE="0BSD Apache-2.0 Apache-2.0-with-LLVM-exceptions BSD BSD-2 Boost-1.0 ISC LicenseRef-UFL-1.0 MIT MPL-2.0 OFL-1.1 Unicode-DFS-2016 Unlicense ZLIB"
@@ -131,7 +131,7 @@ src_install() {
 		doins ${FILESDIR}/90-acpi_call.conf
 	fi
 
-	use gui && domenu rog-control-center/data/rog-control-center.desktop
+	use gui && domenu rog-control-center/data/org.opengamingcollective.rog-control-center.desktop
 
 	default
 }

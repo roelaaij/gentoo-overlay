@@ -4,9 +4,9 @@ EAPI=8
 
 RUST_MIN_VER="1.92.0"
 RUST_NEEDS_LLVM=1
-LLVM_COMPAT=( 21 22 )
+LLVM_COMPAT=( 21 22 23 )
 
-inherit llvm-r1 systemd cargo linux-info udev xdg desktop
+inherit llvm-r2 systemd cargo linux-info udev xdg desktop
 
 _PV=${PV//_rc/-RC}
 _PVV=`[[ ${_PV} =~ .*"RC".* ]] && echo || echo ${_PV}`

@@ -114,7 +114,6 @@ src_prepare() {
 
 src_configure() {
 	local mycmakeargs=(
-		-DGGML_BACKEND_DL=OFF
 		-DGGML_BUILD_EXAMPLES=OFF
 		-DGGML_NATIVE=OFF
 		-DGGML_HIP_MMQ_MFMA=OFF
@@ -191,6 +190,12 @@ src_configure() {
 			# cmake.eclass clears per-build-type flags for C/CXX only; drop CMake's "-O2 -g -DNDEBUG" for HIP
 			-DCMAKE_HIP_FLAGS_${CMAKE_BUILD_TYPE^^}=
 		)
+	fi
+
+	if use cuda && use rocm; then
+		mycmakeargs+=( -DGGML_BACKEND_DL=ON )
+	else
+		mycmakeargs+=( -DGGML_BACKEND_DL=OFF )
 	fi
 
 	cmake_src_configure

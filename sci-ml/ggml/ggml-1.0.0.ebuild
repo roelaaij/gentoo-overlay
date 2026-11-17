@@ -193,7 +193,10 @@ src_configure() {
 	fi
 
 	if use cuda && use rocm; then
-		mycmakeargs+=( -DGGML_BACKEND_DL=ON )
+		mycmakeargs+=(
+			-DGGML_BACKEND_DL=ON
+			-DGGML_BACKEND_DIR="/usr/lib64/ggml/backend"
+		)
 	else
 		mycmakeargs+=( -DGGML_BACKEND_DL=OFF )
 	fi

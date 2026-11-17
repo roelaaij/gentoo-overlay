@@ -1,0 +1,190 @@
+diff --git a/third_party/voice-detect.cpp/CMakeLists.txt b/third_party/voice-detect.cpp/CMakeLists.txt
+index 2bf7915..b4d4498 100644
+--- a/third_party/voice-detect.cpp/CMakeLists.txt
++++ b/third_party/voice-detect.cpp/CMakeLists.txt
+@@ -21,6 +21,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+   set(VOICEDETECT_TOP_LEVEL ON)
+ endif()
+ option(VOICEDETECT_EXTERNAL_DR_WAV "Use the embedding project's dr_wav implementation" OFF)
++option(VOICEDETECT_USE_SYSTEM_GGML "Use system-provided libggml instead of the vendored submodule" OFF)
+ 
+ # An embedding host owns its ggml configuration; everything up to the ggml
+ # add_subdirectory below only applies to a top-level build.
+@@ -123,7 +124,8 @@ endif()
+ # skipped. voice-detect.cpp ships no patches today; the hook is kept so a future
+ # ggml fix can be dropped into third_party/ggml-patches/ without a CMake change.
+ find_program(BASH_EXECUTABLE bash)
+-if(BASH_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/scripts/apply_ggml_patches.sh"
++if(NOT VOICEDETECT_USE_SYSTEM_GGML AND BASH_EXECUTABLE
++   AND EXISTS "${CMAKE_SOURCE_DIR}/scripts/apply_ggml_patches.sh"
+    AND EXISTS "${CMAKE_SOURCE_DIR}/third_party/ggml-patches")
+   execute_process(
+     COMMAND "${BASH_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/apply_ggml_patches.sh"
+@@ -142,6 +144,15 @@ endif()
+ 
+ endif() # VOICEDETECT_TOP_LEVEL
+ 
++# Only when embedded in a host that has not already provided a `ggml` target:
++# an alias cannot be created when the name is taken, which is exactly the case
++# when parakeet.cpp (or another host) resolved ggml itself.
++if(VOICEDETECT_USE_SYSTEM_GGML AND NOT TARGET ggml)
++  message(STATUS "voice-detect.cpp: using system-provided libggml, skipping ggml submodule build")
++  find_package(ggml REQUIRED)
++  add_library(ggml ALIAS ggml::ggml)
++endif()
++
+ if(NOT TARGET ggml)
+   add_subdirectory(third_party/ggml)
+ endif()
+diff --git a/third_party/voice-detect.cpp/scripts/apply_ggml_patches.sh b/third_party/voice-detect.cpp/scripts/apply_ggml_patches.sh
+index 99fa2fe..ab0e2bb 100755
+--- a/third_party/voice-detect.cpp/scripts/apply_ggml_patches.sh
++++ b/third_party/voice-detect.cpp/scripts/apply_ggml_patches.sh
+@@ -10,6 +10,7 @@
+ #
+ # Usage:
+ #   bash scripts/apply_ggml_patches.sh
++#   GGML_DIR=/path/to/ggml bash scripts/apply_ggml_patches.sh
+ #
+ # Exits 0 on success, non-zero on any failure. Designed to be called by CMake
+ # during configure but also runnable standalone for debugging.
+@@ -20,7 +21,7 @@ set -euo pipefail
+ # any CWD (including CMake's build dir).
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+-GGML_DIR="${PROJECT_ROOT}/third_party/ggml"
++GGML_DIR="${GGML_DIR:-${PROJECT_ROOT}/third_party/ggml}"
+ PATCH_DIR="${PROJECT_ROOT}/third_party/ggml-patches"
+ 
+ if [[ ! -d "${GGML_DIR}" ]]; then
+@@ -30,8 +31,10 @@ if [[ ! -d "${GGML_DIR}" ]]; then
+ fi
+ 
+ if [[ ! -d "${GGML_DIR}/.git" && ! -f "${GGML_DIR}/.git" ]]; then
+-    echo "error: ${GGML_DIR} is not a git repository" >&2
+-    exit 1
++    # A system ggml source tree (e.g. sci-ml/ggml[src]) has no .git. `git apply`
++    # still works outside a repository when run from the tree, including the
++    # `--check --reverse` already-applied detection, so this is not fatal.
++    echo "note: ${GGML_DIR} is not a git repository; applying patches without git metadata" >&2
+ fi
+ 
+ if [[ ! -d "${PATCH_DIR}" ]]; then
+diff --git a/third_party/voice-detect.cpp/src/analyze_w2v2.cpp b/third_party/voice-detect.cpp/src/analyze_w2v2.cpp
+index 69dbe7e..6ddb23d 100644
+--- a/third_party/voice-detect.cpp/src/analyze_w2v2.cpp
++++ b/third_party/voice-detect.cpp/src/analyze_w2v2.cpp
+@@ -242,7 +242,11 @@ static ggml_tensor* self_attention(ggml_context* c, const ModelLoader& ml,
+         ggml_tensor* kf = ggml_cont(c, ggml_permute(c, ggml_reshape_3d(c, k, hd, n_heads, T), 0, 2, 1, 3));
+         ggml_tensor* vf = ggml_cont(c, ggml_permute(c, ggml_reshape_3d(c, v, hd, n_heads, T), 0, 2, 1, 3));
+         ggml_tensor* o = ggml_flash_attn_ext(c, qf, kf, vf, nullptr, scaling, 0.0f, 0.0f);
+-        ggml_flash_attn_ext_set_prec(o, GGML_PREC_F32);  // match the manual F32 softmax
++        // ggml 1.0 replaced the per-op ggml_flash_attn_ext_set_prec() with the
++        // generic ggml_prec_set_acc(), which handles GGML_OP_FLASH_ATTN_EXT by
++        // writing op_params[3] -- the same slot the old setter used, so this is
++        // a rename, not a behaviour change.
++        ggml_prec_set_acc(o, GGML_PREC_F32);  // match the manual F32 softmax
+         ggml_tensor* out = ggml_reshape_2d(c, o, H, T);  // out is [hd, n_heads, T] -> [H, T]
+         return linear(c, clone_weight(c, ml, (p + ".out_proj.weight").c_str()),
+                          clone_weight(c, ml, (p + ".out_proj.bias").c_str()), out);
+diff --git a/third_party/voice-detect.cpp/third_party/ggml-patches/0001-ggml-cuda-cudnn-conv2d-implicit-gemm.patch b/third_party/voice-detect.cpp/third_party/ggml-patches/0001-ggml-cuda-cudnn-conv2d-implicit-gemm.patch
+index bc280df..88835ec 100644
+--- a/third_party/voice-detect.cpp/third_party/ggml-patches/0001-ggml-cuda-cudnn-conv2d-implicit-gemm.patch
++++ b/third_party/voice-detect.cpp/third_party/ggml-patches/0001-ggml-cuda-cudnn-conv2d-implicit-gemm.patch
+@@ -1,10 +1,43 @@
++From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
++From: voice-detect.cpp <noreply@localai.io>
++Date: Sun, 15 Nov 2026 00:00:00 +0000
++Subject: [PATCH] ggml-cuda: cuDNN implicit-GEMM forward conv for CONV_2D
++
++Opt-in cuDNN path for GGML_OP_CONV_2D, avoiding the im2col global-memory
++spill of the native kernel. Enabled with -DGGML_CUDA_USE_CUDNN=ON; the
++F32-only, NCHW-only, uncached-shape-during-capture cases all fall back to
++ggml_cuda_op_conv2d, so this is never a correctness risk.
++
++Ported to ggml 1.0.0. Two hunks needed re-anchoring, both context drift
++rather than API change:
++
++  - src/ggml-cuda/CMakeLists.txt: the original anchored after
++    GGML_CUDA_PEER_MAX_BATCH_SIZE, which 1.0.0 removed. The block only needs
++    the ggml-cuda target to exist, so it now sits immediately after
++    ggml_add_backend_library(ggml-cuda ...), before the GGML_CUDA_GRAPHS
++    block. Content is otherwise identical.
++  - src/ggml-cuda/ggml-cuda.cu: the include hunk's context shifted by one
++    line (conv2d-dw.cuh was added upstream); the dispatch hunk moved from
++    line 3041 to 2959. Both applied unchanged once re-anchored.
++
++The 296-line cudnn-conv.cu needed no changes: it uses only
++ggml_backend_cuda_context (ctx.device, ctx.stream()), ggml_is_contiguous,
++ggml_tensor fields, and the cudnn/cuda runtime API, all unchanged in 1.0.0.
++The op_params layout it reads is still s0,s1,p0,p1,d0,d1 at indices 0-5 with
++no c7 slot, and op_params is zero-initialised, so its p[6] cwhn guard is a
++safe no-op.
++
++NOT COMPILED: no CUDA toolchain was available to verify this builds. The
++CMake parses and every symbol it references exists in 1.0.0, but the .cu
++itself has not been through nvcc.
++---
+ diff --git a/src/ggml-cuda/CMakeLists.txt b/src/ggml-cuda/CMakeLists.txt
+-index d3953eee..4f8de668 100644
++index dce8827..3658813 100644
+ --- a/src/ggml-cuda/CMakeLists.txt
+ +++ b/src/ggml-cuda/CMakeLists.txt
+-@@ -131,6 +131,26 @@ if (CUDAToolkit_FOUND)
+- 
+-     add_compile_definitions(GGML_CUDA_PEER_MAX_BATCH_SIZE=${GGML_CUDA_PEER_MAX_BATCH_SIZE})
++@@ -132,6 +132,26 @@ if (CUDAToolkit_FOUND)
++                              ${GGML_SOURCES_CUDA}
++                             )
+  
+ +    # cuDNN forward-conv path for GGML_OP_CONV_2D (see cudnn-conv.cu). Opt-in via
+ +    # -DGGML_CUDA_USE_CUDNN=ON (voice-detect.cpp forwards VOICEDETECT_GGML_CUDNN).
+@@ -31,7 +64,7 @@ index d3953eee..4f8de668 100644
+      endif()
+ diff --git a/src/ggml-cuda/cudnn-conv.cu b/src/ggml-cuda/cudnn-conv.cu
+ new file mode 100644
+-index 00000000..522b75a2
++index 0000000..522b75a
+ --- /dev/null
+ +++ b/src/ggml-cuda/cudnn-conv.cu
+ @@ -0,0 +1,296 @@
+@@ -333,7 +366,7 @@ index 00000000..522b75a2
+ +#endif // GGML_CUDA_USE_CUDNN
+ diff --git a/src/ggml-cuda/cudnn-conv.cuh b/src/ggml-cuda/cudnn-conv.cuh
+ new file mode 100644
+-index 00000000..c4f5f1a8
++index 0000000..c4f5f1a
+ --- /dev/null
+ +++ b/src/ggml-cuda/cudnn-conv.cuh
+ @@ -0,0 +1,15 @@
+@@ -353,18 +386,18 @@ index 00000000..c4f5f1a8
+ +// include dance.
+ +bool ggml_cuda_op_conv2d_cudnn(ggml_backend_cuda_context & ctx, ggml_tensor * dst);
+ diff --git a/src/ggml-cuda/ggml-cuda.cu b/src/ggml-cuda/ggml-cuda.cu
+-index 3d4b5f60..0a5d5d22 100644
++index fed14dd..65e534e 100644
+ --- a/src/ggml-cuda/ggml-cuda.cu
+ +++ b/src/ggml-cuda/ggml-cuda.cu
+-@@ -15,6 +15,7 @@
++@@ -17,6 +17,7 @@
+  #include "ggml-cuda/concat.cuh"
+  #include "ggml-cuda/conv-transpose-1d.cuh"
+  #include "ggml-cuda/conv2d.cuh"
+ +#include "ggml-cuda/cudnn-conv.cuh"
+  #include "ggml-cuda/conv2d-dw.cuh"
+  #include "ggml-cuda/conv2d-transpose.cuh"
+- #include "ggml-cuda/convert.cuh"
+-@@ -3041,6 +3042,12 @@ static bool ggml_cuda_compute_forward(ggml_backend_cuda_context & ctx, struct gg
++ #include "ggml-cuda/conv3d.cuh"
++@@ -2957,6 +2958,12 @@ static bool ggml_cuda_compute_forward(ggml_backend_cuda_context & ctx, struct gg
+              ggml_cuda_op_im2col_3d(ctx, dst);
+              break;
+          case GGML_OP_CONV_2D:
+@@ -376,4 +409,6 @@ index 3d4b5f60..0a5d5d22 100644
+ +#endif
+              ggml_cuda_op_conv2d(ctx, dst);
+              break;
+-         case GGML_OP_CONV_2D_DW:
++         case GGML_OP_CONV_3D:
++-- 
++2.43.0

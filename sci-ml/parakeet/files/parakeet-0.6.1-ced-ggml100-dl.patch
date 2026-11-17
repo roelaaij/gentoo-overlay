@@ -1,0 +1,130 @@
+diff --git a/third_party/ced.cpp/CMakeLists.txt b/third_party/ced.cpp/CMakeLists.txt
+index 5c82aad..9db08f6 100644
+--- a/third_party/ced.cpp/CMakeLists.txt
++++ b/third_party/ced.cpp/CMakeLists.txt
+@@ -21,6 +21,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+ endif()
+ 
+ option(CED_EXTERNAL_DR_WAV "Use the embedding project's dr_wav implementation" OFF)
++option(CED_USE_SYSTEM_GGML "Use system-provided libggml instead of the vendored submodule" OFF)
+ 
+ if(CED_TOP_LEVEL)
+   set(GGML_CUDA   ${CED_GGML_CUDA}   CACHE BOOL "" FORCE)
+@@ -36,6 +37,15 @@ if(CED_TOP_LEVEL)
+     set(GGML_LLAMAFILE ON CACHE BOOL "ggml: use LLAMAFILE (tinyBLAS SGEMM)" FORCE)
+   endif()
+ endif()
++# Only when embedded in a host that has not already provided a `ggml` target:
++# an alias cannot be created when the name is taken, which is exactly the case
++# when parakeet.cpp (or another host) resolved ggml itself.
++if(CED_USE_SYSTEM_GGML AND NOT TARGET ggml)
++  message(STATUS "ced.cpp: using system-provided libggml, skipping ggml submodule build")
++  find_package(ggml REQUIRED)
++  add_library(ggml ALIAS ggml::ggml)
++endif()
++
+ if(NOT TARGET ggml)
+   add_subdirectory(third_party/ggml)
+ endif()
+diff --git a/third_party/ced.cpp/src/ced_runner.cpp b/third_party/ced.cpp/src/ced_runner.cpp
+index 5e60da6..c12e86e 100644
+--- a/third_party/ced.cpp/src/ced_runner.cpp
++++ b/third_party/ced.cpp/src/ced_runner.cpp
+@@ -2,7 +2,6 @@
+ 
+ #include "ggml-alloc.h"
+ #include "ggml-backend.h"
+-#include "ggml-cpu.h"
+ #include "ggml.h"
+ 
+ #include <cctype>
+@@ -22,6 +21,26 @@ struct Backend::Impl {
+     ggml_backend_sched_t sched = nullptr;        // created only if a graph needs it
+ };
+ 
++// Backend-agnostic helpers used in place of the CPU-backend-specific entry
++// points (ggml_backend_cpu_init / ggml_backend_cpu_set_n_threads). Those live
++// in the ggml-cpu translation unit, which is a dlopen'd MODULE in a
++// GGML_BACKEND_DL build and therefore not linkable from here. Same pattern as
++// voice-detect.cpp's backend.cpp.
++static ggml_backend_t backend_cpu_init() {
++    return ggml_backend_init_by_type(GGML_BACKEND_DEVICE_TYPE_CPU, nullptr);
++}
++
++static void backend_set_n_threads(ggml_backend_t b, int n_threads) {
++    if (!b) return;
++    ggml_backend_dev_t dev = ggml_backend_get_device(b);
++    if (!dev) return;
++    ggml_backend_reg_t reg = ggml_backend_dev_backend_reg(dev);
++    if (!reg) return;
++    auto set_fn = (ggml_backend_set_n_threads_t)
++        ggml_backend_reg_get_proc_address(reg, "ggml_backend_set_n_threads");
++    if (set_fn) set_fn(b, n_threads);
++}
++
+ static bool iequals(const std::string& a, const char* b) {
+     if (!b) return false;
+     size_t i = 0;
+@@ -55,7 +74,7 @@ Backend::Backend() : impl_(new Impl()) {
+             std::fprintf(stderr, "ced: CED_DEVICE=%s not found, using CPU\n", want.c_str());
+     }
+     if (!impl_->backend) {
+-        impl_->backend = ggml_backend_cpu_init();
++        impl_->backend = backend_cpu_init();
+         device_name_ = "cpu";
+         is_cpu_ = true;
+     }
+@@ -63,7 +82,7 @@ Backend::Backend() : impl_(new Impl()) {
+         std::fprintf(stderr, "ced: backend init failed\n");
+         return;
+     }
+-    if (!is_cpu_) impl_->cpu_fallback = ggml_backend_cpu_init();
++    if (!is_cpu_) impl_->cpu_fallback = backend_cpu_init();
+ }
+ 
+ Backend::~Backend() {
+@@ -123,7 +142,7 @@ bool Backend::compute(int n_threads, const BuildFn& build,
+                                                   /*parallel=*/false, /*op_offload=*/true);
+         }
+         if (impl_->sched) {
+-            ggml_backend_cpu_set_n_threads(impl_->cpu_fallback, nt);
++            backend_set_n_threads(impl_->cpu_fallback, nt);
+             ggml_backend_sched_reset(impl_->sched);
+             alloc_ok = ggml_backend_sched_alloc_graph(impl_->sched, gf);
+         }
+@@ -142,7 +161,7 @@ bool Backend::compute(int n_threads, const BuildFn& build,
+     for (const GraphInput& in : inputs)
+         ggml_backend_tensor_set(in.t, in.data, 0, in.nbytes);
+ 
+-    if (is_cpu_) ggml_backend_cpu_set_n_threads(impl_->backend, nt);
++    if (is_cpu_) backend_set_n_threads(impl_->backend, nt);
+     const ggml_status st = use_sched ? ggml_backend_sched_graph_compute(impl_->sched, gf)
+                                      : ggml_backend_graph_compute(impl_->backend, gf);
+     if (st != GGML_STATUS_SUCCESS) {
+diff --git a/third_party/ced.cpp/src/model_loader.cpp b/third_party/ced.cpp/src/model_loader.cpp
+index 0a462e1..6f43d13 100644
+--- a/third_party/ced.cpp/src/model_loader.cpp
++++ b/third_party/ced.cpp/src/model_loader.cpp
+@@ -4,7 +4,6 @@
+ #include "gguf_check.hpp"
+ 
+ #include "ggml-backend.h"
+-#include "ggml-cpu.h"
+ #include "ggml.h"
+ #include "gguf.h"
+ 
+@@ -87,9 +86,13 @@ bool ModelLoader::realize_weights(const Backend& backend) {
+         // one contiguous ctx mem buffer. Wrap that exact memory as a CPU
+         // backend buffer (zero-copy) and point every tensor's ->buffer at it;
+         // graphs then reference the loader's tensors directly as leaves.
++        // ggml_backend_cpu_buffer_from_ptr lives in the ggml-cpu translation
++        // unit (a dlopen'd MODULE in a GGML_BACKEND_DL build); the device's
++        // buffer_from_host_ptr is the registry equivalent.
+         void* base = ggml_get_mem_buffer(ctx_);
+         size_t size = ggml_get_mem_size(ctx_);
+-        weights_buf_ = ggml_backend_cpu_buffer_from_ptr(base, size);
++        ggml_backend_dev_t dev = ggml_backend_get_device(backend.handle());
++        weights_buf_ = dev ? ggml_backend_dev_buffer_from_host_ptr(dev, base, size, 0) : nullptr;
+         if (!weights_buf_) return false;
+         for (auto& kv : tensors_) kv.second->buffer = weights_buf_;
+         return true;

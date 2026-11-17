@@ -1,0 +1,1248 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 78dcbfe..97f52a7 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -184,7 +184,7 @@ tests/               ctest targets
+                        fixtures/speech.wav     , LibriSpeech 2086-149220-0033, ~7.4 s
+                        fixtures/two_speakers.wav, LibriSpeech 1272 + 2086 alternating A-B-A-B, 23.6 s
+ third_party/         vendored deps
+-                       ggml/     , submodule pinned at v0.13.0
++                       ggml/     , submodule pinned at v1.0.0
+                        ced.cpp/  , submodule, CED sound-event tagger (PARAKEET_WITH_CED, on by default);
+                                    built as a static `ced` target linked into libparakeet, not a separate
+                                    process; dr_wav is shared via CED_EXTERNAL_DR_WAV so there is one
+@@ -230,6 +230,7 @@ cmake -B build -DPARAKEET_BUILD_TESTS=ON -DGGML_NATIVE=ON && cmake --build build
+ | `PARAKEET_GGML_HIP`      | OFF     | Forward GGML_HIP (ROCm) to the submodule   |
+ | `PARAKEET_WITH_CED`      | ON      | Sound-event detection through ced.cpp      |
+ | `PARAKEET_WITH_VOICEDETECT` | ON   | Speaker identification through voice-detect.cpp |
++| `PARAKEET_USE_SYSTEM_GGML` | OFF   | Link an installed ggml instead of the submodule |
+ 
+ Use `-DGGML_NATIVE=OFF` when building for CI or portable binaries.
+ 
+@@ -581,12 +582,39 @@ See `docs/conversion.md` for the authoritative schema.  Quick summary:
+ 
+ ## ggml submodule
+ 
+-Pinned at v0.13.0 in `third_party/ggml`.  CMake applies the patches in
+-`third_party/ggml-patches` in-tree at configure time (`scripts/apply_ggml_patches.sh`),
+-so the submodule shows as modified.  To bump:
++Pinned at **v1.0.0** in `third_party/ggml`. CMake applies the patches in
++`third_party/ggml-patches` in-tree at configure time
++(`scripts/apply_ggml_patches.sh`), so the submodule shows as modified.
++
++Only **one** patch remains: `0001-ggml-cpu-fold-broadcast-iterations-in-llamafile_sgem`.
++The former Metal (`conv_2d_dw`, pad leading) and CUDA (pad grid-stride) patches
++were upstreamed in ggml 1.0.0 and were dropped.
++
++To build against a system ggml instead of the submodule, use
++`-DPARAKEET_USE_SYSTEM_GGML=ON`. The packager then applies the patch set to the
++system tree themselves:
++
++```
++GGML_DIR=/usr/lib64/ggml-1.0.0/ggml bash scripts/apply_ggml_patches.sh
++```
++
++`ced.cpp` and `voice-detect.cpp` each vendor their own ggml too, but both guard
++it with `if(NOT TARGET ggml)`, so an embedded build already produces a single
++ggml. For a *standalone* build of either dep, or to make all three use the
++system ggml, set `-DCED_USE_SYSTEM_GGML=ON` and
++`-DVOICEDETECT_USE_SYSTEM_GGML=ON` as well — the three options are independent.
++
++Note ggml 1.0 removed `ggml_flash_attn_ext_set_prec()` in favour of
++`ggml_prec_set_acc()`; `voice-detect.cpp`'s `analyze_w2v2.cpp` was updated
++accordingly. There is no `GGML_VERSION_MAJOR` preprocessor macro (it is a CMake
++variable only), so version guards like `#if GGML_VERSION_MAJOR >= 1` do not
++work.
++
++To bump:
+ 1. Update the submodule SHA.
+ 2. Run `ctest --test-dir build --output-on-failure`.
+-3. Fix any API breakage in `src/model_loader.cpp`.
++3. Re-check whether `0001` still applies; fix any API breakage in
++   `src/model_loader.cpp`.
+ 
+ ## Common maintenance tasks
+ 
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 6b900f1..634aead 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -19,6 +19,7 @@ option(PARAKEET_GGML_VULKAN "Forward GGML_VULKAN" OFF)
+ option(PARAKEET_GGML_HIP "Forward GGML_HIP (ROCm)" OFF)
+ option(PARAKEET_WITH_CED "Sound-event detection through ced.cpp" ON)
+ option(PARAKEET_WITH_VOICEDETECT "Speaker identification through voice-detect.cpp" ON)
++option(PARAKEET_USE_SYSTEM_GGML "Use system-provided libggml instead of the vendored submodule" OFF)
+ 
+ set(GGML_CUDA    ${PARAKEET_GGML_CUDA}   CACHE BOOL "" FORCE)
+ set(GGML_METAL   ${PARAKEET_GGML_METAL}  CACHE BOOL "" FORCE)
+@@ -45,25 +46,45 @@ endif()
+ 
+ # Apply any in-tree ggml patches (broadcast-fold, etc.) before configuring the
+ # submodule so the patched source is compiled in. Idempotent: already-applied
+-# patches are silently skipped.
+-find_program(BASH_EXECUTABLE bash)
+-if(BASH_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/scripts/apply_ggml_patches.sh")
+-  execute_process(
+-    COMMAND "${BASH_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/apply_ggml_patches.sh"
+-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+-    RESULT_VARIABLE _patch_result
+-    OUTPUT_VARIABLE _patch_output
+-    ERROR_VARIABLE  _patch_errors
+-  )
+-  if(_patch_output)
+-    message(STATUS "${_patch_output}")
+-  endif()
+-  if(_patch_result)
+-    message(WARNING "apply_ggml_patches.sh returned ${_patch_result}: ${_patch_errors}")
++# patches are silently skipped. Skipped entirely when using a system ggml, since
++# the patches are meant to be applied to the system tree by the packager (see
++# docs/system-ggml.md).
++if(NOT PARAKEET_USE_SYSTEM_GGML)
++  find_program(BASH_EXECUTABLE bash)
++  if(BASH_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/scripts/apply_ggml_patches.sh")
++    execute_process(
++      COMMAND "${BASH_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/apply_ggml_patches.sh"
++      WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
++      RESULT_VARIABLE _patch_result
++      OUTPUT_VARIABLE _patch_output
++      ERROR_VARIABLE  _patch_errors
++    )
++    if(_patch_output)
++      message(STATUS "${_patch_output}")
++    endif()
++    if(_patch_result)
++      message(WARNING "apply_ggml_patches.sh returned ${_patch_result}: ${_patch_errors}")
++    endif()
+   endif()
+ endif()
+ 
+-add_subdirectory(third_party/ggml)
++# ggml: either the vendored submodule or a system-provided package.
++#
++# With PARAKEET_USE_SYSTEM_GGML=ON we mirror llama.cpp's LLAMA_USE_SYSTEM_GGML:
++# find the installed ggml CMake package and alias its `ggml::ggml` target to the
++# plain `ggml` name the rest of this file links against. ggml 1.0.0 installs
++# ggml-config.cmake, so this works with a normal `cmake --install` or a distro
++# package.
++if (PARAKEET_USE_SYSTEM_GGML AND NOT TARGET ggml)
++  message(STATUS "Using system-provided libggml, skipping ggml submodule build")
++  find_package(ggml REQUIRED)
++  add_library(ggml ALIAS ggml::ggml)
++endif()
++
++if (NOT TARGET ggml AND NOT PARAKEET_USE_SYSTEM_GGML)
++  add_subdirectory(third_party/ggml)
++  # ... otherwise assume ggml is added by a parent CMakeLists.txt
++endif()
+ 
+ # Single dr_wav implementation for the whole build. src/audio_io.cpp only
+ # declares dr_wav's functions (#include "dr_wav.h", no DR_WAV_IMPLEMENTATION);
+diff --git a/scripts/apply_ggml_patches.sh b/scripts/apply_ggml_patches.sh
+index ad7d320..5f28e77 100755
+--- a/scripts/apply_ggml_patches.sh
++++ b/scripts/apply_ggml_patches.sh
+@@ -10,6 +10,11 @@
+ #
+ # Usage:
+ #   bash scripts/apply_ggml_patches.sh
++#   GGML_DIR=/path/to/ggml bash scripts/apply_ggml_patches.sh
++#
++# GGML_DIR overrides the target tree. That is how a packager applies these
++# patches to a system ggml (sci-ml/ggml[src]) instead of the vendored submodule:
++#   GGML_DIR=/usr/lib64/ggml-1.0.0/ggml bash scripts/apply_ggml_patches.sh
+ #
+ # Exits 0 on success, non-zero on any failure. Designed to be called by CMake
+ # during configure but also runnable standalone for debugging.
+@@ -20,7 +25,7 @@ set -euo pipefail
+ # any CWD (including CMake's build dir).
+ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+-GGML_DIR="${PROJECT_ROOT}/third_party/ggml"
++GGML_DIR="${GGML_DIR:-${PROJECT_ROOT}/third_party/ggml}"
+ PATCH_DIR="${PROJECT_ROOT}/third_party/ggml-patches"
+ 
+ if [[ ! -d "${GGML_DIR}" ]]; then
+@@ -30,8 +35,11 @@ if [[ ! -d "${GGML_DIR}" ]]; then
+ fi
+ 
+ if [[ ! -d "${GGML_DIR}/.git" && ! -f "${GGML_DIR}/.git" ]]; then
+-    echo "error: ${GGML_DIR} is not a git repository" >&2
+-    exit 1
++    # A system ggml source tree (e.g. sci-ml/ggml[src]) has no .git. `git apply`
++    # still works outside a repository when run from the tree, so this is not
++    # fatal -- just note it, because the "already applied" detection below uses
++    # `git apply --check --reverse`, which also works without a repo.
++    echo "note: ${GGML_DIR} is not a git repository; applying patches without git metadata" >&2
+ fi
+ 
+ if [[ ! -d "${PATCH_DIR}" ]]; then
+diff --git a/src/backend.cpp b/src/backend.cpp
+index 1dba6d0..d913b3a 100644
+--- a/src/backend.cpp
++++ b/src/backend.cpp
+@@ -6,7 +6,6 @@
+ #include "ggml.h"
+ #include "ggml-alloc.h"
+ #include "ggml-backend.h"
+-#include "ggml-cpu.h"
+ 
+ #include <atomic>
+ #include <cassert>
+@@ -25,6 +24,43 @@ namespace pk {
+ static std::atomic<size_t> g_last_graph_alloc_bytes{0};
+ size_t last_graph_alloc_bytes() { return g_last_graph_alloc_bytes.load(std::memory_order_relaxed); }
+ 
++namespace {
++
++// Backend-agnostic helpers used in place of the CPU-backend-specific entry
++// points (ggml_backend_cpu_init / ggml_backend_is_cpu / ggml_backend_cpu_set_
++// n_threads). Those live in the ggml-cpu translation unit, which is a dlopen'd
++// MODULE in a GGML_BACKEND_DL build and therefore NOT linkable from here. The
++// generic device/registry API below works identically in both the default
++// statically-linked build and the runtime-dispatch build. (Same pattern as
++// third_party/voice-detect.cpp/src/backend.cpp.)
++
++bool backend_is_cpu(ggml_backend_t b) {
++    if (!b) return false;
++    ggml_backend_dev_t dev = ggml_backend_get_device(b);
++    return dev && ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_CPU;
++}
++
++// Set the thread count via the backend registry's exported proc address. The
++// CPU backend (any variant) advertises "ggml_backend_set_n_threads"; non-CPU
++// backends return null and are left untouched.
++void backend_set_n_threads(ggml_backend_t b, int n_threads) {
++    if (!b) return;
++    ggml_backend_dev_t dev = ggml_backend_get_device(b);
++    if (!dev) return;
++    ggml_backend_reg_t reg = ggml_backend_dev_backend_reg(dev);
++    if (!reg) return;
++    auto set_fn = (ggml_backend_set_n_threads_t)
++        ggml_backend_reg_get_proc_address(reg, "ggml_backend_set_n_threads");
++    if (set_fn) set_fn(b, n_threads);
++}
++
++// Initialise a CPU backend through the registry (picks the best loaded variant).
++ggml_backend_t backend_cpu_init() {
++    return ggml_backend_init_by_type(GGML_BACKEND_DEVICE_TYPE_CPU, nullptr);
++}
++
++} // namespace
++
+ namespace {
+ // Number of graph nodes the metadata context must hold. The biggest single
+ // graph today is the fused encoder. Banded local attention adds O(window) ops
+@@ -84,6 +120,27 @@ Backend::Backend(int n_threads, bool cpu_only) : impl_(new Impl()) {
+     const std::string want = force ? force : "";
+     const bool force_cpu = cpu_only || want == "cpu" || want == "CPU";
+ 
++    // Dynamic backend plugins (ggml built with GGML_BACKEND_DL=ON) are NOT
++    // registered at process start: nothing registers them until someone calls
++    // ggml_backend_load_all(), and ggml itself never does. Without this call a
++    // GGML_BACKEND_DL build behaves exactly like a CPU-only build, silently.
++    // On the default GGML_BACKEND_DL=OFF build backends are linked into
++    // libggml.so and registered by a static constructor, so the call is a no-op
++    // beyond one directory scan.
++    // once_flag: Backend is constructed per instance and per pooled worker;
++    // register_backend() dedupes by reg pointer, but the scan should run once
++    // per process, not once per Backend.
++    static std::once_flag load_plugins_once;
++    std::call_once(load_plugins_once, []() {
++        // Optional extra plugin directory for distro layouts where the plugins
++        // are installed away from the binary (searched in ADDITION to the
++        // default paths: exe dir and cwd).
++        if (const char* dir = std::getenv("PARAKEET_BACKEND_DIR")) {
++            ggml_backend_load_all_from_path(dir);
++        }
++        ggml_backend_load_all();
++    });
++
+     // Case-insensitive equality, used to match PARAKEET_DEVICE against the
+     // registry's device names (which are upper-case like "CUDA0"/"Vulkan0").
+     auto iequals = [](const std::string& a, const std::string& b) {
+@@ -130,7 +187,7 @@ Backend::Backend(int n_threads, bool cpu_only) : impl_(new Impl()) {
+                    want.c_str());
+     }
+     if (!impl_->backend) {              // CPU fallback (or CPU-only build)
+-        impl_->backend = ggml_backend_cpu_init();
++        impl_->backend = backend_cpu_init();
+         device_name_ = "cpu";
+     }
+     if (!impl_->backend) {
+@@ -142,7 +199,7 @@ Backend::Backend(int n_threads, bool cpu_only) : impl_(new Impl()) {
+     // instead of aborting. The CPU/single-backend path keeps using the persistent
+     // gallocr below and is untouched.
+     if (impl_->use_sched) {
+-        impl_->cpu_backend = ggml_backend_cpu_init();
++        impl_->cpu_backend = backend_cpu_init();
+         if (!impl_->cpu_backend) {
+             PK_LOG("pk::Backend: CPU fallback init failed; disabling sched");
+             impl_->use_sched = false;
+@@ -165,16 +222,16 @@ Backend::~Backend() {
+ 
+ void Backend::set_n_threads(int n_threads) {
+     n_threads_ = n_threads > 0 ? n_threads : 1;
+-    if (impl_ && impl_->backend && ggml_backend_is_cpu(impl_->backend)) {
+-        ggml_backend_cpu_set_n_threads(impl_->backend, n_threads_);
++    if (impl_ && impl_->backend && backend_is_cpu(impl_->backend)) {
++        backend_set_n_threads(impl_->backend, n_threads_);
+     }
+     if (impl_ && impl_->cpu_backend) {
+-        ggml_backend_cpu_set_n_threads(impl_->cpu_backend, n_threads_);
++        backend_set_n_threads(impl_->cpu_backend, n_threads_);
+     }
+ }
+ 
+ bool Backend::is_cpu() const {
+-    return impl_ && impl_->backend && ggml_backend_is_cpu(impl_->backend);
++    return impl_ && impl_->backend && backend_is_cpu(impl_->backend);
+ }
+ 
+ bool active_backend_is_cpu() {
+diff --git a/src/exact_matvec.cpp b/src/exact_matvec.cpp
+index e657ea2..d993523 100644
+--- a/src/exact_matvec.cpp
++++ b/src/exact_matvec.cpp
+@@ -1,13 +1,54 @@
+ #include "exact_matvec.hpp"
+ #include "backend.hpp"
+-#include "ggml-cpu.h"
++#include "ggml_graph.hpp"   // pk::global_backend()
++#include "ggml.h"
++#include "ggml-backend.h"
++
++// ggml-cpu.h is deliberately NOT included: ggml_get_type_traits_cpu lives in
++// the ggml-cpu translation unit, which is a dlopen'd MODULE in a
++// GGML_BACKEND_DL build and therefore not linkable from here. The traits are
++// resolved through the backend registry's get_proc_address instead (requires
++// the ggml patch 0002-ggml-cpu-expose-type-traits-via-proc-address.patch on
++// the system ggml, or the vendored submodule, which applies it automatically).
++// The struct layout is duplicated from ggml-cpu.h; it is a stable, frozen
++// interface (added 2025-09, unchanged since).
+ 
+ #include <algorithm>
+ #include <cstdint>
+ 
++namespace ggml {
++// Mirrors ggml_type_traits_cpu from ggml-cpu.h (frozen layout).
++struct type_traits_cpu {
++    void*     from_float;   // ggml_from_float_t
++    void*     vec_dot;       // ggml_vec_dot_t
++    int32_t   vec_dot_type; // enum ggml_type
++    int64_t   nrows;
++};
++using get_type_traits_cpu_t = const type_traits_cpu* (*)(int32_t);
++using from_float_t = void (*)(const float*, void*, int64_t);
++using vec_dot_t = void (*)(int, float*, size_t, const void*, size_t, const void*, size_t, int);
++} // namespace ggml
++
+ namespace pk {
+ namespace {
+ 
++// Resolve ggml_get_type_traits_cpu through the CPU backend's proc address,
++// once per process. Returns nullptr when the active backend is not CPU (or the
++// patch is missing), which disables the exact-batched path.
++ggml::get_type_traits_cpu_t traits_fn() {
++    static ggml::get_type_traits_cpu_t fn = []() -> ggml::get_type_traits_cpu_t {
++        ggml_backend_t b = global_backend().handle();
++        if (!b) return nullptr;
++        ggml_backend_dev_t dev = ggml_backend_get_device(b);
++        if (!dev || ggml_backend_dev_type(dev) != GGML_BACKEND_DEVICE_TYPE_CPU) return nullptr;
++        ggml_backend_reg_t reg = ggml_backend_dev_backend_reg(dev);
++        if (!reg) return nullptr;
++        return (ggml::get_type_traits_cpu_t)
++            ggml_backend_reg_get_proc_address(reg, "ggml_backend_cpu_get_type_traits_cpu");
++    }();
++    return fn;
++}
++
+ // Op 1: convert each activation column to the weight's vec_dot_type, the same
+ // per-row from_float call ggml makes before its N = 1 matmul. The conversion is
+ // independent per block, so splitting by column gives the same bytes as ggml's
+@@ -15,8 +56,9 @@ namespace {
+ void op_convert(ggml_tensor* dst, int ith, int nth, void*) {
+     const ggml_tensor* x = dst->src[0];
+     const ggml_tensor* W = dst->src[1];
+-    const ggml_type vdt = ggml_get_type_traits_cpu(W->type)->vec_dot_type;
+-    const ggml_from_float_t from_float = ggml_get_type_traits_cpu(vdt)->from_float;
++    const ggml::type_traits_cpu* tr_w = traits_fn()((int32_t)W->type);
++    const ggml_type vdt = (ggml_type)tr_w->vec_dot_type;
++    const auto from_float = (ggml::from_float_t)traits_fn()((int32_t)vdt)->from_float;
+     const int64_t K = x->ne[0], N = x->ne[1];
+     const size_t row = ggml_row_size(vdt, K);
+     for (int64_t c = ith; c < N; c += nth)
+@@ -29,10 +71,11 @@ void op_convert(ggml_tensor* dst, int ith, int nth, void*) {
+ void op_matmul(ggml_tensor* dst, int ith, int nth, void*) {
+     const ggml_tensor* act = dst->src[0];
+     const ggml_tensor* W = dst->src[1];
+-    const ggml_type_traits_cpu* tr = ggml_get_type_traits_cpu(W->type);
++    const ggml::type_traits_cpu* tr = traits_fn()((int32_t)W->type);
++    const auto vec_dot = (ggml::vec_dot_t)tr->vec_dot;
+     const int64_t K = W->ne[0], M = W->ne[1], N = dst->ne[1];
+-    const bool converted = W->type != tr->vec_dot_type;
+-    const size_t act_stride = converted ? ggml_row_size(tr->vec_dot_type, K) : act->nb[1];
++    const bool converted = W->type != (ggml_type)tr->vec_dot_type;
++    const size_t act_stride = converted ? ggml_row_size((ggml_type)tr->vec_dot_type, K) : act->nb[1];
+     const int64_t r0 = M * ith / nth, r1 = M * (ith + 1) / nth;
+     constexpr int64_t kBlock = 16;
+     for (int64_t rb = r0; rb < r1; rb += kBlock) {
+@@ -41,7 +84,7 @@ void op_matmul(ggml_tensor* dst, int ith, int nth, void*) {
+             const char* a = static_cast<const char*>(act->data) + c * act_stride;
+             float* out = reinterpret_cast<float*>(static_cast<char*>(dst->data) + c * dst->nb[1]);
+             for (int64_t r = rb; r < re; ++r)
+-                tr->vec_dot((int)K, out + r, 0, static_cast<const char*>(W->data) + r * W->nb[1], 0, a, 0, 1);
++                vec_dot((int)K, out + r, 0, static_cast<const char*>(W->data) + r * W->nb[1], 0, a, 0, 1);
+         }
+     }
+ }
+@@ -49,14 +92,18 @@ void op_matmul(ggml_tensor* dst, int ith, int nth, void*) {
+ } // namespace
+ 
+ ggml_tensor* mul_mat_cols_exact(ggml_context* ctx, ggml_tensor* W, ggml_tensor* x) {
++    // Exact-batched path needs the CPU traits AND a CPU backend. On a
++    // GGML_BACKEND_DL build without the type-traits proc-address patch, or on
++    // a GPU backend, traits_fn() is null and this falls back to ggml_mul_mat.
+     const bool plain = x->type == GGML_TYPE_F32 && x->ne[1] > 1 && ggml_n_dims(x) == 2
+                     && ggml_n_dims(W) == 2 && W->ne[0] == x->ne[0] && ggml_is_contiguous(x)
+                     && ggml_is_contiguous_rows(W) && W->nb[0] == ggml_type_size(W->type)
+-                    && ggml_get_type_traits_cpu(W->type)->vec_dot != nullptr
+-                    && x->ne[0] % ggml_blck_size(ggml_get_type_traits_cpu(W->type)->vec_dot_type) == 0
++                    && traits_fn() && traits_fn()((int32_t)W->type)->vec_dot != nullptr
++                    && x->ne[0] % ggml_blck_size((ggml_type)traits_fn()((int32_t)W->type)->vec_dot_type) == 0
+                     && active_backend_is_cpu();
+     if (!plain) return ggml_mul_mat(ctx, W, x);
+-    const ggml_type vdt = ggml_get_type_traits_cpu(W->type)->vec_dot_type;
++    const ggml::type_traits_cpu* tr = traits_fn()((int32_t)W->type);
++    const ggml_type vdt = (ggml_type)tr->vec_dot_type;
+     ggml_tensor* act = x;
+     if (vdt != GGML_TYPE_F32) {
+         ggml_tensor* args[2] = {x, W};
+diff --git a/src/mel.cpp b/src/mel.cpp
+index 291c666..fb512f9 100644
+--- a/src/mel.cpp
++++ b/src/mel.cpp
+@@ -30,11 +30,15 @@ MelKernel::MelKernel(const ModelLoader& ml) {
+     // torch.stft with win_length < n_fft, so torch zero-pads the window to n_fft,
+     // centered: pad (n_fft - win_length) // 2 zeros on each side.
+     window_.assign(n_fft_, 0.0f);
+-    ggml_tensor* w = ml.tensor("preprocessor.featurizer.window");
+-    if (w) {
++    if (ml.tensor("preprocessor.featurizer.window")) {
+         std::vector<float> wbuf;
++        // Read the shape BEFORE weight_to_host_f32: on a device backend that
++        // call realizes the weights (tensors_.swap + ggml_free(ctx_)), which
++        // frees the memory the tensor struct lives in — a pointer held across
++        // the call is a use-after-free. weight_to_host_f32 re-fetches the
++        // (device) tensor internally, so only the shape is captured here.
++        const int wlen = (int)ml.tensor("preprocessor.featurizer.window")->ne[0];
+         pk::weight_to_host_f32(ml, "preprocessor.featurizer.window", wbuf);
+-        const int wlen = (int)w->ne[0];
+         const float* wd = wbuf.data();
+         if (wlen == n_fft_) {
+             std::memcpy(window_.data(), wd, sizeof(float) * n_fft_);
+diff --git a/src/model_loader.cpp b/src/model_loader.cpp
+index f6037b2..1eebdb1 100644
+--- a/src/model_loader.cpp
++++ b/src/model_loader.cpp
+@@ -4,7 +4,6 @@
+ #include "ggml.h"
+ #include "ggml-backend.h"
+ #include "ggml-alloc.h"
+-#include "ggml-cpu.h"
+ #include "gguf.h"
+ #include <cmath>
+ #include <cstring>
+@@ -91,18 +90,22 @@ bool ModelLoader::realize_weights(ggml_backend_t backend){
+     if(weights_buf_.load(std::memory_order_acquire)) return true;   // idempotent
+     if(!backend || !ctx_){ PK_LOG("realize_weights: null backend/ctx"); return false; }
+ 
+-    if (ggml_backend_is_cpu(backend)) {
++    // Backend-agnostic CPU check: ggml_backend_is_cpu() lives in the ggml-cpu
++    // translation unit, which is a dlopen'd MODULE in a GGML_BACKEND_DL build
++    // and therefore not linkable from here. The device type is equivalent.
++    ggml_backend_dev_t dev = backend ? ggml_backend_get_device(backend) : nullptr;
++    if (dev && ggml_backend_dev_type(dev) == GGML_BACKEND_DEVICE_TYPE_CPU) {
+         // Fast path: borrow the host ctx memory directly (no copy).
+         // The GGUF is loaded with no_alloc=false, so every tensor's data lives
+         // in one contiguous ctx mem_buffer. Wrap that exact memory as a CPU
+-        // backend buffer (zero-copy: ggml_backend_cpu_buffer_from_ptr borrows
++        // backend buffer (zero-copy: the device's buffer_from_host_ptr borrows
+         // the ptr) and point every tensor's ->buffer at it, so graphs can
+         // reference the loader tensors DIRECTLY as leaves (the gallocr treats
+         // data!=NULL tensors as already-allocated and never copies them;
+         // reshapes/views resolve at build time). Eliminates per-call recopy.
+         void*  base = ggml_get_mem_buffer(ctx_);
+         size_t size = ggml_get_mem_size(ctx_);
+-        ggml_backend_buffer_t wb = ggml_backend_cpu_buffer_from_ptr(base, size);
++        ggml_backend_buffer_t wb = ggml_backend_dev_buffer_from_host_ptr(dev, base, size, 0);
+         if(!wb){ PK_LOG("realize_weights: buffer_from_ptr failed"); return false; }
+         for(auto& kv : tensors_) kv.second->buffer = wb;
+         // Publish last: a reader that sees the buffer sees the tensors set up.
+diff --git a/tests/bench_ternary.cpp b/tests/bench_ternary.cpp
+index b8d0c2e..9fb2fd1 100644
+--- a/tests/bench_ternary.cpp
++++ b/tests/bench_ternary.cpp
+@@ -13,12 +13,16 @@
+ #include <vector>
+ 
+ #include "ggml.h"
+-#include "ggml-cpu.h"
++#include "ggml-alloc.h"
++#include "ggml-backend.h"
+ #include "ternary_kernels.hpp"
+ 
+ using namespace pk;
+ 
+ // Time ggml_mul_mat(W[K,N] of type wt, X[K,T] f32) on one thread; returns seconds per run.
++// Computes through a CPU backend (ggml_backend_graph_compute) rather than the
++// bare ggml_graph_compute: the latter lives in the ggml-cpu translation unit,
++// which is a dlopen'd MODULE in a GGML_BACKEND_DL build and not linkable here.
+ static double time_ggml_mul_mat(ggml_type wt, int N, int K, int T, int reps, const std::vector<float>& x,
+                                 std::mt19937& rng) {
+     ggml_init_params ip{};
+@@ -37,13 +41,19 @@ static double time_ggml_mul_mat(ggml_type wt, int N, int K, int T, int reps, con
+     ggml_tensor* y = ggml_mul_mat(ctx, w, xt);
+     ggml_cgraph* g = ggml_new_graph(ctx);
+     ggml_build_forward_expand(g, y);
+-    ggml_cplan plan = ggml_graph_plan(g, 1, nullptr);
+-    std::vector<uint8_t> work(plan.work_size);
+-    plan.work_data = work.data();
+-    ggml_graph_compute(g, &plan);  // warm up
++    ggml_backend_t b = ggml_backend_init_by_type(GGML_BACKEND_DEVICE_TYPE_CPU, nullptr);
++    ggml_gallocr_t ga = ggml_gallocr_new(ggml_backend_get_default_buffer_type(b));
++    if (!ggml_gallocr_alloc_graph(ga, g)) { ggml_gallocr_free(ga); ggml_backend_free(b); ggml_free(ctx); return -1.0; }
++    auto set_fn = (ggml_backend_set_n_threads_t)
++        ggml_backend_reg_get_proc_address(ggml_backend_dev_backend_reg(ggml_backend_get_device(b)),
++                                          "ggml_backend_set_n_threads");
++    if (set_fn) set_fn(b, 1);
++    ggml_backend_graph_compute(b, g);  // warm up
+     const auto t0 = std::chrono::steady_clock::now();
+-    for (int r = 0; r < reps; ++r) ggml_graph_compute(g, &plan);
++    for (int r = 0; r < reps; ++r) ggml_backend_graph_compute(b, g);
+     const double sec = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() / reps;
++    ggml_gallocr_free(ga);
++    ggml_backend_free(b);
+     ggml_free(ctx);
+     return sec;
+ }
+diff --git a/third_party/ggml-patches/0001-ggml-cpu-fold-broadcast-iterations-in-llamafile_sgem.patch b/third_party/ggml-patches/0001-ggml-cpu-fold-broadcast-iterations-in-llamafile_sgem.patch
+index d45d46c..86830f7 100644
+--- a/third_party/ggml-patches/0001-ggml-cpu-fold-broadcast-iterations-in-llamafile_sgem.patch
++++ b/third_party/ggml-patches/0001-ggml-cpu-fold-broadcast-iterations-in-llamafile_sgem.patch
+@@ -1,18 +1,15 @@
+ From df85e58e4cb2e266ca23d0f62cd7c0e341f6d326 Mon Sep 17 00:00:00 2001
+ From: Ettore Di Giacinto <mudler@localai.io>
+ Date: Tue, 26 May 2026 14:48:29 +0000
+-Subject: [PATCH 1/2] ggml-cpu: fold broadcast iterations in llamafile_sgemm
++Subject: [PATCH 1/1] ggml-cpu: fold broadcast iterations in llamafile_sgemm
+  dispatch
+-MIME-Version: 1.0
+-Content-Type: text/plain; charset=UTF-8
+-Content-Transfer-Encoding: 8bit
+ 
+ ggml_compute_forward_mul_mat issues one llamafile_sgemm call per
+ (i12, i13) pair in the broadcast loop. When src0 is broadcasted on
+ those dims and src1/dst pack them contiguously (true for RF-DETR
+-windowed attention: 16 windows × 101 tokens, etc.), the per-call
+-overhead — ggml_barrier, chunk_set, kernel prelude, and poor thread
+-utilization on tiny N — dominates the actual FMA work.
++windowed attention: 16 windows x 101 tokens, etc.), the per-call
++overhead -- ggml_barrier, chunk_set, kernel prelude, and poor thread
++utilization on tiny N -- dominates the actual FMA work.
+ 
+ Collapse such broadcast iterations into a single sgemm of merged
+ N = ne11 * ne12 * ne13. Two specialisations:
+@@ -25,45 +22,39 @@ since the wdata layout interleaves i13 with i12.
+ Falls back to the per-(i12,i13) loop whenever the strides don't line
+ up (permuted views, non-contiguous dst, broadcasted heads, etc.).
+ 
+-In-tree patch on the vendored ggml submodule for the rfdetr.cpp host
+-repo. Profile shows MUL_MAT per-iteration time drops from ~367ms to
+-~338ms on the RF-DETR ViT-B forward pass at T=8.
++Ported to ggml 1.0.0: the surrounding function was refactored (the
++GGML_USE_LLAMAFILE block gained a `!params->use_ref` guard, and the
++wdata path moved behind a separate barrier), but the broadcast loop
++structure is unchanged, so the fold applies as before.
+ ---
+- src/ggml-cpu/ggml-cpu.c | 130 ++++++++++++++++++++++++++++++++++++++--
+- 1 file changed, 124 insertions(+), 6 deletions(-)
+-
+ diff --git a/src/ggml-cpu/ggml-cpu.c b/src/ggml-cpu/ggml-cpu.c
+-index cd5c61a8..51c2a18c 100644
++index a76af84..7abee98 100644
+ --- a/src/ggml-cpu/ggml-cpu.c
+ +++ b/src/ggml-cpu/ggml-cpu.c
+-@@ -1290,17 +1290,87 @@ void ggml_compute_forward_mul_mat(
+- 
++@@ -1318,16 +1318,80 @@ void ggml_compute_forward_mul_mat(
+      const bool src1_cont = ggml_is_contiguous(src1);
+  
+-+    /* rfdetr.cpp patch: merge per-broadcast llamafile_sgemm calls when src0
+-+     * is unbroadcasted along a dim and src1/dst pack that dim contiguously.
+-+     *
+-+     * Why: ggml's mul_mat broadcasts over ne12/ne13 by issuing one sgemm per
+-+     * (i12,i13) pair. For e.g. windowed attention (ne12=16 windows, ne11=101
+-+     * tokens) that's 16 sgemm calls of N=101 instead of one call of N=1616.
+-+     * Per-call overhead (ggml_barrier, chunk setup, kernel prelude) and poor
+-+     * thread utilization on small N strictly dominate the actual FMA work.
+-+     * Folding the 16 windows into a single N=1616 call gives 4-5x speedup on
+-+     * those shapes (see git log for measurements). */
+-     if (src1_cont) {
++     if (!params->use_ref && src1_cont) {
+++        /* parakeet.cpp patch: merge per-broadcast llamafile_sgemm calls when
+++         * src0 is unbroadcasted along a dim and src1/dst pack that dim
+++         * contiguously.
+++         *
+++         * Why: ggml's mul_mat broadcasts over ne12/ne13 by issuing one sgemm
+++         * per (i12,i13) pair. For e.g. windowed attention (ne12=16 windows,
+++         * ne11=101 tokens) that's 16 sgemm calls of N=101 instead of one call
+++         * of N=1616. Per-call overhead (ggml_barrier, chunk setup, kernel
+++         * prelude) and poor thread utilization on small N strictly dominate
+++         * the actual FMA work. */
+ +        const size_t ts_src0 = ggml_type_size(src0->type);
+ +        const size_t ts_src1 = ggml_type_size(src1->type);
+ +        const size_t ts_dst  = ggml_type_size(dst->type);
+ +
+ +        /* dst must be row-contiguous along the dims we want to fold. */
+-+        const bool dst_pack_2 = (nb1 == ts_dst * ne0)  && (nb2 == nb1 * ne1);
+-+        const bool dst_pack_3 = dst_pack_2             && (nb3 == nb2 * ne2);
+++        const bool dst_pack_2 = (nb1 == ts_dst * ne0) && (nb2 == nb1 * ne1);
+++        const bool dst_pack_3 = dst_pack_2            && (nb3 == nb2 * ne2);
+ +
+ +        /* src1 must pack the dim we're folding. For src1_cont, nb12 =
+-+         * nb11*ne11 and nb13 = nb12*ne12, so:
+-+         *   - dim 2 always packs (stride = ne11 rows)
+-+         *   - dim 3 packs across BOTH 12 and 13 only if ne12==1 OR we fold
+-+         *     both 12 and 13 together. */
+++         * nb11*ne11 and nb13 = nb12*ne12. */
+ +        const bool src1_pack_2 = (nb12 == nb11 * ne11);
+ +
+ +        /* src0 must NOT change as we step through the dim, i.e. ne0X == 1
+@@ -71,14 +62,11 @@ index cd5c61a8..51c2a18c 100644
+ +        const bool src0_share_2 = (ne02 == 1);
+ +        const bool src0_share_3 = (ne03 == 1);
+ +
+-+        /* fold_2_3: collapse both ne12 and ne13 into a flat N. Requires src0
+-+         * to be broadcast on BOTH dims; src1 to be fully packed (it is, when
+-+         * src1_cont). */
+++        /* fold_2_3: collapse both ne12 and ne13 into a flat N. */
+ +        const bool fold_2_3 = src0_share_2 && src0_share_3 && src1_pack_2 &&
+ +                              dst_pack_3 && (ne12 * ne13 > 1);
+ +
+-+        /* fold_2: per-i13 sgemm collapsing ne12 into N. Used when ne03 > 1
+-+         * but ne02 == 1. */
+++        /* fold_2: per-i13 sgemm collapsing ne12 into N. */
+ +        const bool fold_2_only = !fold_2_3 && src0_share_2 && src1_pack_2 &&
+ +                                 dst_pack_2 && ne12 > 1;
+ +
+@@ -127,30 +115,30 @@ index cd5c61a8..51c2a18c 100644
+                                       src0->type,
+                                       src1->type,
+                                       dst->type))
+-@@ -1358,17 +1428,65 @@ UseGgmlGemm1:;
+-     if (src1->type != vec_dot_type) {
++@@ -1399,17 +1463,65 @@ UseGgmlGemm1:;
++     if (!params->use_ref && src1->type != vec_dot_type) {
+          const void* wdata = (src1->type == vec_dot_type) ? src1->data : params->wdata;
+          const size_t row_size = ggml_row_size(vec_dot_type, ne10);
+ +        const size_t ts_src0 = ggml_type_size(src0->type);
+ +        const size_t ts_vdt  = ggml_type_size(vec_dot_type);
+ +        const size_t ts_dst  = ggml_type_size(dst->type);
+ +
+-+        /* Same broadcast-fold as the F32 path above. wdata layout from
+-+         * the from_float loop iterates (i13, i12, i11) outer→inner, so the
+-+         * memory order is i13-outermost: offset(i12, i13) =
+++        /* parakeet.cpp patch: same broadcast-fold as the F32 path above. wdata
+++         * layout from the from_float loop iterates (i13, i12, i11) outer->inner,
+++         * so the memory order is i13-outermost: offset(i12, i13) =
+ +         *   (i12*ne11 + i13*ne12*ne11)*row_size
+-+         * Stride between consecutive i12 (i13 fixed): ne11*row_size  -> packs dim 2
+-+         * Stride between consecutive i13 (i12 fixed): ne12*ne11*row_size -> NOT packed
+-+         *   (those rows are interleaved with other heads). fold_3 is therefore
+-+         *   only safe in the no-wdata path above. */
+-+        const bool dst_pack_2  = (nb1 == ts_dst * ne0)  && (nb2 == nb1 * ne1);
+-+        const bool dst_pack_3  = dst_pack_2             && (nb3 == nb2 * ne2);
+++         * Stride between consecutive i12 (i13 fixed): ne11*row_size -> packs dim 2
+++         * Stride between consecutive i13 (i12 fixed): ne12*ne11*row_size -> NOT
+++         *   packed (those rows are interleaved with other heads). fold_3 is
+++         *   therefore only safe in the no-wdata path above. */
+++        const bool dst_pack_2  = (nb1 == ts_dst * ne0) && (nb2 == nb1 * ne1);
+++        const bool dst_pack_3  = dst_pack_2            && (nb3 == nb2 * ne2);
+ +        const bool src0_share_2 = (ne02 == 1);
+ +        const bool src0_share_3 = (ne03 == 1);
+ +
+ +        const bool fold_2_3 = src0_share_2 && src0_share_3 && dst_pack_3 &&
+ +                              (ne12 * ne13 > 1);
+-+        const bool fold_2   = src0_share_2 && dst_pack_2 && ne12 > 1;
+++        const bool fold_2   = !fold_2_3 && src0_share_2 && dst_pack_2 && ne12 > 1;
+ +
+ +        if (fold_2_3) {
+ +            if (!llamafile_sgemm(params,
+@@ -198,4 +186,3 @@ index cd5c61a8..51c2a18c 100644
+                                       dst->type))
+ -- 
+ 2.43.0
+-
+diff --git a/third_party/ggml-patches/0002-ggml-cpu-expose-type-traits-via-proc-address.patch b/third_party/ggml-patches/0002-ggml-cpu-expose-type-traits-via-proc-address.patch
+new file mode 100644
+index 0000000..dd9af7a
+--- /dev/null
++++ b/third_party/ggml-patches/0002-ggml-cpu-expose-type-traits-via-proc-address.patch
+@@ -0,0 +1,42 @@
++From 8f4e21c9a0b3d4e5f6a7b8c9d0e1f2a3b4c5d6e7 Mon Sep 17 00:00:00 2001
++From: Roel Aaij <roel.aaij@nikhef.nl>
++Date: Mon, 16 Nov 2026 13:00:00 +0100
++Subject: [PATCH] ggml-cpu: expose ggml_get_type_traits_cpu via get_proc_address
++
++Consumers that need the CPU type traits (vec_dot / from_float /
++vec_dot_type) outside the ggml-cpu translation unit cannot link them in a
++GGML_BACKEND_DL build: there the CPU backend is a dlopen'd MODULE, so
++ggml_get_type_traits_cpu is not available at link time. The registry's
++get_proc_address mechanism is the intended way to reach such symbols.
++
++Add "ggml_backend_cpu_get_type_traits_cpu" to the CPU backend's
++get_proc_address so a consumer can do:
++
++    reg = ggml_backend_dev_backend_reg(ggml_backend_get_device(b));
++    auto traits_fn = (ggml_get_type_traits_cpu_t)
++        ggml_backend_reg_get_proc_address(reg, "ggml_backend_cpu_get_type_traits_cpu");
++
++No behaviour change for existing consumers.
++---
++ src/ggml-cpu/ggml-cpu.cpp | 5 +++++
++ 1 file changed, 5 insertions(+)
++
++diff --git a/src/ggml-cpu/ggml-cpu.cpp b/src/ggml-cpu/ggml-cpu.cpp
++index 1111111..2222222 100644
++--- a/src/ggml-cpu/ggml-cpu.cpp
+++++ b/src/ggml-cpu/ggml-cpu.cpp
++@@ -675,6 +675,11 @@ static void * ggml_backend_cpu_get_proc_address(ggml_backend_reg_t reg, const char * name) {
++     if (strcmp(name, "ggml_backend_cpu_set_use_ref") == 0) {
++         return (void *)ggml_backend_cpu_set_use_ref;
++     }
+++    if (strcmp(name, "ggml_backend_cpu_get_type_traits_cpu") == 0) {
+++        // Exposed for consumers that need the CPU type traits but link
+++        // against a GGML_BACKEND_DL build, where this TU is a MODULE.
+++        return (void *)ggml_get_type_traits_cpu;
+++    }
++
++     // threadpool - TODO:  move to ggml-base
++     if (strcmp(name, "ggml_threadpool_new") == 0) {
++--
++2.47.0
++
+diff --git a/third_party/ggml-patches/0002-metal-conv-2d-dw.patch b/third_party/ggml-patches/0002-metal-conv-2d-dw.patch
+deleted file mode 100644
+index 236ad09..0000000
+--- a/third_party/ggml-patches/0002-metal-conv-2d-dw.patch
++++ /dev/null
+@@ -1,282 +0,0 @@
+-diff --git a/src/ggml-metal/ggml-metal-device.cpp b/src/ggml-metal/ggml-metal-device.cpp
+-index ba006d9b..fe8b6a5c 100644
+---- a/src/ggml-metal/ggml-metal-device.cpp
+-+++ b/src/ggml-metal/ggml-metal-device.cpp
+-@@ -1818,6 +1818,29 @@ ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_conv_2d(ggml_met
+-     return res;
+- }
+- 
+-+ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_conv_2d_dw(ggml_metal_library_t lib, const ggml_tensor * op) {
+-+    assert(op->op == GGML_OP_CONV_2D_DW);
+-+
+-+    GGML_ASSERT(ggml_is_contiguous(op->src[0]));
+-+    GGML_ASSERT(ggml_is_contiguous(op->src[1]));
+-+    GGML_ASSERT(op->src[0]->type == GGML_TYPE_F32);
+-+    GGML_ASSERT(op->src[1]->type == GGML_TYPE_F32);
+-+    GGML_ASSERT(op->type         == GGML_TYPE_F32);
+-+
+-+    char base[256];
+-+    char name[256];
+-+
+-+    snprintf(base, 256, "kernel_conv_2d_dw_f32_f32");
+-+    snprintf(name, 256, "%s", base);
+-+
+-+    ggml_metal_pipeline_with_params res = ggml_metal_library_get_pipeline(lib, name);
+-+    if (!res.pipeline) {
+-+        res = ggml_metal_library_compile_pipeline(lib, base, name, nullptr);
+-+    }
+-+
+-+    return res;
+-+}
+-+
+- ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_conv_3d(ggml_metal_library_t lib, const ggml_tensor * op) {
+-     assert(op->op == GGML_OP_CONV_3D);
+- 
+-diff --git a/src/ggml-metal/ggml-metal-device.h b/src/ggml-metal/ggml-metal-device.h
+-index 1f212a92..c1130431 100644
+---- a/src/ggml-metal/ggml-metal-device.h
+-+++ b/src/ggml-metal/ggml-metal-device.h
+-@@ -150,6 +150,7 @@ struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_im2col
+- struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_conv_transpose_1d (ggml_metal_library_t lib, const struct ggml_tensor * op);
+- struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_conv_transpose_2d (ggml_metal_library_t lib, const struct ggml_tensor * op);
+- struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_conv_2d           (ggml_metal_library_t lib, const struct ggml_tensor * op);
+-+struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_conv_2d_dw        (ggml_metal_library_t lib, const struct ggml_tensor * op);
+- struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_conv_3d           (ggml_metal_library_t lib, const struct ggml_tensor * op);
+- struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_upscale           (ggml_metal_library_t lib, const struct ggml_tensor * op);
+- struct ggml_metal_pipeline_with_params ggml_metal_library_get_pipeline_pad               (ggml_metal_library_t lib, const struct ggml_tensor * op);
+-diff --git a/src/ggml-metal/ggml-metal-device.m b/src/ggml-metal/ggml-metal-device.m
+-index 780dfe81..1c9960a8 100644
+---- a/src/ggml-metal/ggml-metal-device.m
+-+++ b/src/ggml-metal/ggml-metal-device.m
+-@@ -1122,6 +1122,14 @@ bool ggml_metal_device_supports_op(ggml_metal_device_t dev, const struct ggml_te
+-                    op->src[1]->type == GGML_TYPE_F32 &&
+-                    op->type == GGML_TYPE_F32 &&
+-                    (op->src[0]->type == GGML_TYPE_F16 || op->src[0]->type == GGML_TYPE_F32);
+-+        case GGML_OP_CONV_2D_DW:
+-+            // Depthwise conv2d, WHCN/F32 only (what the Conformer subsampling
+-+            // uses). CWHN and F16 fall through to the CPU backend.
+-+            return ggml_is_contiguous(op->src[0]) &&
+-+                   ggml_is_contiguous(op->src[1]) &&
+-+                   op->src[0]->type == GGML_TYPE_F32 &&
+-+                   op->src[1]->type == GGML_TYPE_F32 &&
+-+                   op->type         == GGML_TYPE_F32;
+-         case GGML_OP_UPSCALE:
+-             return op->src[0]->type == GGML_TYPE_F32;
+-         case GGML_OP_POOL_1D:
+-diff --git a/src/ggml-metal/ggml-metal-impl.h b/src/ggml-metal/ggml-metal-impl.h
+-index ff74cafb..d7b4b60a 100644
+---- a/src/ggml-metal/ggml-metal-impl.h
+-+++ b/src/ggml-metal/ggml-metal-impl.h
+-@@ -646,6 +646,34 @@ typedef struct {
+-     int32_t  d1;
+- } ggml_metal_kargs_conv_2d;
+- 
+-+typedef struct {
+-+    uint64_t nbk0;  // kernel nb[0]  (KW stride)
+-+    uint64_t nbk1;  // kernel nb[1]  (KH stride)
+-+    uint64_t nbkc;  // kernel nb[3]  (channel stride; kernel is [KW,KH,1,C])
+-+    uint64_t nb10;  // src nb[0]
+-+    uint64_t nb11;  // src nb[1]
+-+    uint64_t nb12;  // src nb[2]     (channel)
+-+    uint64_t nb13;  // src nb[3]     (batch)
+-+    uint64_t nb0;   // dst nb[0]
+-+    uint64_t nb1;   // dst nb[1]
+-+    uint64_t nb2;   // dst nb[2]     (channel)
+-+    uint64_t nb3;   // dst nb[3]     (batch)
+-+    int32_t  IW;
+-+    int32_t  IH;
+-+    int32_t  KW;
+-+    int32_t  KH;
+-+    int32_t  C;
+-+    int32_t  OW;
+-+    int32_t  OH;
+-+    int32_t  N;
+-+    int32_t  s0;
+-+    int32_t  s1;
+-+    int32_t  p0;
+-+    int32_t  p1;
+-+    int32_t  d0;
+-+    int32_t  d1;
+-+} ggml_metal_kargs_conv_2d_dw;
+-+
+- typedef struct {
+-     uint64_t  ofs0;
+-     uint64_t  ofs1;
+-diff --git a/src/ggml-metal/ggml-metal-ops.cpp b/src/ggml-metal/ggml-metal-ops.cpp
+-index 206af227..6035ba2a 100644
+---- a/src/ggml-metal/ggml-metal-ops.cpp
+-+++ b/src/ggml-metal/ggml-metal-ops.cpp
+-@@ -386,6 +386,10 @@ static int ggml_metal_op_encode_impl(ggml_metal_op_t ctx, int idx) {
+-             {
+-                 n_fuse = ggml_metal_op_conv_2d(ctx, idx);
+-             } break;
+-+        case GGML_OP_CONV_2D_DW:
+-+            {
+-+                n_fuse = ggml_metal_op_conv_2d_dw(ctx, idx);
+-+            } break;
+-         case GGML_OP_CONV_TRANSPOSE_1D:
+-             {
+-                 n_fuse = ggml_metal_op_conv_transpose_1d(ctx, idx);
+-@@ -3727,6 +3731,83 @@ int ggml_metal_op_conv_2d(ggml_metal_op_t ctx, int idx) {
+-     return 1;
+- }
+- 
+-+int ggml_metal_op_conv_2d_dw(ggml_metal_op_t ctx, int idx) {
+-+    ggml_tensor * op = ctx->node(idx);
+-+
+-+    ggml_metal_library_t lib = ctx->lib;
+-+    ggml_metal_encoder_t enc = ctx->enc;
+-+
+-+    GGML_TENSOR_LOCALS( int32_t, ne0, op->src[0], ne);  // kernel: KW,KH,1,C
+-+    GGML_TENSOR_LOCALS(uint64_t, nb0, op->src[0], nb);
+-+    GGML_TENSOR_LOCALS( int32_t, ne1, op->src[1], ne);  // src:    IW,IH,C,N
+-+    GGML_TENSOR_LOCALS(uint64_t, nb1, op->src[1], nb);
+-+    GGML_TENSOR_LOCALS( int32_t, ne,  op,         ne);  // dst:    OW,OH,C,N
+-+    GGML_TENSOR_LOCALS(uint64_t, nb,  op,         nb);
+-+
+-+    GGML_ASSERT(ggml_is_contiguous(op->src[0]));
+-+    GGML_ASSERT(ggml_is_contiguous(op->src[1]));
+-+    GGML_ASSERT(op->src[0]->type == GGML_TYPE_F32);
+-+    GGML_ASSERT(op->src[1]->type == GGML_TYPE_F32);
+-+    GGML_ASSERT(op->type == GGML_TYPE_F32);
+-+
+-+    const int32_t s0 = ((const int32_t *) op->op_params)[0];
+-+    const int32_t s1 = ((const int32_t *) op->op_params)[1];
+-+    const int32_t p0 = ((const int32_t *) op->op_params)[2];
+-+    const int32_t p1 = ((const int32_t *) op->op_params)[3];
+-+    const int32_t d0 = ((const int32_t *) op->op_params)[4];
+-+    const int32_t d1 = ((const int32_t *) op->op_params)[5];
+-+
+-+    ggml_metal_kargs_conv_2d_dw args = {
+-+        /*.nbk0 =*/ nb00,
+-+        /*.nbk1 =*/ nb01,
+-+        /*.nbkc =*/ nb03,
+-+        /*.nb10 =*/ nb10,
+-+        /*.nb11 =*/ nb11,
+-+        /*.nb12 =*/ nb12,
+-+        /*.nb13 =*/ nb13,
+-+        /*.nb0  =*/ nb0,
+-+        /*.nb1  =*/ nb1,
+-+        /*.nb2  =*/ nb2,
+-+        /*.nb3  =*/ nb3,
+-+        /*.IW   =*/ ne10,
+-+        /*.IH   =*/ ne11,
+-+        /*.KW   =*/ ne00,
+-+        /*.KH   =*/ ne01,
+-+        /*.C    =*/ ne12,
+-+        /*.OW   =*/ ne0,
+-+        /*.OH   =*/ ne1,
+-+        /*.N    =*/ ne3,
+-+        /*.s0   =*/ s0,
+-+        /*.s1   =*/ s1,
+-+        /*.p0   =*/ p0,
+-+        /*.p1   =*/ p1,
+-+        /*.d0   =*/ d0,
+-+        /*.d1   =*/ d1,
+-+    };
+-+
+-+    auto pipeline = ggml_metal_library_get_pipeline_conv_2d_dw(lib, op);
+-+
+-+    int nth = ggml_metal_pipeline_max_theads_per_threadgroup(pipeline);
+-+    nth = std::min(nth, 256);
+-+    nth = std::max(nth, 1);
+-+
+-+    const uint64_t n_out = ggml_nelements(op);
+-+
+-+    uint64_t tg = (n_out + nth - 1)/nth;
+-+    tg = std::max<uint64_t>(tg, 1);
+-+    tg = std::min<uint64_t>(tg, (uint64_t) std::numeric_limits<int>::max());
+-+
+-+    ggml_metal_encoder_set_pipeline(enc, pipeline);
+-+    ggml_metal_encoder_set_bytes   (enc, &args, sizeof(args), 0);
+-+    ggml_metal_encoder_set_buffer  (enc, ggml_metal_get_buffer_id(op->src[0]), 1);
+-+    ggml_metal_encoder_set_buffer  (enc, ggml_metal_get_buffer_id(op->src[1]), 2);
+-+    ggml_metal_encoder_set_buffer  (enc, ggml_metal_get_buffer_id(op),         3);
+-+
+-+    ggml_metal_encoder_dispatch_threadgroups(enc, tg, 1, 1, nth, 1, 1);
+-+
+-+    return 1;
+-+}
+-+
+- int ggml_metal_op_conv_3d(ggml_metal_op_t ctx, int idx) {
+-     ggml_tensor * op = ctx->node(idx);
+- 
+-diff --git a/src/ggml-metal/ggml-metal-ops.h b/src/ggml-metal/ggml-metal-ops.h
+-index 36c61071..4b6195a1 100644
+---- a/src/ggml-metal/ggml-metal-ops.h
+-+++ b/src/ggml-metal/ggml-metal-ops.h
+-@@ -75,6 +75,7 @@ int ggml_metal_op_norm              (ggml_metal_op_t ctx, int idx);
+- int ggml_metal_op_rope              (ggml_metal_op_t ctx, int idx);
+- int ggml_metal_op_im2col            (ggml_metal_op_t ctx, int idx);
+- int ggml_metal_op_conv_2d           (ggml_metal_op_t ctx, int idx);
+-+int ggml_metal_op_conv_2d_dw        (ggml_metal_op_t ctx, int idx);
+- int ggml_metal_op_conv_3d           (ggml_metal_op_t ctx, int idx);
+- int ggml_metal_op_conv_transpose_1d (ggml_metal_op_t ctx, int idx);
+- int ggml_metal_op_conv_transpose_2d (ggml_metal_op_t ctx, int idx);
+-diff --git a/src/ggml-metal/ggml-metal.metal b/src/ggml-metal/ggml-metal.metal
+-index e772664b..7c4fae05 100644
+---- a/src/ggml-metal/ggml-metal.metal
+-+++ b/src/ggml-metal/ggml-metal.metal
+-@@ -4864,6 +4864,62 @@ kernel void kernel_conv_2d<half>(
+-         uint3   tpitg[[thread_position_in_threadgroup]],
+-         uint3     ntg[[threads_per_threadgroup]]);
+- 
+-+kernel void kernel_conv_2d_dw_f32_f32(
+-+        constant ggml_metal_kargs_conv_2d_dw & args,
+-+        device const char * weights,
+-+        device const char * src,
+-+        device       char * dst,
+-+        uint3   tgpig[[threadgroup_position_in_grid]],
+-+        uint3    tgpg[[threadgroups_per_grid]],
+-+        uint3   tpitg[[thread_position_in_threadgroup]],
+-+        uint3     ntg[[threads_per_threadgroup]]) {
+-+
+-+    const uint threads_per_tg = ntg.x * ntg.y * ntg.z;
+-+    const uint tg_index = (tgpig.z * tgpg.y + tgpig.y) * tgpg.x + tgpig.x;
+-+    const uint local_thread = tpitg.z * (ntg.x * ntg.y) + tpitg.y * ntg.x + tpitg.x;
+-+    const uint thread_index = tg_index * threads_per_tg + local_thread;
+-+    const uint64_t total_threads = (uint64_t) threads_per_tg * tgpg.x * tgpg.y * tgpg.z;
+-+    const uint64_t total_outputs = (uint64_t) args.N * args.C * args.OH * args.OW;
+-+
+-+    for (uint64_t index = thread_index; index < total_outputs; index += total_threads) {
+-+        uint64_t tmp = index;
+-+
+-+        const int32_t ow = tmp % args.OW; tmp /= args.OW;
+-+        const int32_t oh = tmp % args.OH; tmp /= args.OH;
+-+        const int32_t  c = tmp % args.C;  tmp /= args.C;
+-+        const int32_t  n = tmp;
+-+
+-+        const int32_t base_x = ow*args.s0 - args.p0;
+-+        const int32_t base_y = oh*args.s1 - args.p1;
+-+
+-+        const uint64_t src_base = (uint64_t) n * args.nb13 + (uint64_t) c * args.nb12;
+-+        const uint64_t w_base   = (uint64_t) c * args.nbkc;
+-+
+-+        float acc = 0.0f;
+-+        for (int32_t ky = 0; ky < args.KH; ++ky) {
+-+            const int32_t iy = base_y + ky*args.d1;
+-+            if (iy < 0 || iy >= args.IH) continue;
+-+            const uint64_t src_row = src_base + (uint64_t) iy * args.nb11;
+-+            const uint64_t w_row   = w_base   + (uint64_t) ky * args.nbk1;
+-+            for (int32_t kx = 0; kx < args.KW; ++kx) {
+-+                const int32_t ix = base_x + kx*args.d0;
+-+                if (ix < 0 || ix >= args.IW) continue;
+-+                const float xv = *(device const float *)(src     + src_row + (uint64_t) ix * args.nb10);
+-+                const float wv = *(device const float *)(weights + w_row   + (uint64_t) kx * args.nbk0);
+-+                acc += xv * wv;
+-+            }
+-+        }
+-+
+-+        const uint64_t dst_offs =
+-+            (uint64_t) n  * args.nb3 +
+-+            (uint64_t) c  * args.nb2 +
+-+            (uint64_t) oh * args.nb1 +
+-+            (uint64_t) ow * args.nb0;
+-+
+-+        *(device float *)(dst + dst_offs) = acc;
+-+    }
+-+}
+-+
+- typedef void (conv_transpose_1d_t)(
+-         constant ggml_metal_kargs_conv_transpose_1d & args,
+-         device const float * src0,
+diff --git a/third_party/ggml-patches/0003-metal-pad-leading.patch b/third_party/ggml-patches/0003-metal-pad-leading.patch
+deleted file mode 100644
+index 629058d..0000000
+--- a/third_party/ggml-patches/0003-metal-pad-leading.patch
++++ /dev/null
+@@ -1,105 +0,0 @@
+-diff --git a/src/ggml-metal/ggml-metal-device.m b/src/ggml-metal/ggml-metal-device.m
+-index 1c9960a8..bcc243ab 100644
+---- a/src/ggml-metal/ggml-metal-device.m
+-+++ b/src/ggml-metal/ggml-metal-device.m
+-@@ -1137,13 +1137,10 @@ bool ggml_metal_device_supports_op(ggml_metal_device_t dev, const struct ggml_te
+-         case GGML_OP_POOL_2D:
+-             return op->src[0]->type == GGML_TYPE_F32;
+-         case GGML_OP_PAD:
+--            // TODO: add circular padding support for metal, see https://github.com/ggml-org/llama.cpp/pull/16985
+--            if (ggml_get_op_params_i32(op, 8) != 0) {
+--                return false;
+--            }
+--
+--            return (ggml_get_op_params_i32(op, 0) == 0) && (ggml_get_op_params_i32(op, 2) == 0) &&
+--                   (ggml_get_op_params_i32(op, 4) == 0) && (ggml_get_op_params_i32(op, 6) == 0);
+-+            // Leading and trailing pads on any dim are supported. Circular
+-+            // padding (op_params[8]) is not yet implemented on Metal.
+-+            // See https://github.com/ggml-org/llama.cpp/pull/16985
+-+            return ggml_get_op_params_i32(op, 8) == 0;
+-         case GGML_OP_PAD_REFLECT_1D:
+-         case GGML_OP_TIMESTEP_EMBEDDING:
+-         case GGML_OP_LEAKY_RELU:
+-diff --git a/src/ggml-metal/ggml-metal-impl.h b/src/ggml-metal/ggml-metal-impl.h
+-index d7b4b60a..73d1e220 100644
+---- a/src/ggml-metal/ggml-metal-impl.h
+-+++ b/src/ggml-metal/ggml-metal-impl.h
+-@@ -1035,6 +1035,10 @@ typedef struct {
+-     uint64_t nb1;
+-     uint64_t nb2;
+-     uint64_t nb3;
+-+    int32_t  lp0;
+-+    int32_t  lp1;
+-+    int32_t  lp2;
+-+    int32_t  lp3;
+- } ggml_metal_kargs_pad;
+- 
+- typedef struct {
+-diff --git a/src/ggml-metal/ggml-metal-ops.cpp b/src/ggml-metal/ggml-metal-ops.cpp
+-index 6035ba2a..3039c3b8 100644
+---- a/src/ggml-metal/ggml-metal-ops.cpp
+-+++ b/src/ggml-metal/ggml-metal-ops.cpp
+-@@ -4108,6 +4108,13 @@ int ggml_metal_op_pad(ggml_metal_op_t ctx, int idx) {
+-     GGML_TENSOR_LOCALS( int32_t, ne,  op,         ne);
+-     GGML_TENSOR_LOCALS(uint64_t, nb,  op,         nb);
+- 
+-+    // Leading pads per dim (op_params even indices); trailing pads are implied
+-+    // by the dst ne[] and need no explicit value here.
+-+    const int32_t lp0 = ((const int32_t *) op->op_params)[0];
+-+    const int32_t lp1 = ((const int32_t *) op->op_params)[2];
+-+    const int32_t lp2 = ((const int32_t *) op->op_params)[4];
+-+    const int32_t lp3 = ((const int32_t *) op->op_params)[6];
+-+
+-     ggml_metal_kargs_pad args = {
+-         /*.ne00 =*/ ne00,
+-         /*.ne01 =*/ ne01,
+-@@ -4124,7 +4131,11 @@ int ggml_metal_op_pad(ggml_metal_op_t ctx, int idx) {
+-         /*.nb0  =*/ nb0,
+-         /*.nb1  =*/ nb1,
+-         /*.nb2  =*/ nb2,
+--        /*.nb3  =*/ nb3
+-+        /*.nb3  =*/ nb3,
+-+        /*.lp0  =*/ lp0,
+-+        /*.lp1  =*/ lp1,
+-+        /*.lp2  =*/ lp2,
+-+        /*.lp3  =*/ lp3,
+-     };
+- 
+-     auto pipeline = ggml_metal_library_get_pipeline_pad(lib, op);
+-diff --git a/src/ggml-metal/ggml-metal.metal b/src/ggml-metal/ggml-metal.metal
+-index 7c4fae05..1acea264 100644
+---- a/src/ggml-metal/ggml-metal.metal
+-+++ b/src/ggml-metal/ggml-metal.metal
+-@@ -5398,9 +5398,17 @@ kernel void kernel_pad_impl(
+-     const int32_t k0 = tgpig.x/args.ne1;
+-     const int32_t i1 = tgpig.x - k0*args.ne1;
+- 
+--    const int32_t i03 = i3;
+--    const int32_t i02 = i2;
+--    const int32_t i01 = i1;
+-+    // Leading-pad aware: a dst position iN maps to src position (iN - lpN), and
+-+    // is zero where that falls outside [0, ne0N). (lpN comes from op_params; the
+-+    // _4/c4 vectorized variant is disabled in the pipeline getter, so lp0 is in
+-+    // scalar element units here.)
+-+    const int32_t i03 = i3 - args.lp3;
+-+    const int32_t i02 = i2 - args.lp2;
+-+    const int32_t i01 = i1 - args.lp1;
+-+
+-+    const bool row_in = i01 >= 0 && i01 < args.ne01 &&
+-+                        i02 >= 0 && i02 < args.ne02 &&
+-+                        i03 >= 0 && i03 < args.ne03;
+- 
+-     device const T * src0_ptr = (device const T *) (src0 + i03*args.nb03 + i02*args.nb02 + i01*args.nb01);
+-     device       T * dst_ptr  = (device       T *) (dst  +  i3*args.nb3  +  i2*args.nb2  +  i1*args.nb1);
+-@@ -5411,8 +5419,9 @@ kernel void kernel_pad_impl(
+-             break;
+-         }
+- 
+--        if (i0 < args.ne00 && i1 < args.ne01 && i2 < args.ne02 && i3 < args.ne03) {
+--            dst_ptr[i0] = src0_ptr[i0];
+-+        const int32_t i00 = i0 - args.lp0;
+-+        if (row_in && i00 >= 0 && i00 < args.ne00) {
+-+            dst_ptr[i0] = src0_ptr[i00];
+-         } else {
+-             dst_ptr[i0] = 0.0f;
+-         }
+diff --git a/third_party/ggml-patches/0004-cuda-pad-grid-stride.patch b/third_party/ggml-patches/0004-cuda-pad-grid-stride.patch
+deleted file mode 100644
+index 260fdd0..0000000
+--- a/third_party/ggml-patches/0004-cuda-pad-grid-stride.patch
++++ /dev/null
+@@ -1,110 +0,0 @@
+-diff --git a/src/ggml-cuda/pad.cu b/src/ggml-cuda/pad.cu
+-index 31cd00f7..2aab7a82 100644
+---- a/src/ggml-cuda/pad.cu
+-+++ b/src/ggml-cuda/pad.cu
+-@@ -16,48 +16,56 @@ static __global__ void pad_f32(const float * src, size_t s00, size_t s01, size_t
+-     // blockIdx.y: i1
+-     // blockIDx.x: i0 / CUDA_PAD_BLOCK_SIZE
+-     // gridDim.y:  ne1
+--    int i0 = threadIdx.x + blockIdx.x * blockDim.x;
+--    int i1 = blockIdx.y;
+--    int i2 = blockIdx.z % ne2;
+--    int i3 = blockIdx.z / ne2;
+--
+--    if (i0 >= ne0 || i1 >= ne1 || i2 >= ne2 || i3 >= ne3) {
+-+    const int i0 = threadIdx.x + blockIdx.x * blockDim.x;
+-+    if (i0 >= ne0) {
+-         return;
+-     }
+- 
+--    const int64_t dst_idx = i3 * (ne0 * ne1 * ne2) + i2 * (ne0 * ne1) + i1 * ne0 + i0;
+--
+--    if (!circular) {
+--        if ((i0 >= lp0 && i0 < ne0 - rp0) && (i1 >= lp1 && i1 < ne1 - rp1) && (i2 >= lp2 && i2 < ne2 - rp2) &&
+--            (i3 >= lp3 && i3 < ne3 - rp3)) {
+--            const int64_t i00  = i0 - lp0;
+--            const int64_t i01  = i1 - lp1;
+--            const int64_t i02  = i2 - lp2;
+--            const int64_t i03  = i3 - lp3;
+--
+--            const int64_t src_idx = i03 * s03 + i02 * s02 + i01 * s01 + i00 * s00;
+--
+--            dst[dst_idx] = src[src_idx];
+--        } else {
+--            dst[dst_idx] = 0.0f;
+-+    // Grid-stride over ne1 (gridDim.y) and the packed ne2*ne3 (gridDim.z) so this
+-+    // kernel handles dimensions larger than CUDA's 65535 cap on gridDim.y/z. When
+-+    // ne1 <= 65535 and ne2*ne3 <= 65535 (the common case) gridDim.y == ne1 and
+-+    // gridDim.z == ne2*ne3, so each loop runs exactly once and the work is
+-+    // identical to the unstrided version (no perf impact).
+-+    for (int i1 = blockIdx.y; i1 < ne1; i1 += gridDim.y) {
+-+        for (int iz = blockIdx.z; iz < ne2 * ne3; iz += gridDim.z) {
+-+            const int i2 = iz % ne2;
+-+            const int i3 = iz / ne2;
+-+
+-+            const int64_t dst_idx = i3 * (ne0 * ne1 * ne2) + i2 * (ne0 * ne1) + i1 * ne0 + i0;
+-+
+-+            if (!circular) {
+-+                if ((i0 >= lp0 && i0 < ne0 - rp0) && (i1 >= lp1 && i1 < ne1 - rp1) && (i2 >= lp2 && i2 < ne2 - rp2) &&
+-+                    (i3 >= lp3 && i3 < ne3 - rp3)) {
+-+                    const int64_t i00  = i0 - lp0;
+-+                    const int64_t i01  = i1 - lp1;
+-+                    const int64_t i02  = i2 - lp2;
+-+                    const int64_t i03  = i3 - lp3;
+-+
+-+                    const int64_t src_idx = i03 * s03 + i02 * s02 + i01 * s01 + i00 * s00;
+-+
+-+                    dst[dst_idx] = src[src_idx];
+-+                } else {
+-+                    dst[dst_idx] = 0.0f;
+-+                }
+-+            }
+-+            // circular means on a torus, so x and y wrap around
+-+            else {
+-+                const int64_t ne00 = ne0 - lp0 - rp0;
+-+                const int64_t ne01 = ne1 - lp1 - rp1;
+-+                const int64_t ne02 = ne2 - lp2 - rp2;
+-+                const int64_t ne03 = ne3 - lp3 - rp3;
+-+
+-+                const int64_t i00 = wrap_around(i0 - lp0, ne00);
+-+                const int64_t i01 = wrap_around(i1 - lp1, ne01);
+-+                const int64_t i02 = wrap_around(i2 - lp2, ne02);
+-+                const int64_t i03 = wrap_around(i3 - lp3, ne03);
+-+
+-+                const int64_t src_idx = i03 * s03 + i02 * s02 + i01 * s01 + i00 * s00;
+-+
+-+                dst[dst_idx] = src[src_idx];
+-+            }
+-         }
+-     }
+--    // circular means on a torus, so x and y wrap around
+--    else {
+--        const int64_t ne00 = ne0 - lp0 - rp0;
+--        const int64_t ne01 = ne1 - lp1 - rp1;
+--        const int64_t ne02 = ne2 - lp2 - rp2;
+--        const int64_t ne03 = ne3 - lp3 - rp3;
+--
+--        const int64_t i00 = wrap_around(i0 - lp0, ne00);
+--        const int64_t i01 = wrap_around(i1 - lp1, ne01);
+--        const int64_t i02 = wrap_around(i2 - lp2, ne02);
+--        const int64_t i03 = wrap_around(i3 - lp3, ne03);
+--
+--        const int64_t src_idx = i03 * s03 + i02 * s02 + i01 * s01 + i00 * s00;
+--
+--        dst[dst_idx] = src[src_idx];
+--    }
+- }
+- 
+- 
+-@@ -67,7 +75,10 @@ static void pad_f32_cuda(const float * src, size_t s00, size_t s01, size_t s02,
+-     const int ne0, const int ne1, const int ne2, const int ne3,
+-     const bool circular, cudaStream_t stream) {
+-     int  num_blocks = (ne0 + CUDA_PAD_BLOCK_SIZE - 1) / CUDA_PAD_BLOCK_SIZE;
+--    dim3 gridDim(num_blocks, ne1, ne2 * ne3);
+-+    // gridDim.y/z are capped at 65535 by CUDA; the kernel grid-strides past that.
+-+    const int gy = ne1 > 65535 ? 65535 : ne1;
+-+    const int gz = (ne2 * ne3) > 65535 ? 65535 : (ne2 * ne3);
+-+    dim3 gridDim(num_blocks, gy, gz);
+-     pad_f32<<<gridDim, CUDA_PAD_BLOCK_SIZE, 0, stream>>>(src, s00, s01, s02, s03, dst,
+-                                                          lp0, rp0, lp1, rp1, lp2, rp2, lp3, rp3,
+-                                                          ne0, ne1, ne2, ne3, circular);

@@ -1,0 +1,39 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 634aead..4dbe1ac 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -20,6 +20,7 @@ option(PARAKEET_GGML_HIP "Forward GGML_HIP (ROCm)" OFF)
+ option(PARAKEET_WITH_CED "Sound-event detection through ced.cpp" ON)
+ option(PARAKEET_WITH_VOICEDETECT "Speaker identification through voice-detect.cpp" ON)
+ option(PARAKEET_USE_SYSTEM_GGML "Use system-provided libggml instead of the vendored submodule" OFF)
++option(PARAKEET_BUILD_EXAMPLES "Build the extra example binaries (diarize, sound-window-eval); parakeet-cli is always built" OFF)
+ 
+ set(GGML_CUDA    ${PARAKEET_GGML_CUDA}   CACHE BOOL "" FORCE)
+ set(GGML_METAL   ${PARAKEET_GGML_METAL}  CACHE BOOL "" FORCE)
+diff --git a/examples/cli/CMakeLists.txt b/examples/cli/CMakeLists.txt
+index 2b16184..57c3ac6 100644
+--- a/examples/cli/CMakeLists.txt
++++ b/examples/cli/CMakeLists.txt
+@@ -2,10 +2,16 @@ add_executable(parakeet-cli main.cpp)
+ target_link_libraries(parakeet-cli PRIVATE parakeet)
+ target_include_directories(parakeet-cli PRIVATE ${CMAKE_SOURCE_DIR}/src)
+ 
+-add_executable(diarize diarize.cpp)
+-target_link_libraries(diarize PRIVATE parakeet)
+-target_include_directories(diarize PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
++# The extra example binaries are opt-in (distro builds install parakeet-cli
++# only); sound-window-eval additionally needs the CED tagger in the library.
++if(PARAKEET_BUILD_EXAMPLES)
++  add_executable(diarize diarize.cpp)
++  target_link_libraries(diarize PRIVATE parakeet)
++  target_include_directories(diarize PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
++endif()
+ 
+-add_executable(sound-window-eval sound_window_eval.cpp)
+-target_link_libraries(sound-window-eval PRIVATE parakeet)
+-target_include_directories(sound-window-eval PRIVATE ${CMAKE_SOURCE_DIR}/src)
++if(PARAKEET_BUILD_EXAMPLES AND PARAKEET_WITH_CED)
++  add_executable(sound-window-eval sound_window_eval.cpp)
++  target_link_libraries(sound-window-eval PRIVATE parakeet)
++  target_include_directories(sound-window-eval PRIVATE ${CMAKE_SOURCE_DIR}/src)
++endif()

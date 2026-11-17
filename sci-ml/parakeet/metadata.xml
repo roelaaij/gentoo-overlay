@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+	<maintainer type="person">
+		<email>roel.aaij@nikhef.nl</email>
+		<name>Roel Aaij</name>
+	</maintainer>
+	<longdescription>
+		parakeet.cpp is a C++17/ggml inference port of NVIDIA NeMo Parakeet
+		ASR (CTC, RNNT, TDT and hybrid TDT-CTC heads), with cache-aware
+		streaming + EOU decoding and a flat C-API (libparakeet.so) for
+		FFI/dlopen integration. The GGML model files are converted from NeMo
+		checkpoints with the bundled Python scripts and are not part of the
+		package.
+	</longdescription>
+	<use>
+		<flag name="ced">Sound-event detection through the vendored ced.cpp</flag>
+		<flag name="examples">Build the extra example binaries (diarize,
+			sound-window-eval) besides parakeet-cli</flag>
+		<flag name="system-ggml">Link against sci-ml/ggml instead of building
+			the vendored ggml submodule</flag>
+		<flag name="vulkan">Build the ggml Vulkan backend into the vendored
+			ggml (only used without system-ggml; the system ggml's backends are
+			chosen by its own USE flags)</flag>
+	</use>
+	<upstream>
+		<remote-id type="github">mudler/parakeet.cpp</remote-id>
+	</upstream>
+</pkgmetadata>
